@@ -21,8 +21,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef VOLTTYPE_H_
-#define VOLTTYPE_H_
+#ifndef VOLTDB_WIRETYPE_H_
+#define VOLTDB_WIRETYPE_H_
+
+#include <string>
+
 namespace voltdb {
 enum WireType {
     WIRE_TYPE_ARRAY = -99,
@@ -36,5 +39,8 @@ enum WireType {
     WIRE_TYPE_TIMESTAMP = 11,
     WIRE_TYPE_DECIMAL = 22
 };
+
+std::string wireTypeToString(WireType type);
+
 }
-#endif /* VOLTTYPE_H_ */
+#endif /* VOLTDB_WIRETYPE_H_ */

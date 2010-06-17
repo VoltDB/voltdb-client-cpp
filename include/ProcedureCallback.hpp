@@ -21,8 +21,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef PROCEDURECALLBACK_HPP_
-#define PROCEDURECALLBACK_HPP_
+#ifndef VOLTDB_PROCEDURECALLBACK_HPP_
+#define VOLTDB_PROCEDURECALLBACK_HPP_
 #include "InvocationResponse.hpp"
 #include <boost/shared_ptr.hpp>
 namespace voltdb {
@@ -34,4 +34,4 @@ public:
 };
 }
 
-#endif /* PROCEDURECALLBACK_HPP_ */
+#endif /* VOLTDB_PROCEDURECALLBACK_HPP_ */

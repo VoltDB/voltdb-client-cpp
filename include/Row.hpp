@@ -21,8 +21,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef ROW_HPP_
-#define ROW_HPP_
+#ifndef VOLTDB_ROW_HPP_
+#define VOLTDB_ROW_HPP_
 
 #include "ByteBuffer.hpp"
 #include "Column.hpp"
@@ -31,14 +31,10 @@
 #include "Exception.hpp"
 #include "WireType.h"
 #include <stdint.h>
+#include "Decimal.hpp"
+#include <sstream>
 
 namespace voltdb {
-class InvalidColumnException : public voltdb::Exception {
-    const char * what() const throw() {
-        return "Attempted to retrieve a column with an invalid index or name, or an invalid type for the specified column";
-    }
-};
-
 class Row {
 private:
     WireType validateType(WireType type, int32_t index)  throw (InvalidColumnException) {
@@ -48,6 +44,12 @@ private:
         }
         WireType columnType = m_columns->at(static_cast<size_t>(index)).m_type;
         switch (columnType) {
+        case WIRE_TYPE_DECIMAL:
+            if (type != WIRE_TYPE_DECIMAL) throw InvalidColumnException();
+            break;
+        case WIRE_TYPE_TIMESTAMP:
+            if (type != WIRE_TYPE_TIMESTAMP) throw InvalidColumnException();
+            break;
         case WIRE_TYPE_BIGINT:
             if (type != WIRE_TYPE_BIGINT) throw InvalidColumnException();
             break;
@@ -91,7 +93,7 @@ private:
         if (m_hasCalculatedOffsets == true) return;
         m_offsets[0] = m_data.position();
         for (int32_t i = 1; i < static_cast<ssize_t>(m_columns->size()); i++) {
-            WireType type = m_columns->at(static_cast<size_t>(i)).m_type;
+            WireType type = m_columns->at(static_cast<size_t>(i - 1)).m_type;
             if (type == WIRE_TYPE_STRING) {
                 int32_t length = m_data.getInt32(m_offsets[static_cast<size_t>(i - 1)]);
                 if (length == -1) {
@@ -104,6 +106,10 @@ private:
             } else {
                 int32_t length = 0;
                 switch (type) {
+                case WIRE_TYPE_DECIMAL:
+                    length = 16;
+                    break;
+                case WIRE_TYPE_TIMESTAMP:
                 case WIRE_TYPE_BIGINT:
                 case WIRE_TYPE_FLOAT:
                     length = 8;
@@ -137,6 +143,22 @@ private:
 public:
     Row(SharedByteBuffer rowData, boost::shared_ptr<std::vector<voltdb::Column> > columns) :
         m_data(rowData), m_columns(columns), m_wasNull(false), m_offsets(columns->size()), m_hasCalculatedOffsets(false) {
+    }
+
+    Decimal getDecimal(int32_t column) {
+        validateType(WIRE_TYPE_DECIMAL, column);
+        char data[16];
+        m_data.get(getOffset(column), data, 16);
+        Decimal retval(data);
+        m_wasNull = retval.isNull();
+        return retval;
+    }
+
+    int64_t getTimestamp(int32_t column) {
+        validateType(WIRE_TYPE_TIMESTAMP, column);
+        int64_t retval = m_data.getInt64(getOffset(column));
+        if (retval == INT64_MIN) m_wasNull = true;
+        return retval;
     }
 
     int64_t getInt64(int32_t column) {
@@ -234,6 +256,10 @@ public:
         }
         WireType columnType = m_columns->at(static_cast<size_t>(column)).m_type;
         switch (columnType) {
+        case WIRE_TYPE_DECIMAL:
+            getDecimal(column); break;
+        case WIRE_TYPE_TIMESTAMP:
+            getTimestamp(column); break;
         case WIRE_TYPE_BIGINT:
             getInt64(column); break;
         case WIRE_TYPE_INTEGER:
@@ -252,23 +278,31 @@ public:
         return wasNull();
     }
 
-    int64_t getInt64(std::string cname, int64_t val) {
+    Decimal getDecimal(std::string cname) {
+        return getDecimal(getColumnIndexByName(cname));
+    }
+
+    int64_t getTimestamp(std::string cname) {
+        return getTimestamp(getColumnIndexByName(cname));
+    }
+
+    int64_t getInt64(std::string cname) {
         return getInt64(getColumnIndexByName(cname));
     }
 
-    int32_t getInt32(std::string cname, int32_t val) {
+    int32_t getInt32(std::string cname) {
         return getInt32(getColumnIndexByName(cname));
     }
 
-    int16_t getInt16(std::string cname, int16_t val) {
+    int16_t getInt16(std::string cname) {
         return getInt16(getColumnIndexByName(cname));
     }
 
-    int8_t getInt8(std::string cname, int8_t val) {
+    int8_t getInt8(std::string cname) {
         return getInt8(getColumnIndexByName(cname));
     }
 
-    double getDouble(std::string cname, double val) {
+    double getDouble(std::string cname) {
         return getDouble(getColumnIndexByName(cname));
     }
 
@@ -284,6 +318,45 @@ public:
     bool wasNull() {
         return m_wasNull;
     }
+
+    std::string toString() {
+        std::ostringstream ostream;
+        toString(ostream, std::string(""));
+        return ostream.str();
+    }
+
+    void toString(std::ostringstream &ostream, std::string indent) {
+        ostream << indent;
+        for (size_t ii = 0; ii < m_columns->size(); ii++) {
+            if (ii != 0) {
+                ostream << ", ";
+            }
+            if (isNull(ii)) {
+                ostream << "NULL";
+                continue;
+            }
+            switch(m_columns->at(ii).m_type) {
+            case WIRE_TYPE_TINYINT:
+                ostream << static_cast<int32_t>(getInt8(ii)); break;
+            case WIRE_TYPE_SMALLINT:
+                ostream << getInt16(ii); break;
+            case WIRE_TYPE_INTEGER:
+                ostream << getInt32(ii); break;
+            case WIRE_TYPE_BIGINT:
+                ostream << getInt64(ii); break;
+            case WIRE_TYPE_FLOAT:
+                ostream << getDouble(ii); break;
+            case WIRE_TYPE_STRING:
+                ostream << "\"" << getString(ii) << "\""; break;
+            case WIRE_TYPE_TIMESTAMP:
+                ostream << getTimestamp(ii); break;
+            case WIRE_TYPE_DECIMAL:
+                ostream << getDecimal(ii).toString(); break;
+            default:
+                assert(false);
+            }
+        }
+    }
 private:
     SharedByteBuffer m_data;
     boost::shared_ptr<std::vector<voltdb::Column> > m_columns;
@@ -293,4 +366,4 @@ private:
 };
 }
 
-#endif /* ROW_HPP_ */
+#endif /* VOLTDB_ROW_HPP_ */

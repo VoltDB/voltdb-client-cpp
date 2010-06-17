@@ -17,12 +17,17 @@
 #include "WireType.h"
 #include "TableIterator.h"
 #include "Row.hpp"
+#include "Decimal.hpp"
 
 class StupidCallback : public voltdb::ProcedureCallback {
+public:
+    StupidCallback(bool *callbackInvoked) : callbackInvoked(callbackInvoked) {}
     bool callback(boost::shared_ptr<voltdb::InvocationResponse> response) {
-        printf("Status code %d\n", response->statusCode());
-        return true;
+        std::cout << response->toString() << std::endl;
+        *callbackInvoked = true;
+        return false;
     }
+    bool *callbackInvoked;
 };
 
 int main(int argc, char **argv) {
@@ -30,9 +35,9 @@ int main(int argc, char **argv) {
     assert(argv != NULL);
     printf("foo\n");
     voltdb::ScopedByteBuffer buf(8);
-    buf.putInt32(static_cast<int32_t>(233));
+    buf.putInt64(static_cast<int64_t>(2398009703));
     buf.position(0);
-    printf("%d\n", buf.getInt32());
+    printf("%jd\n", (intmax_t)buf.getInt64());
     buf.position(0);
     buf.putDouble(3.1459);
     buf.position(0);
@@ -55,20 +60,17 @@ int main(int argc, char **argv) {
     } else {
         printf("Connected and athenticate failed\n");
     }
+    bool callbackInvoked = false;
+    boost::shared_ptr<StupidCallback> callback(new StupidCallback(&callbackInvoked));
     std::vector<voltdb::Parameter> parameters;
-    //parameters.push_back(voltdb::Parameter(voltdb::WIRE_TYPE_INTEGER));
+    parameters.push_back(voltdb::Parameter(voltdb::WIRE_TYPE_DECIMAL));
     //parameters.push_back(voltdb::Parameter(voltdb::WIRE_TYPE_STRING));
     voltdb::Procedure noexist("Results", parameters);
-    //voltdb::ParameterSet *params = noexist.params();
-    //params->addInt32(45);
+    voltdb::ParameterSet *params = noexist.params();
+    params->addDecimal(voltdb::Decimal(std::string("12312431542.123124")));
     //params->addString("woot!");
-    boost::shared_ptr<voltdb::InvocationResponse> response = client->invoke(&noexist);
-    printf("Response code is %d\n", response->statusCode());
-    printf("Response string is %s\n", response->statusString().c_str());
-    printf("Result count: %d\n", static_cast<int32_t>(response->results().size()));
-    voltdb::TableIterator iterator = response->results()[0]->iterator();
-    while (iterator.hasNext()) {
-        voltdb::Row row = iterator.next();
-        printf("%s,\t%jd\n", row.getString(0).c_str(), (intmax_t)row.getInt64(1));
+    client->invoke(&noexist, callback);
+    while (!callbackInvoked) {
+        client->runOnce();
     }
 }

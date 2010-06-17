@@ -20,47 +20,34 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
-
-#ifndef VOLTDB_PROCEDURE_HPP_
-#define VOLTDB_PROCEDURE_HPP_
-#include <vector>
-#include <string>
-#include "ParameterSet.hpp"
-#include "ByteBuffer.hpp"
+#include "WireType.h"
+#include <cassert>
 
 namespace voltdb {
-class Procedure {
-public:
-    Procedure(std::string name, std::vector<Parameter> parameters) : m_name(name), m_params(parameters) {}
-
-    /**
-     * Retrieve the parameter set and set the client data for the next invocation
-     */
-    ParameterSet* params() {
-        m_params.reset();
-        return &m_params;
+std::string wireTypeToString(WireType type) {
+    switch (type) {
+    case WIRE_TYPE_ARRAY:
+        return std::string("ARRAY");
+    case WIRE_TYPE_NULL:
+        return std::string("NULL");
+    case WIRE_TYPE_TINYINT:
+        return std::string("TINYINT");
+    case WIRE_TYPE_SMALLINT:
+        return std::string("SMALLINT");
+    case WIRE_TYPE_INTEGER:
+        return std::string("INTEGER");
+    case WIRE_TYPE_BIGINT:
+        return std::string("BIGINT");
+    case WIRE_TYPE_FLOAT:
+        return std::string("FLOAT");
+    case WIRE_TYPE_STRING:
+        return std::string("STRING");
+    case WIRE_TYPE_TIMESTAMP:
+        return std::string("TIMESTAMP");
+    case WIRE_TYPE_DECIMAL:
+        return std::string("DECIMAL");
+    default:
+        assert(false);
     }
-
-    int32_t getSerializedSize() {
-        return 5 + //length prefix
-               4 + static_cast<int32_t>(m_name.size()) + // proc name
-                m_params.getSerializedSize() + //parameters
-                + 8; //client data
-    }
-
-    void serializeTo(ByteBuffer *buffer, int64_t clientData) {
-        buffer->position(4);
-        buffer->putInt8(0);
-        buffer->putString(m_name);
-        buffer->putInt64(clientData);
-        m_params.serializeTo(buffer);
-        buffer->flip();
-        buffer->putInt32( 0, buffer->limit() - 4);
-    }
-private:
-    std::string m_name;
-    ParameterSet m_params;
-};
 }
-
-#endif /* VOLTDB_PROCEDURE_HPP_ */
+}

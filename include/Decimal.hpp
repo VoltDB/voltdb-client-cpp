@@ -1,0 +1,167 @@
+/* This file is part of VoltDB.
+ * Copyright (C) 2008-2010 VoltDB L.L.C.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+ * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+#ifndef VOLT_DECIMAL_HPP_
+#define VOLT_DECIMAL_HPP_
+#include <string>
+#include "ttmath/ttmathint.h"
+#include "Exception.hpp"
+#include <sstream>
+
+namespace voltdb {
+//The int used for storage and return values
+typedef ttmath::Int<2> TTInt;
+
+class Decimal {
+public:
+
+    // Constants for Decimal type
+    // Precision and scale (inherent in the schema)
+    static const uint16_t kMaxDecPrec = 38;
+    static const uint16_t kMaxDecScale = 12;
+    static const int64_t kMaxScaleFactor = 1000000000000;
+
+    Decimal(std::string txt) {
+        if (txt.length() == 0) {
+            throw StringToDecimalException();
+        }
+        bool setSign = false;
+        if (txt[0] == '-') {
+            setSign = true;
+        }
+
+        /**
+         * Check for invalid characters
+         */
+        for (size_t ii = (setSign ? 1 : 0); ii < txt.size(); ii++) {
+            if ((txt[ii] < '0' || txt[ii] > '9') && txt[ii] != '.') {
+                throw StringToDecimalException();
+            }
+        }
+
+        std::size_t separatorPos = txt.find( '.', 0);
+        if (separatorPos == std::string::npos) {
+            const std::string wholeString = txt.substr( setSign ? 1 : 0, txt.size());
+            const std::size_t wholeStringSize = wholeString.size();
+            if (wholeStringSize > 26) {
+                throw StringToDecimalException();
+            }
+            TTInt whole(wholeString);
+            if (setSign) {
+                whole.SetSign();
+            }
+            whole *= kMaxScaleFactor;
+            getDecimal() = whole;
+            return;
+        }
+
+        if (txt.find( '.', separatorPos + 1) != std::string::npos) {
+            throw StringToDecimalException();;
+        }
+
+        const std::string wholeString = txt.substr( setSign ? 1 : 0, separatorPos - (setSign ? 1 : 0));
+        const std::size_t wholeStringSize = wholeString.size();
+        if (wholeStringSize > 26) {
+            throw StringToDecimalException();;
+        }
+        TTInt whole(wholeString);
+        std::string fractionalString = txt.substr( separatorPos + 1, txt.size() - (separatorPos + 1));
+        if (fractionalString.size() > 12) {
+            throw StringToDecimalException();;
+        }
+        while(fractionalString.size() < kMaxDecScale) {
+            fractionalString.push_back('0');
+        }
+        TTInt fractional(fractionalString);
+
+        whole *= kMaxScaleFactor;
+        whole += fractional;
+
+        if (setSign) {
+            whole.SetSign();
+        }
+
+        getDecimal() = whole;
+    }
+
+    Decimal(char data[16]) {
+        ByteBuffer buf(data, 16);
+        int64_t *longStorage = reinterpret_cast<int64_t*>(m_data);
+        //Reverse order for Java BigDecimal BigEndian
+        longStorage[1] = buf.getInt64();
+        longStorage[0] = buf.getInt64();
+    }
+
+    TTInt& getDecimal() {
+        void *retval = reinterpret_cast<void*>(m_data);
+        return *reinterpret_cast<TTInt*>(retval);
+    }
+
+    const TTInt& getDecimal() const {
+        const void *retval = reinterpret_cast<const void*>(m_data);
+        return *reinterpret_cast<const TTInt*>(retval);
+    }
+
+    void serializeTo(ByteBuffer *buffer) {
+        TTInt val = getDecimal();
+        buffer->putInt64(*reinterpret_cast<int64_t*>(&val.table[1]));
+        buffer->putInt64(*reinterpret_cast<int64_t*>(&val.table[0]));
+    }
+
+    std::string toString() {
+        assert(!isNull());
+        std::ostringstream buffer;
+        TTInt scaledValue = getDecimal();
+        if (scaledValue.IsSign()) {
+            buffer << '-';
+        }
+        TTInt whole(scaledValue);
+        TTInt fractional(scaledValue);
+        whole /= kMaxScaleFactor;
+        fractional %= kMaxScaleFactor;
+        if (whole.IsSign()) {
+            whole.ChangeSign();
+        }
+        buffer << whole.ToString(10);
+        buffer << '.';
+        if (fractional.IsSign()) {
+            fractional.ChangeSign();
+        }
+        std::string fractionalString = fractional.ToString(10);
+        for (int ii = static_cast<int>(fractionalString.size()); ii < kMaxDecScale; ii++) {
+            buffer << '0';
+        }
+        buffer << fractionalString;
+        return buffer.str();
+    }
+
+    bool isNull() {
+        TTInt min;
+        min.SetMin();
+        return getDecimal() == min;
+    }
+private:
+    char m_data[16];
+};
+}
+#endif /* VOLT_DECIMAL_HPP_ */

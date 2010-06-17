@@ -21,8 +21,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef VOLTTABLEITERATOR_H_
-#define VOLTTABLEITERATOR_H_
+#ifndef VOLTDB_TABLEITERATOR_H_
+#define VOLTDB_TABLEITERATOR_H_
 
 #include "ByteBuffer.hpp"
 #include "Column.hpp"
@@ -31,13 +31,6 @@
 #include "Exception.hpp"
 
 namespace voltdb {
-
-class NoMoreRowsException : public voltdb::Exception {
-    const char * what() const throw() {
-        return "Requests another row when there are no more";
-    }
-};
-
 class Table;
 class TableIterator {
 public:
@@ -75,4 +68,4 @@ private:
     int32_t m_currentRow;
 };
 }
-#endif /* VOLTTABLEITERATOR_H_ */
+#endif /* VOLTDB_TABLEITERATOR_H_ */

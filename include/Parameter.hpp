@@ -21,8 +21,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef PARAMETER_HPP_
-#define PARAMETER_HPP_
+#ifndef VOLTDB_PARAMETER_HPP_
+#define VOLTDB_PARAMETER_HPP_
 #include "WireType.h"
 namespace voltdb {
 class Parameter {
@@ -34,4 +34,4 @@ public:
     bool m_array;
 };
 }
-#endif /* PARAMETER_HPP_ */
+#endif /* VOLTDB_PARAMETER_HPP_ */

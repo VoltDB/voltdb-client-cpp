@@ -21,8 +21,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef CLIENT_H_
-#define CLIENT_H_
+#ifndef VOLTDB_CLIENT_H_
+#define VOLTDB_CLIENT_H_
 
 #include <string>
 #include "ProcedureCallback.hpp"
@@ -76,4 +76,4 @@ private:
 };
 }
 
-#endif /* CLIENT_H_ */
+#endif /* VOLTDB_CLIENT_H_ */

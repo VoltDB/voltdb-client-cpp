@@ -45,8 +45,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef BYTEBUFFER_H
-#define BYTEBUFFER_H
+#ifndef VOLTDB_BYTEBUFFER_H
+#define VOLTDB_BYTEBUFFER_H
 
 #include <stdint.h>
 #include <arpa/inet.h>
@@ -87,24 +87,6 @@ namespace voltdb {
 #endif // __bswap_64
 
 #endif // unix or mac
-
-class OverflowUnderflowException : public voltdb::Exception {
-    const char * what() const throw() {
-        return "Overflow underflow exception";
-    }
-};
-
-class IndexOutOfBoundsException : public voltdb::Exception {
-    const char * what() const throw() {
-        return "Index out of bounds exception";
-    }
-};
-
-class NonExpandableBufferException : public voltdb::Exception {
-    const char * what() const throw() {
-        return "Attempted to add too/expand a nonexpandable buffer";
-    }
-};
 
 class ByteBuffer {
 private:
@@ -313,6 +295,9 @@ public:
     }
 
     ByteBuffer& limit(int32_t newLimit) throw (IndexOutOfBoundsException) {
+        if (newLimit > m_capacity) {
+            throw IndexOutOfBoundsException();
+        }
         m_limit = newLimit;
         return *this;
     }
@@ -357,6 +342,10 @@ public:
     }
 
     virtual ~ByteBuffer() {}
+
+    int32_t capacity() {
+        return m_capacity;
+    }
 private:
     ByteBuffer& operator = (const ByteBuffer& other) {
         m_buffer = other.m_buffer;

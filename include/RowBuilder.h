@@ -21,8 +21,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef VOLTROWBUILDER_H_
-#define VOLTROWBUILDER_H_
+#ifndef VOLTDB_ROWBUILDER_H_
+#define VOLTDB_ROWBUILDER_H_
 #include "ByteBuffer.hpp"
 #include "WireType.h"
 #include "Column.hpp"
@@ -125,4 +125,4 @@ private:
 };
 }
 
-#endif /* VOLTROWBUILDER_H_ */
+#endif /* VOLTDB_ROWBUILDER_H_ */

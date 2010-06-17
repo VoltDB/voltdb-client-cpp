@@ -22,6 +22,7 @@
  */
 #include "Table.h"
 #include "TableIterator.h"
+#include "Row.hpp"
 
 namespace voltdb {
 
@@ -54,5 +55,37 @@ namespace voltdb {
     TableIterator Table::iterator() {
         m_buffer.position(m_rowStart + 4);//skip row count
         return TableIterator(m_buffer.slice(), m_columns, m_rowCount);
+    }
+
+    std::string Table::toString() {
+        std::ostringstream ostream;
+        toString(ostream, std::string(""));
+        return ostream.str();
+    }
+
+    void Table::toString(std::ostringstream &ostream, std::string indent) {
+        ostream << indent << "Table size: " << m_buffer.capacity() << std::endl;
+        ostream << indent << "Status code: " << static_cast<int32_t>(getStatusCode()) << std::endl;
+        ostream << indent << "Column names: ";
+        for (size_t ii = 0; ii < m_columns->size(); ii++) {
+            if (ii != 0) {
+                ostream << ", ";
+            }
+            ostream << m_columns->at(ii).m_name;
+        }
+        ostream << std::endl << indent << "Column types: ";
+        for (size_t ii = 0; ii < m_columns->size(); ii++) {
+            if (ii != 0) {
+                ostream << ", ";
+            }
+            ostream << wireTypeToString(m_columns->at(ii).m_type);
+        }
+        ostream << std::endl;
+        TableIterator iter = iterator();
+        while (iter.hasNext()) {
+            Row row = iter.next();
+            row.toString(ostream, indent + "    ");
+            ostream << std::endl;
+        }
     }
 }

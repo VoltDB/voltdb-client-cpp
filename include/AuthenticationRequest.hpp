@@ -21,8 +21,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef AUTHENTICATIONMESSAGE_HPP_
-#define AUTHENTICATIONMESSAGE_HPP_
+#ifndef VOLTDB_AUTHENTICATIONMESSAGE_HPP_
+#define VOLTDB_AUTHENTICATIONMESSAGE_HPP_
 #include "ByteBuffer.hpp"
 #include <openssl/sha.h>
 namespace voltdb {
@@ -56,4 +56,4 @@ private:
 };
 }
 
-#endif /* AUTHENTICATIONMESSAGE_HPP_ */
+#endif /* VOLTDB_AUTHENTICATIONMESSAGE_HPP_ */

@@ -21,8 +21,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef COLUMN_HPP_
-#define COLUMN_HPP_
+#ifndef VOLTDB_COLUMN_HPP_
+#define VOLTDB_COLUMN_HPP_
 #include "Column.hpp"
 #include "WireType.h"
 #include <string>

@@ -21,13 +21,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef VOLTTABLE_H_
-#define VOLTTABLE_H_
+#ifndef VOLTDB_TABLE_H_
+#define VOLTDB_TABLE_H_
 
 #include "ByteBuffer.hpp"
 #include <boost/shared_ptr.hpp>
 #include <vector>
 #include "Column.hpp"
+#include <sstream>
 
 namespace voltdb {
 class TableIterator;
@@ -43,6 +44,8 @@ public:
     //void serializeTo(ByteBuffer *buffer);
     int8_t getStatusCode();
     //int8_t setStatusCode(int8_t code);
+    std::string toString();
+    void toString(std::ostringstream &ostream, std::string indent);
 private:
     boost::shared_ptr<std::vector<voltdb::Column> > m_columns;
     int32_t m_rowStart;
@@ -51,4 +54,4 @@ private:
 };
 }
 
-#endif /* VOLTTABLE_H_ */
+#endif /* VOLTDB_TABLE_H_ */

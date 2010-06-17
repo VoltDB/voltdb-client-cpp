@@ -21,27 +21,18 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef PARAMETERSET_HPP_
-#define PARAMETERSET_HPP_
+#ifndef VOLTDB_PARAMETERSET_HPP_
+#define VOLTDB_PARAMETERSET_HPP_
 #include "Parameter.hpp"
 #include "RowBuilder.h"
 #include <vector>
 #include "ByteBuffer.hpp"
 #include "boost/shared_ptr.hpp"
 #include "Exception.hpp"
+#include "Decimal.hpp"
 
 namespace voltdb {
 class Procedure;
-class UninitializedParamsException : public voltdb::Exception {
-    const char * what() const throw() {
-        return "Parameters were not set";
-    }
-};
-class ParamMismatchException : public voltdb::Exception {
-    const char * what() const throw() {
-        return "Attempted to set a parameter using the wrong type";
-    }
-};
 class ParameterSet {
     friend class Procedure;
 private:
@@ -56,6 +47,46 @@ private:
         }
     }
 public:
+
+    void addDecimal(Decimal val) {
+        validateType(WIRE_TYPE_DECIMAL, false);
+        m_buffer.ensureRemaining(sizeof(Decimal) + 1);
+        m_buffer.putInt8(WIRE_TYPE_DECIMAL);
+        val.serializeTo(&m_buffer);
+        m_currentParam++;
+    }
+
+    void addDecimal(std::vector<Decimal> vals) {
+        validateType(WIRE_TYPE_DECIMAL, true);
+        m_buffer.ensureRemaining(4 + (sizeof(Decimal) * vals.size()));
+        m_buffer.putInt8(WIRE_TYPE_ARRAY);
+        m_buffer.putInt8(WIRE_TYPE_DECIMAL);
+        m_buffer.putInt16(static_cast<int16_t>(vals.size()));
+        for (std::vector<Decimal>::iterator i = vals.begin(); i != vals.end(); i++) {
+            i->serializeTo(&m_buffer);
+        }
+        m_currentParam++;
+    }
+
+    void addTimestamp(int64_t val) {
+        validateType(WIRE_TYPE_TIMESTAMP, false);
+        m_buffer.ensureRemaining(9);
+        m_buffer.putInt8(WIRE_TYPE_TIMESTAMP);
+        m_buffer.putInt64(val);
+        m_currentParam++;
+    }
+    void addTimestamp(std::vector<int64_t> vals) {
+        validateType(WIRE_TYPE_TIMESTAMP, true);
+        m_buffer.ensureRemaining(4 + (sizeof(int64_t) * vals.size()));
+        m_buffer.putInt8(WIRE_TYPE_ARRAY);
+        m_buffer.putInt8(WIRE_TYPE_TIMESTAMP);
+        m_buffer.putInt16(static_cast<int16_t>(vals.size()));
+        for (std::vector<int64_t>::iterator i = vals.begin(); i != vals.end(); i++) {
+            m_buffer.putInt64(*i);
+        }
+        m_currentParam++;
+    }
+
     void addInt64(int64_t val) {
         validateType(WIRE_TYPE_BIGINT, false);
         m_buffer.ensureRemaining(9);
@@ -203,4 +234,4 @@ private:
     uint32_t m_currentParam;
 };
 }
-#endif /* PARAMETERSET_HPP_ */
+#endif /* VOLTDB_PARAMETERSET_HPP_ */

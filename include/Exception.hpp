@@ -21,16 +21,62 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef EXCEPTION_HPP_
-#define EXCEPTION_HPP_
+#ifndef VOLTDB_EXCEPTION_HPP_
+#define VOLTDB_EXCEPTION_HPP_
 #include <exception>
 
 namespace voltdb {
 class Exception : public std::exception {
 public:
+    Exception() : m_what("") {}
+    Exception(const char *what) : m_what("") {}
     virtual ~Exception() throw() {}
-    virtual const char* what() const throw() = 0;
+    virtual const char* what() const throw() {
+        return m_what;
+    }
+    const char *m_what;
+};
+
+class InvalidColumnException : public voltdb::Exception {
+public:
+    InvalidColumnException() :
+        Exception("Attempted to retrieve a column with an invalid index or name, or an invalid type for the specified column") {}
+};
+
+class OverflowUnderflowException : public voltdb::Exception {
+public:
+    OverflowUnderflowException() : Exception("Overflow underflow exception") {}
+};
+
+class IndexOutOfBoundsException : public voltdb::Exception {
+public:
+    IndexOutOfBoundsException() : Exception("Index out of bounds exception") {}
+};
+
+class NonExpandableBufferException : public voltdb::Exception {
+public:
+    NonExpandableBufferException() : Exception("Attempted to add/expand a nonexpandable buffer") {}
+};
+
+class UninitializedParamsException : public voltdb::Exception {
+public:
+    UninitializedParamsException() : Exception("Not all parameters were set") {}
+};
+
+class ParamMismatchException : public voltdb::Exception {
+public:
+    ParamMismatchException() : Exception("Attempted to set a parameter using the wrong type") {}
+};
+
+class NoMoreRowsException : public voltdb::Exception {
+public:
+    NoMoreRowsException() : Exception("Requests another row when there are no more") {}
+};
+
+class StringToDecimalException : public voltdb::Exception {
+public:
+    StringToDecimalException() : Exception("Parse error constructing decimal from string") {}
 };
 }
 
-#endif /* EXCEPTION_HPP_ */
+#endif /* VOLTDB_EXCEPTION_HPP_ */

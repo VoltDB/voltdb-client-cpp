@@ -21,10 +21,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef INVOCATIONRESPONSE_HPP_
-#define INVOCATIONRESPONSE_HPP_
+#ifndef VOLTDB_INVOCATIONRESPONSE_HPP_
+#define VOLTDB_INVOCATIONRESPONSE_HPP_
 #include <boost/shared_array.hpp>
 #include <vector>
+#include <sstream>
 #include <boost/shared_ptr.hpp>
 #include "ByteBuffer.hpp"
 #include "Table.h"
@@ -73,6 +74,19 @@ public:
     int32_t clusterRoundTripTime() { return m_clusterRoundTripTime; }
     std::vector<boost::shared_ptr<voltdb::Table> > results() { return m_results; }
 
+    std::string toString() {
+        std::ostringstream ostream;
+        ostream << "Status: " << static_cast<int32_t>(statusCode()) << ", " << statusString() <<  std::endl;
+        ostream << "App Status: " << static_cast<int32_t>(appStatusCode()) << ", " << appStatusString() << std::endl;
+        ostream << "Client Data: " << clientData() << std::endl;
+        ostream << "Cluster Round Trip Time: " << clusterRoundTripTime() << std::endl;
+        for (size_t ii = 0; ii < m_results.size(); ii++) {
+            ostream << "Result Table " << ii << std::endl;
+            m_results[ii]->toString(ostream, std::string("    "));
+        }
+        return ostream.str();
+    }
+
 private:
     int64_t m_clientData;
     int8_t m_statusCode;
@@ -84,4 +98,4 @@ private:
 };
 }
 
-#endif /* INVOCATIONRESPONSE_HPP_ */
+#endif /* VOLTDB_INVOCATIONRESPONSE_HPP_ */

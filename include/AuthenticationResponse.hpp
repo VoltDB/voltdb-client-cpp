@@ -21,8 +21,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef AUTHENTICATIONRESPONSE_HPP_
-#define AUTHENTICATIONRESPONSE_HPP_
+#ifndef VOLTDB_AUTHENTICATIONRESPONSE_HPP_
+#define VOLTDB_AUTHENTICATIONRESPONSE_HPP_
 #include "ByteBuffer.hpp"
 namespace voltdb {
 class AuthenticationResponse {
@@ -64,4 +64,4 @@ private:
 };
 }
 
-#endif /* AUTHENTICATIONRESPONSE_HPP_ */
+#endif /* VOLTDB_AUTHENTICATIONRESPONSE_HPP_ */
