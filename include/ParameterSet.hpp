@@ -48,15 +48,16 @@ private:
     }
 public:
 
-    void addDecimal(Decimal val) {
+    ParameterSet& addDecimal(Decimal val) {
         validateType(WIRE_TYPE_DECIMAL, false);
         m_buffer.ensureRemaining(sizeof(Decimal) + 1);
         m_buffer.putInt8(WIRE_TYPE_DECIMAL);
         val.serializeTo(&m_buffer);
         m_currentParam++;
+        return *this;
     }
 
-    void addDecimal(std::vector<Decimal> vals) {
+    ParameterSet& addDecimal(std::vector<Decimal> vals) {
         validateType(WIRE_TYPE_DECIMAL, true);
         m_buffer.ensureRemaining(4 + (sizeof(Decimal) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
@@ -66,16 +67,19 @@ public:
             i->serializeTo(&m_buffer);
         }
         m_currentParam++;
+        return *this;
     }
 
-    void addTimestamp(int64_t val) {
+    ParameterSet& addTimestamp(int64_t val) {
         validateType(WIRE_TYPE_TIMESTAMP, false);
         m_buffer.ensureRemaining(9);
         m_buffer.putInt8(WIRE_TYPE_TIMESTAMP);
         m_buffer.putInt64(val);
         m_currentParam++;
+        return *this;
     }
-    void addTimestamp(std::vector<int64_t> vals) {
+
+    ParameterSet& addTimestamp(std::vector<int64_t> vals) {
         validateType(WIRE_TYPE_TIMESTAMP, true);
         m_buffer.ensureRemaining(4 + (sizeof(int64_t) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
@@ -85,16 +89,19 @@ public:
             m_buffer.putInt64(*i);
         }
         m_currentParam++;
+        return *this;
     }
 
-    void addInt64(int64_t val) {
+    ParameterSet& addInt64(int64_t val) {
         validateType(WIRE_TYPE_BIGINT, false);
         m_buffer.ensureRemaining(9);
         m_buffer.putInt8(WIRE_TYPE_BIGINT);
         m_buffer.putInt64(val);
         m_currentParam++;
+        return *this;
     }
-    void addInt64(std::vector<int64_t> vals) {
+
+    ParameterSet& addInt64(std::vector<int64_t> vals) {
         validateType(WIRE_TYPE_BIGINT, true);
         m_buffer.ensureRemaining(4 + (sizeof(int64_t) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
@@ -104,15 +111,19 @@ public:
             m_buffer.putInt64(*i);
         }
         m_currentParam++;
+        return *this;
     }
 
-    void addInt32(int32_t val) {
+    ParameterSet& addInt32(int32_t val) {
         validateType(WIRE_TYPE_INTEGER, false);
         m_buffer.ensureRemaining(5);
+        m_buffer.putInt8(WIRE_TYPE_INTEGER);
         m_buffer.putInt32(val);
         m_currentParam++;
+        return *this;
     }
-    void addInt32(std::vector<int32_t> vals) {
+
+    ParameterSet& addInt32(std::vector<int32_t> vals) {
         validateType(WIRE_TYPE_INTEGER, true);
         m_buffer.ensureRemaining(4 + (sizeof(int32_t) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
@@ -122,15 +133,19 @@ public:
             m_buffer.putInt32(*i);
         }
         m_currentParam++;
+        return *this;
     }
 
-    void addInt16(int16_t val) {
+    ParameterSet& addInt16(int16_t val) {
         validateType(WIRE_TYPE_SMALLINT, false);
         m_buffer.ensureRemaining(3);
+        m_buffer.putInt8(WIRE_TYPE_SMALLINT);
         m_buffer.putInt16(val);
         m_currentParam++;
+        return *this;
     }
-    void addInt16(std::vector<int16_t> vals) {
+
+    ParameterSet& addInt16(std::vector<int16_t> vals) {
         validateType(WIRE_TYPE_SMALLINT, true);
         m_buffer.ensureRemaining(4 + (sizeof(int16_t) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
@@ -140,33 +155,41 @@ public:
             m_buffer.putInt16(*i);
         }
         m_currentParam++;
+        return *this;
     }
 
-    void addInt8(int8_t val) {
+    ParameterSet& addInt8(int8_t val) {
         validateType(WIRE_TYPE_TINYINT, false);
         m_buffer.ensureRemaining(2);
+        m_buffer.putInt8(WIRE_TYPE_TINYINT);
         m_buffer.putInt8(val);
         m_currentParam++;
+        return *this;
     }
-    void addInt8(std::vector<int8_t> vals) {
+
+    ParameterSet& addInt8(std::vector<int8_t> vals) {
         validateType(WIRE_TYPE_TINYINT, true);
         m_buffer.ensureRemaining(6 + (sizeof(int8_t) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
-        m_buffer.putInt8(WIRE_TYPE_SMALLINT);
+        m_buffer.putInt8(WIRE_TYPE_TINYINT);
         m_buffer.putInt32(static_cast<int32_t>(vals.size()));
         for (std::vector<int8_t>::iterator i = vals.begin(); i != vals.end(); i++) {
             m_buffer.putInt8(*i);
         }
         m_currentParam++;
+        return *this;
     }
 
-    void addDouble(double val) {
+    ParameterSet& addDouble(double val) {
         validateType(WIRE_TYPE_FLOAT, false);
         m_buffer.ensureRemaining(9);
+        m_buffer.putInt8(WIRE_TYPE_FLOAT);
         m_buffer.putDouble(val);
         m_currentParam++;
+        return *this;
     }
-    void addDouble(std::vector<double> vals) {
+
+    ParameterSet& addDouble(std::vector<double> vals) {
         validateType(WIRE_TYPE_FLOAT, true);
         m_buffer.ensureRemaining(2 + (sizeof(double) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
@@ -176,23 +199,28 @@ public:
             m_buffer.putDouble(*i);
         }
         m_currentParam++;
+        return *this;
     }
 
-    void addNull() {
+    ParameterSet& addNull() {
         if (m_currentParam > m_parameters.size()) {
             throw new ParamMismatchException();
         }
         m_buffer.ensureRemaining(1);
         m_buffer.putInt8(WIRE_TYPE_NULL);
         m_currentParam++;
+        return *this;
     }
-    void addString(std::string val) {
+
+    ParameterSet& addString(std::string val) {
         validateType(WIRE_TYPE_STRING, false);
         m_buffer.ensureRemaining(5 + val.size());
+        m_buffer.putInt8(WIRE_TYPE_STRING);
         m_buffer.putString(val);
         m_currentParam++;
+        return *this;
     }
-    void addString(std::vector<std::string> vals) {
+    ParameterSet& addString(std::vector<std::string> vals) {
         validateType(WIRE_TYPE_STRING, true);
         int32_t totalStringLength = 0;
         for (std::vector<std::string>::iterator i = vals.begin(); i != vals.end(); i++) {
@@ -202,12 +230,13 @@ public:
                 totalStringLength +
                 (4 * static_cast<int32_t>(vals.size())));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
-        m_buffer.putInt8(WIRE_TYPE_SMALLINT);
+        m_buffer.putInt8(WIRE_TYPE_STRING);
         m_buffer.putInt16(static_cast<int16_t>(vals.size()));
         for (std::vector<std::string>::iterator i = vals.begin(); i != vals.end(); i++) {
             m_buffer.putString(*i);
         }
         m_currentParam++;
+        return *this;
     }
     void reset() {
         m_buffer.clear();
@@ -227,6 +256,7 @@ public:
         }
         m_buffer.flip();
         buffer->put(&m_buffer);
+        reset();
     }
 private:
     std::vector<Parameter> m_parameters;

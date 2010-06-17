@@ -56,7 +56,7 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>
@@ -545,7 +545,7 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>

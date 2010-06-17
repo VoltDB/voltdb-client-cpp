@@ -59,10 +59,10 @@ public:
 class Client {
 public:
     bool createConnection(std::string hostname, std::string username, std::string password);
-    boost::shared_ptr<InvocationResponse> invoke(Procedure *proc);
-    void invoke(Procedure *proc, boost::shared_ptr<ProcedureCallback> callback);
-    bool runOnce();
-    bool run();
+    boost::shared_ptr<InvocationResponse> invoke(Procedure &proc);
+    void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback);
+    void runOnce();
+    void run();
     static boost::shared_ptr<Client> create();
     ~Client();
 private:

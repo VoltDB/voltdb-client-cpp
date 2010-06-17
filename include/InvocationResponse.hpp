@@ -29,8 +29,17 @@
 #include <boost/shared_ptr.hpp>
 #include "ByteBuffer.hpp"
 #include "Table.h"
-
+#include <iostream>
 namespace voltdb {
+
+enum StatusCode {
+    STATUS_CODE_SUCCESS = 1,
+    STATUS_CODE_USER_ABORT = -1,
+    STATUS_CODE_GRACEFUL_FAILURE = -2,
+    STATUS_CODE_UNEXPECTED_FAILURE = -3,
+    STATUS_CODE_CONNECTION_LOST = -4
+};
+
 class InvocationResponse {
 public:
     InvocationResponse(boost::shared_array<char> data, int32_t length) {
@@ -51,7 +60,7 @@ public:
         assert(!wasNull);
         m_clusterRoundTripTime = buffer.getInt32();
         if ((presentFields & (1 << 6)) != 0) {
-            int32_t position = buffer.position();
+            int32_t position = buffer.position() + 4;
             buffer.position(position + buffer.getInt32());
         }
         size_t resultCount = static_cast<size_t>(buffer.getInt16());
@@ -68,6 +77,8 @@ public:
 
     int64_t clientData() { return m_clientData; }
     int8_t statusCode() { return m_statusCode; }
+    bool success() { return m_statusCode == STATUS_CODE_SUCCESS; }
+    bool failure() { return m_statusCode != STATUS_CODE_SUCCESS; }
     std::string statusString() { return m_statusString; }
     int8_t appStatusCode() { return m_appStatusCode; }
     std::string appStatusString() { return m_appStatusString; }

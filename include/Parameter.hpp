@@ -27,6 +27,7 @@
 namespace voltdb {
 class Parameter {
 public:
+    Parameter() : m_type(WIRE_TYPE_INVALID), m_array(false) {}
     Parameter(WireType type, bool array) : m_type(type), m_array(array) {}
     Parameter(WireType type) : m_type(type), m_array(false) {}
     Parameter(const Parameter &other) : m_type(other.m_type), m_array(other.m_array) {}

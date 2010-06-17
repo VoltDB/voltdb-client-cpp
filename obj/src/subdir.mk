@@ -4,22 +4,22 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../src/ByteBufferTest.cpp \
 ../src/Client.cpp \
+../src/HelloWorld.cpp \
 ../src/RowBuilder.cpp \
 ../src/Table.cpp \
 ../src/WireType.cpp 
 
 OBJS += \
-./src/ByteBufferTest.o \
 ./src/Client.o \
+./src/HelloWorld.o \
 ./src/RowBuilder.o \
 ./src/Table.o \
 ./src/WireType.o 
 
 CPP_DEPS += \
-./src/ByteBufferTest.d \
 ./src/Client.d \
+./src/HelloWorld.d \
 ./src/RowBuilder.d \
 ./src/Table.d \
 ./src/WireType.d 

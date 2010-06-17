@@ -28,6 +28,7 @@
 
 namespace voltdb {
 enum WireType {
+    WIRE_TYPE_INVALID = -98,
     WIRE_TYPE_ARRAY = -99,
     WIRE_TYPE_NULL = 1,
     WIRE_TYPE_TINYINT = 3,

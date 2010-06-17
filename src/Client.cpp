@@ -265,11 +265,11 @@ private:
     boost::shared_ptr<InvocationResponse> *m_responseOut;
 };
 
-boost::shared_ptr<InvocationResponse> Client::invoke(Procedure *proc) {
-    int32_t messageSize = proc->getSerializedSize();
+boost::shared_ptr<InvocationResponse> Client::invoke(Procedure &proc) {
+    int32_t messageSize = proc.getSerializedSize();
     ScopedByteBuffer sbb(messageSize);
     int64_t clientData = m_nextRequestId++;
-    proc->serializeTo(&sbb, clientData);
+    proc.serializeTo(&sbb, clientData);
     struct bufferevent *bev = m_bevs[m_nextConnectionIndex++ % m_bevs.size()].first;
     boost::shared_ptr<InvocationResponse> response;
     boost::shared_ptr<ProcedureCallback> callback(new SyncCallback(&response));
@@ -280,11 +280,11 @@ boost::shared_ptr<InvocationResponse> Client::invoke(Procedure *proc) {
     return response;
 }
 
-void Client::invoke(Procedure *proc, boost::shared_ptr<ProcedureCallback> callback) {
-    int32_t messageSize = proc->getSerializedSize();
+void Client::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) {
+    int32_t messageSize = proc.getSerializedSize();
     ScopedByteBuffer sbb(messageSize);
     int64_t clientData = m_nextRequestId++;
-    proc->serializeTo(&sbb, clientData);
+    proc.serializeTo(&sbb, clientData);
 
     struct bufferevent *bev = NULL;
     while (true) {
@@ -313,17 +313,11 @@ void Client::invoke(Procedure *proc, boost::shared_ptr<ProcedureCallback> callba
     return;
 }
 
-bool Client::runOnce() {
-    if (event_base_loop(m_base, EVLOOP_NONBLOCK) != 0) {
-        return false;
-    }
-    return true;
+void Client::runOnce() {
+    event_base_loop(m_base, EVLOOP_NONBLOCK);
 }
 
-bool Client::run() {
-    if (event_base_dispatch(m_base) != 0) {
-        return false;
-    }
-    return true;
+void Client::run() {
+    event_base_dispatch(m_base);
 }
 }
