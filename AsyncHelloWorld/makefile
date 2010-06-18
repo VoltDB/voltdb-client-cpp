@@ -38,19 +38,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: cpp_api
+all: AsyncHelloWorld
 
 # Tool invocations
-cpp_api: $(OBJS) $(USER_OBJS)
+AsyncHelloWorld: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ -L/home/aweisberg/lib -o"cpp_api" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -L"/home/aweisberg/lib" -o"AsyncHelloWorld" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) cpp_api
+	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) AsyncHelloWorld
 	-@echo ' '
 
 .PHONY: all clean dependents

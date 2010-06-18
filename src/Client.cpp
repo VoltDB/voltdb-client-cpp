@@ -198,7 +198,9 @@ Client::~Client() {
 }
 
 Client::Client() : m_nextRequestId(0), m_nextConnectionIndex(0) {
-    //event_enable_debug_mode();
+#ifdef DEBUG
+    event_enable_debug_mode();
+#endif
     m_base = event_base_new();
     assert(m_base);
 }
