@@ -42,6 +42,16 @@ enum StatusCode {
 
 class InvocationResponse {
 public:
+    InvocationResponse() :
+        m_clientData(0),
+        m_statusCode(voltdb::STATUS_CODE_CONNECTION_LOST),
+        m_statusString(std::string("Connection to the database was lost")),
+        m_appStatusCode(INT8_MIN),
+        m_appStatusString(std::string("")),
+        m_clusterRoundTripTime(0),
+        m_results(0) {
+    }
+
     InvocationResponse(boost::shared_array<char> data, int32_t length) {
         SharedByteBuffer buffer(data, length);
         int8_t version = buffer.getInt8();

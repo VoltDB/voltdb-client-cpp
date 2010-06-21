@@ -44,7 +44,7 @@ all: libvoltcpp..so
 libvoltcpp..so: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ -L"/home/aweisberg/lib" -shared -o"libvoltcpp..so" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -L"${HOME}/lib" -shared -o"libvoltcpp..so" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

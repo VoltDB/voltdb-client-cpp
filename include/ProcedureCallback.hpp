@@ -27,9 +27,22 @@
 #include <boost/shared_ptr.hpp>
 namespace voltdb {
 
+/*
+ * Abstract base class for callbacks to provide to the
+ * API with procedure invocations
+ */
 class ProcedureCallback {
 public:
-    virtual bool callback(boost::shared_ptr<InvocationResponse> response) = 0;
+    /*
+     * Invoked when a response to an invocation is available or
+     * the connection to the node the invocation was sent to was lost.
+     * Callbacks should not throw user exceptions.
+     *
+     * The API surrounds the callback in a try catch for std::exception
+     * and passes any caught exceptions to the status listener.
+     * @return true if the event loop should break after invoking this callback, false otherwise
+     */
+    virtual bool callback(boost::shared_ptr<InvocationResponse> response) throw (voltdb::Exception) = 0;
     virtual ~ProcedureCallback() {}
 };
 }
