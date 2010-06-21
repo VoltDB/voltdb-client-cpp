@@ -33,18 +33,39 @@
 namespace voltdb {
 class TableIterator;
 class RowBuilder;
+
+/*
+ * Reprentation of result tables returns by VoltDB.
+ */
 class Table {
     friend class RowBuilder;
 public:
+    /*
+     * Construct a table from a shared buffer. The table retains a reference
+     * to the shared buffer indefinitely so watch out for unwanted memory retension.
+     */
     Table(SharedByteBuffer buffer);
-    //Table(std::vector<Column> columns);
+
+    /*
+     * Returns an iterator for iterating over the rows of this table
+     */
     TableIterator iterator();
-    //void addRow(RowBuilder *builder);
-    //int32_t getSerializedSize();
-    //void serializeTo(ByteBuffer *buffer);
+
+    /*
+     * Returns the status code associated with this table that was set by the stored procedure.
+     * Default value if not set is -128
+     */
     int8_t getStatusCode();
-    //int8_t setStatusCode(int8_t code);
+
+    /*
+     * Returns a string representation of this table and all of its rows.
+     */
     std::string toString();
+
+    /*
+     * Returns a string representation of this table and all of its rows with
+     * the specified level of indentation before each line.
+     */
     void toString(std::ostringstream &ostream, std::string indent);
 private:
     boost::shared_ptr<std::vector<voltdb::Column> > m_columns;

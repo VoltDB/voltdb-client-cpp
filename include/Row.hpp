@@ -213,7 +213,7 @@ public:
 
     /*
      * Returns true if the value at the specified column index is NULL and false otherwise
-     * @throws InvalidColumnException The index of the column was invalid.
+     * @throws InvalidColumnException The name of the column was invalid.
      * @return true if the value is NULL and false otherwise
      */
     bool isNull(int32_t column) {
@@ -332,21 +332,36 @@ public:
         return getString(getColumnIndexByName(cname));
     }
 
+    /*
+     * Returns true if the value in the column with the specified name is NULL and false otherwise
+     * @throws InvalidColumnException The name of the column was invalid.
+     * @return true if the value is NULL and false otherwise
+     */
     bool isNull(std::string cname) {
         int32_t column = getColumnIndexByName(cname);
         return isNull(column);
     }
 
+    /*
+     * Returns true if the value of the last column returned via a getter was null
+     */
     bool wasNull() {
         return m_wasNull;
     }
 
+    /*
+     * Returns a string representation of this row
+     */
     std::string toString() {
         std::ostringstream ostream;
         toString(ostream, std::string(""));
         return ostream.str();
     }
 
+    /*
+     * Returns a string reprentation of this row with the specified level of indentation
+     * before each line
+     */
     void toString(std::ostringstream &ostream, std::string indent) {
         ostream << indent;
         for (size_t ii = 0; ii < m_columns->size(); ii++) {

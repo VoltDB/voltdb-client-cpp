@@ -32,14 +32,26 @@
 
 namespace voltdb {
 class Table;
+
+/*
+ * Iterator for retrieving rows from a table. Retains a shared pointer to the buffer backing the table. Watch out
+ * for unwanted memory retention.
+ */
 class TableIterator {
 public:
+
+    /*
+     * Construct an iterator for the table rows with the specified column schema and row count
+     */
     TableIterator(
             voltdb::SharedByteBuffer rows,
             boost::shared_ptr<std::vector<voltdb::Column> > columns,
             int32_t rowCount) :
         m_buffer(rows), m_columns(columns), m_rowCount(rowCount), m_currentRow(0) {}
 
+    /*
+     * Returns true if the table has more rows that can be retrieved via invoking next and false otherwise.
+     */
     bool hasNext() {
         if (m_currentRow < m_rowCount) {
             assert(m_buffer.hasRemaining());
@@ -48,6 +60,11 @@ public:
         return false;
     }
 
+    /*
+     * Returns the next row in the table if there are more rows or NoMoreRowsException if there are no
+     * more rows. OverflowUnderflowException and IndexOutOfBoundsException only result if there are bugs
+     * and are not expected normally.
+     */
     voltdb::Row next() throw (NoMoreRowsException, OverflowUnderflowException, IndexOutOfBoundsException) {
         if (m_rowCount <= m_currentRow) {
             throw NoMoreRowsException();
