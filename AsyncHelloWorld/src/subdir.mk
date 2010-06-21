@@ -4,25 +4,13 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../src/AsyncHelloWorld.cpp \
-../src/Client.cpp \
-../src/RowBuilder.cpp \
-../src/Table.cpp \
-../src/WireType.cpp 
+../src/AsyncHelloWorld.cpp 
 
 OBJS += \
-./src/AsyncHelloWorld.o \
-./src/Client.o \
-./src/RowBuilder.o \
-./src/Table.o \
-./src/WireType.o 
+./src/AsyncHelloWorld.o 
 
 CPP_DEPS += \
-./src/AsyncHelloWorld.d \
-./src/Client.d \
-./src/RowBuilder.d \
-./src/Table.d \
-./src/WireType.d 
+./src/AsyncHelloWorld.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

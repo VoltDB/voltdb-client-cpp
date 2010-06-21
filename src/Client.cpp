@@ -312,7 +312,7 @@ void Client::createConnection(std::string hostname, std::string username, std::s
     if (bufferevent_socket_connect_hostname(bev, NULL, AF_INET, hostname.c_str(), 21212) != 0) {
         throw voltdb::LibEventException();
     }
-    if (event_base_dispatch(m_base)) {
+    if (event_base_dispatch(m_base) == -1) {
         throw voltdb::LibEventException();
     }
     if (pc.m_status) {
@@ -328,7 +328,7 @@ void Client::createConnection(std::string hostname, std::string username, std::s
         if (evbuffer_add( evbuf, bb.bytes(), static_cast<size_t>(bb.remaining()))) {
             throw voltdb::LibEventException();
         }
-        if (event_base_dispatch(m_base)) {
+        if (event_base_dispatch(m_base) == -1) {
             throw voltdb::LibEventException();
         }
         if (pc.m_status) {
@@ -391,7 +391,7 @@ boost::shared_ptr<InvocationResponse> Client::invoke(Procedure &proc) throw (vol
         throw voltdb::LibEventException();
     }
     (*m_callbacks[bev])[clientData] = callback;
-    if (event_base_dispatch(m_base)) {
+    if (event_base_dispatch(m_base) == -1) {
         throw voltdb::LibEventException();
     }
     m_loopBreakRequested = false;
@@ -445,7 +445,7 @@ void Client::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callba
             }
             if (callEventLoop) {
                 m_invocationBlockedOnBackpressure = true;
-                if (event_base_dispatch(m_base)) {
+                if (event_base_dispatch(m_base) == -1) {
                     throw voltdb::LibEventException();
                 }
                 if (m_loopBreakRequested) {
@@ -476,7 +476,7 @@ void Client::runOnce() throw (voltdb::Exception, voltdb::NoConnectionsException,
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
-    if (event_base_loop(m_base, EVLOOP_NONBLOCK)) {
+    if (event_base_loop(m_base, EVLOOP_NONBLOCK) == -1) {
         throw voltdb::LibEventException();
     }
     m_loopBreakRequested = false;
@@ -486,7 +486,7 @@ void Client::run() throw (voltdb::Exception, voltdb::NoConnectionsException, vol
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
-    if (event_base_dispatch(m_base)) {
+    if (event_base_dispatch(m_base) == -1) {
         throw voltdb::LibEventException();
     }
     m_loopBreakRequested = false;

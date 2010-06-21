@@ -53,11 +53,11 @@
 <tool id="cdt.managedbuild.tool.gnu.c.linker.base.142955232" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.base"/>
 <tool id="cdt.managedbuild.tool.gnu.cpp.linker.base.1318285234" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.base">
 <option id="gnu.cpp.link.option.libs.422838822" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
-<listOptionValue builtIn="false" value="event"/>
-<listOptionValue builtIn="false" value="ssl"/>
+<listOptionValue builtIn="false" value="voltcpp"/>
 </option>
 <option id="gnu.cpp.link.option.paths.270121165" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
-<listOptionValue builtIn="false" value="&quot;${HOME}/lib&quot;"/>
+<listOptionValue builtIn="false" value="&quot;../Library Debug&quot;"/>
+<listOptionValue builtIn="false" value="&quot;../Library Release&quot;"/>
 </option>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1442079564" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
@@ -73,13 +73,14 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="src/AsyncHelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="src/WireType.cpp|src/Table.cpp|src/RowBuilder.cpp|src/Client.cpp|src/AsyncHelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 <storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
 <storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
@@ -245,7 +246,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960;cdt.managedbuild.toolchain.gnu.base.586372960.516490672;cdt.managedbuild.tool.gnu.cpp.compiler.base.2048070980;cdt.managedbuild.tool.gnu.cpp.compiler.input.1021980189">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960.946098159">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
 <buildOutputProvider>
@@ -328,7 +329,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960.946098159">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960;cdt.managedbuild.toolchain.gnu.base.586372960.516490672;cdt.managedbuild.tool.gnu.cpp.compiler.base.2048070980;cdt.managedbuild.tool.gnu.cpp.compiler.input.1021980189">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
 <buildOutputProvider>
@@ -744,7 +745,6 @@
 </profile>
 </scannerConfigBuildInfo>
 </storageModule>
-<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cconfiguration>
 <cconfiguration id="cdt.managedbuild.toolchain.gnu.base.586372960.982682994">
 <storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.toolchain.gnu.base.586372960.982682994" moduleId="org.eclipse.cdt.core.settings" name="Library Debug">
@@ -763,7 +763,7 @@
 </extensions>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">
-<configuration artifactExtension=".so" artifactName="voltcpp" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.sharedLib" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.sharedLib" description="Build a shared library in debug mode" id="cdt.managedbuild.toolchain.gnu.base.586372960.982682994" name="Library Debug" parent="org.eclipse.cdt.build.core.emptycfg">
+<configuration artifactExtension="so" artifactName="voltcpp" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.sharedLib" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.sharedLib" description="Build a shared library in debug mode" id="cdt.managedbuild.toolchain.gnu.base.586372960.982682994" name="Library Debug" parent="org.eclipse.cdt.build.core.emptycfg">
 <folderInfo id="cdt.managedbuild.toolchain.gnu.base.586372960.982682994." name="/" resourcePath="">
 <toolChain id="cdt.managedbuild.toolchain.gnu.base.1865324346" name="cdt.managedbuild.toolchain.gnu.base" resourceTypeBasedDiscovery="false" superClass="cdt.managedbuild.toolchain.gnu.base">
 <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.target.gnu.platform.base.249887952" name="Debug Platform" osList="linux,hpux,aix,qnx" superClass="cdt.managedbuild.target.gnu.platform.base"/>
@@ -804,7 +804,7 @@
 <listOptionValue builtIn="false" value="&quot;${HOME}/lib&quot;"/>
 </option>
 <option defaultValue="true" id="gnu.cpp.link.option.shared.930658427" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared" valueType="boolean"/>
-<option id="gnu.cpp.link.option.libs.1579040297" superClass="gnu.cpp.link.option.libs" valueType="libs">
+<option id="gnu.cpp.link.option.libs.1579040297" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="event"/>
 <listOptionValue builtIn="false" value="ssl"/>
 </option>
@@ -829,6 +829,7 @@
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 <storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
 <storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
@@ -994,7 +995,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960;cdt.managedbuild.toolchain.gnu.base.586372960.516490672;cdt.managedbuild.tool.gnu.cpp.compiler.base.2048070980;cdt.managedbuild.tool.gnu.cpp.compiler.input.1021980189">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960.946098159">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
 <buildOutputProvider>
@@ -1077,7 +1078,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960.946098159">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960;cdt.managedbuild.toolchain.gnu.base.586372960.516490672;cdt.managedbuild.tool.gnu.cpp.compiler.base.2048070980;cdt.managedbuild.tool.gnu.cpp.compiler.input.1021980189">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
 <buildOutputProvider>
@@ -1493,7 +1494,6 @@
 </profile>
 </scannerConfigBuildInfo>
 </storageModule>
-<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cconfiguration>
 <cconfiguration id="cdt.managedbuild.toolchain.gnu.base.586372960.946098159.957531008">
 <storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.toolchain.gnu.base.586372960.946098159.957531008" moduleId="org.eclipse.cdt.core.settings" name="AsyncHelloWorld">
@@ -1547,11 +1547,11 @@
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.cpp.linker.base.1609900687" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.base">
 <option id="gnu.cpp.link.option.libs.475887330" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
-<listOptionValue builtIn="false" value="event"/>
-<listOptionValue builtIn="false" value="ssl"/>
+<listOptionValue builtIn="false" value="voltcpp"/>
 </option>
 <option id="gnu.cpp.link.option.paths.1326997080" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
-<listOptionValue builtIn="false" value="&quot;${HOME}/lib&quot;"/>
+<listOptionValue builtIn="false" value="&quot;../Library Debug&quot;"/>
+<listOptionValue builtIn="false" value="&quot;../Library Release&quot;"/>
 </option>
 <option id="gnu.cpp.link.option.shared.581987934" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1247769774" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
@@ -1566,13 +1566,14 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="src/HelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="src/WireType.cpp|src/Table.cpp|src/RowBuilder.cpp|src/Client.cpp|src/HelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 <storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
 <storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
@@ -1738,7 +1739,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960;cdt.managedbuild.toolchain.gnu.base.586372960.516490672;cdt.managedbuild.tool.gnu.cpp.compiler.base.2048070980;cdt.managedbuild.tool.gnu.cpp.compiler.input.1021980189">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960.946098159">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
 <buildOutputProvider>
@@ -1821,7 +1822,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960.946098159">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960;cdt.managedbuild.toolchain.gnu.base.586372960.516490672;cdt.managedbuild.tool.gnu.cpp.compiler.base.2048070980;cdt.managedbuild.tool.gnu.cpp.compiler.input.1021980189">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
 <buildOutputProvider>
@@ -2237,7 +2238,6 @@
 </profile>
 </scannerConfigBuildInfo>
 </storageModule>
-<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cconfiguration>
 <cconfiguration id="cdt.managedbuild.toolchain.gnu.base.586372960.982682994.1383560043">
 <storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.toolchain.gnu.base.586372960.982682994.1383560043" moduleId="org.eclipse.cdt.core.settings" name="Library Release">
@@ -2257,7 +2257,7 @@
 </extensions>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">
-<configuration artifactExtension=".so" artifactName="voltcpp" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.sharedLib" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.sharedLib" description="Release version of the shared library with optimization" id="cdt.managedbuild.toolchain.gnu.base.586372960.982682994.1383560043" name="Library Release" parent="org.eclipse.cdt.build.core.emptycfg">
+<configuration artifactExtension="so" artifactName="voltcpp" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.sharedLib" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.sharedLib" description="Release version of the shared library with optimization" id="cdt.managedbuild.toolchain.gnu.base.586372960.982682994.1383560043" name="Library Release" parent="org.eclipse.cdt.build.core.emptycfg">
 <folderInfo id="cdt.managedbuild.toolchain.gnu.base.586372960.982682994.1383560043." name="/" resourcePath="">
 <toolChain id="cdt.managedbuild.toolchain.gnu.base.51639130" name="cdt.managedbuild.toolchain.gnu.base" resourceTypeBasedDiscovery="false" superClass="cdt.managedbuild.toolchain.gnu.base">
 <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.target.gnu.platform.base.676671182" name="Debug Platform" osList="linux,hpux,aix,qnx" superClass="cdt.managedbuild.target.gnu.platform.base"/>
@@ -2298,7 +2298,7 @@
 <listOptionValue builtIn="false" value="&quot;${HOME}/lib&quot;"/>
 </option>
 <option defaultValue="true" id="gnu.cpp.link.option.shared.1201477851" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared" valueType="boolean"/>
-<option id="gnu.cpp.link.option.libs.246474598" superClass="gnu.cpp.link.option.libs" valueType="libs">
+<option id="gnu.cpp.link.option.libs.246474598" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="event"/>
 <listOptionValue builtIn="false" value="ssl"/>
 </option>
@@ -2323,6 +2323,7 @@
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 <storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
 <storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
@@ -2488,7 +2489,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960;cdt.managedbuild.toolchain.gnu.base.586372960.516490672;cdt.managedbuild.tool.gnu.cpp.compiler.base.2048070980;cdt.managedbuild.tool.gnu.cpp.compiler.input.1021980189">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960.946098159">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
 <buildOutputProvider>
@@ -2571,7 +2572,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960.946098159">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.586372960;cdt.managedbuild.toolchain.gnu.base.586372960.516490672;cdt.managedbuild.tool.gnu.cpp.compiler.base.2048070980;cdt.managedbuild.tool.gnu.cpp.compiler.input.1021980189">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
 <buildOutputProvider>
@@ -2987,7 +2988,6 @@
 </profile>
 </scannerConfigBuildInfo>
 </storageModule>
-<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cconfiguration>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">

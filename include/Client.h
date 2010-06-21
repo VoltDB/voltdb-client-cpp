@@ -62,7 +62,7 @@ public:
             std::string hostname)
         : m_client(client), m_base(base), m_lengthOrMessage(true), m_nextLength(4),
           m_backpressuredBevs(backpressuredBevs),
-          m_callbacks(callbacks), m_invocationBlockedOnBackpressure(false),
+          m_callbacks(callbacks), m_invocationBlockedOnBackpressure(invocationBlockedOnBackpressure),
           m_listener(listener),
           m_bevs(bevs),
           m_hostname(hostname) {}

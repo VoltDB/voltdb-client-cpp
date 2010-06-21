@@ -4,25 +4,13 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../src/Client.cpp \
-../src/HelloWorld.cpp \
-../src/RowBuilder.cpp \
-../src/Table.cpp \
-../src/WireType.cpp 
+../src/HelloWorld.cpp 
 
 OBJS += \
-./src/Client.o \
-./src/HelloWorld.o \
-./src/RowBuilder.o \
-./src/Table.o \
-./src/WireType.o 
+./src/HelloWorld.o 
 
 CPP_DEPS += \
-./src/Client.d \
-./src/HelloWorld.d \
-./src/RowBuilder.d \
-./src/Table.d \
-./src/WireType.d 
+./src/HelloWorld.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

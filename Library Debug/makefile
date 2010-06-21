@@ -38,19 +38,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: libvoltcpp..so
+all: libvoltcpp.so
 
 # Tool invocations
-libvoltcpp..so: $(OBJS) $(USER_OBJS)
+libvoltcpp.so: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ -L"${HOME}/lib" -shared -o"libvoltcpp..so" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -L"${HOME}/lib" -shared -o"libvoltcpp.so" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(LIBRARIES)$(CPP_DEPS)$(CXX_DEPS)$(C_UPPER_DEPS) libvoltcpp..so
+	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(LIBRARIES)$(CPP_DEPS)$(CXX_DEPS)$(C_UPPER_DEPS) libvoltcpp.so
 	-@echo ' '
 
 .PHONY: all clean dependents

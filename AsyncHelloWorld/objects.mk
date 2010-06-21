@@ -4,4 +4,4 @@
 
 USER_OBJS :=
 
-LIBS := -levent -lssl
+LIBS := -lvoltcpp
