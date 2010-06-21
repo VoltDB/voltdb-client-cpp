@@ -44,7 +44,7 @@ all: HelloWorld
 HelloWorld: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ -L"../Library Debug" -L"../Library Release" -o"HelloWorld" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -L"../Library Debug" -L"../Library Release" -Xlinker -rpath=../Library\ Debug -Xlinker -rpath=../Library\ Release -o"HelloWorld" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

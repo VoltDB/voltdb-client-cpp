@@ -36,109 +36,6 @@
 
 namespace voltdb {
 class Row {
-private:
-    WireType validateType(WireType type, int32_t index)  throw (InvalidColumnException) {
-        if (index < 0 ||
-                index >= static_cast<ssize_t>(m_columns->size())) {
-            throw InvalidColumnException();
-        }
-        WireType columnType = m_columns->at(static_cast<size_t>(index)).m_type;
-        switch (columnType) {
-        case WIRE_TYPE_DECIMAL:
-            if (type != WIRE_TYPE_DECIMAL) throw InvalidColumnException();
-            break;
-        case WIRE_TYPE_TIMESTAMP:
-            if (type != WIRE_TYPE_TIMESTAMP) throw InvalidColumnException();
-            break;
-        case WIRE_TYPE_BIGINT:
-            if (type != WIRE_TYPE_BIGINT) throw InvalidColumnException();
-            break;
-        case WIRE_TYPE_INTEGER:
-            if (type != WIRE_TYPE_BIGINT || type != WIRE_TYPE_INTEGER) throw InvalidColumnException();
-            break;
-        case WIRE_TYPE_SMALLINT:
-            if (type != WIRE_TYPE_BIGINT ||
-                    type != WIRE_TYPE_INTEGER ||
-                    type != WIRE_TYPE_SMALLINT) throw InvalidColumnException();
-            break;
-        case WIRE_TYPE_TINYINT:
-            if (type != WIRE_TYPE_BIGINT ||
-                    type != WIRE_TYPE_INTEGER ||
-                    type != WIRE_TYPE_SMALLINT ||
-                    type != WIRE_TYPE_TINYINT) throw InvalidColumnException();
-            break;
-        case WIRE_TYPE_FLOAT:
-            if (type != WIRE_TYPE_FLOAT) throw InvalidColumnException();
-            break;
-        case WIRE_TYPE_STRING:
-            if (type != WIRE_TYPE_STRING) throw InvalidColumnException();
-            break;
-        default:
-            assert(false);
-            break;
-        }
-        return columnType;
-    }
-
-    int32_t getColumnIndexByName(std::string name) {
-        for (int32_t ii = 0; ii < static_cast<ssize_t>(m_columns->size()); ii++) {
-            if (m_columns->at(static_cast<size_t>(ii)).m_name == name) {
-                return ii;
-            }
-        }
-        throw InvalidColumnException();
-    }
-
-    void ensureCalculatedOffsets() {
-        if (m_hasCalculatedOffsets == true) return;
-        m_offsets[0] = m_data.position();
-        for (int32_t i = 1; i < static_cast<ssize_t>(m_columns->size()); i++) {
-            WireType type = m_columns->at(static_cast<size_t>(i - 1)).m_type;
-            if (type == WIRE_TYPE_STRING) {
-                int32_t length = m_data.getInt32(m_offsets[static_cast<size_t>(i - 1)]);
-                if (length == -1) {
-                    m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + 4;
-                } else if (length < 0) {
-                    assert(false);
-                } else {
-                    m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + length + 4;
-                }
-            } else {
-                int32_t length = 0;
-                switch (type) {
-                case WIRE_TYPE_DECIMAL:
-                    length = 16;
-                    break;
-                case WIRE_TYPE_TIMESTAMP:
-                case WIRE_TYPE_BIGINT:
-                case WIRE_TYPE_FLOAT:
-                    length = 8;
-                    break;
-                case WIRE_TYPE_INTEGER:
-                    length = 4;
-                    break;
-                case WIRE_TYPE_SMALLINT:
-                    length = 2;
-                    break;
-                case WIRE_TYPE_TINYINT:
-                    length = 1;
-                    break;
-                default:
-                    assert(false);
-                }
-                m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + length;
-            }
-        }
-        m_hasCalculatedOffsets = true;
-    }
-
-    int32_t getOffset(int32_t index) {
-        m_wasNull = false;
-        ensureCalculatedOffsets();
-        assert(index >= 0);
-        assert(static_cast<size_t>(index) < m_offsets.size());
-        return m_offsets[static_cast<size_t>(index)];
-    }
 
 public:
     Row(SharedByteBuffer rowData, boost::shared_ptr<std::vector<voltdb::Column> > columns) :
@@ -358,6 +255,109 @@ public:
         }
     }
 private:
+    WireType validateType(WireType type, int32_t index)  throw (InvalidColumnException) {
+        if (index < 0 ||
+                index >= static_cast<ssize_t>(m_columns->size())) {
+            throw InvalidColumnException();
+        }
+        WireType columnType = m_columns->at(static_cast<size_t>(index)).m_type;
+        switch (columnType) {
+        case WIRE_TYPE_DECIMAL:
+            if (type != WIRE_TYPE_DECIMAL) throw InvalidColumnException();
+            break;
+        case WIRE_TYPE_TIMESTAMP:
+            if (type != WIRE_TYPE_TIMESTAMP) throw InvalidColumnException();
+            break;
+        case WIRE_TYPE_BIGINT:
+            if (type != WIRE_TYPE_BIGINT) throw InvalidColumnException();
+            break;
+        case WIRE_TYPE_INTEGER:
+            if (type != WIRE_TYPE_BIGINT || type != WIRE_TYPE_INTEGER) throw InvalidColumnException();
+            break;
+        case WIRE_TYPE_SMALLINT:
+            if (type != WIRE_TYPE_BIGINT ||
+                    type != WIRE_TYPE_INTEGER ||
+                    type != WIRE_TYPE_SMALLINT) throw InvalidColumnException();
+            break;
+        case WIRE_TYPE_TINYINT:
+            if (type != WIRE_TYPE_BIGINT ||
+                    type != WIRE_TYPE_INTEGER ||
+                    type != WIRE_TYPE_SMALLINT ||
+                    type != WIRE_TYPE_TINYINT) throw InvalidColumnException();
+            break;
+        case WIRE_TYPE_FLOAT:
+            if (type != WIRE_TYPE_FLOAT) throw InvalidColumnException();
+            break;
+        case WIRE_TYPE_STRING:
+            if (type != WIRE_TYPE_STRING) throw InvalidColumnException();
+            break;
+        default:
+            assert(false);
+            break;
+        }
+        return columnType;
+    }
+
+    int32_t getColumnIndexByName(std::string name) {
+        for (int32_t ii = 0; ii < static_cast<ssize_t>(m_columns->size()); ii++) {
+            if (m_columns->at(static_cast<size_t>(ii)).m_name == name) {
+                return ii;
+            }
+        }
+        throw InvalidColumnException();
+    }
+
+    void ensureCalculatedOffsets() {
+        if (m_hasCalculatedOffsets == true) return;
+        m_offsets[0] = m_data.position();
+        for (int32_t i = 1; i < static_cast<ssize_t>(m_columns->size()); i++) {
+            WireType type = m_columns->at(static_cast<size_t>(i - 1)).m_type;
+            if (type == WIRE_TYPE_STRING) {
+                int32_t length = m_data.getInt32(m_offsets[static_cast<size_t>(i - 1)]);
+                if (length == -1) {
+                    m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + 4;
+                } else if (length < 0) {
+                    assert(false);
+                } else {
+                    m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + length + 4;
+                }
+            } else {
+                int32_t length = 0;
+                switch (type) {
+                case WIRE_TYPE_DECIMAL:
+                    length = 16;
+                    break;
+                case WIRE_TYPE_TIMESTAMP:
+                case WIRE_TYPE_BIGINT:
+                case WIRE_TYPE_FLOAT:
+                    length = 8;
+                    break;
+                case WIRE_TYPE_INTEGER:
+                    length = 4;
+                    break;
+                case WIRE_TYPE_SMALLINT:
+                    length = 2;
+                    break;
+                case WIRE_TYPE_TINYINT:
+                    length = 1;
+                    break;
+                default:
+                    assert(false);
+                }
+                m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + length;
+            }
+        }
+        m_hasCalculatedOffsets = true;
+    }
+
+    int32_t getOffset(int32_t index) {
+        m_wasNull = false;
+        ensureCalculatedOffsets();
+        assert(index >= 0);
+        assert(static_cast<size_t>(index) < m_offsets.size());
+        return m_offsets[static_cast<size_t>(index)];
+    }
+
     SharedByteBuffer m_data;
     boost::shared_ptr<std::vector<voltdb::Column> > m_columns;
     bool m_wasNull;

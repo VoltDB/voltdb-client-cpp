@@ -29,55 +29,9 @@
 #include "Procedure.hpp"
 #include "StatusListener.h"
 #include <boost/shared_ptr.hpp>
-#include <event2/event.h>
-#include <event2/bufferevent.h>
-#include <vector>
-#include <boost/unordered/unordered_map.hpp>
-#include <boost/unordered/unordered_set.hpp>
 
 namespace voltdb {
-
-/*
- * Internal type, not needed by user
- */
-typedef boost::unordered_map< int64_t, boost::shared_ptr<ProcedureCallback> > CallbackMap;
-/*
- * Internal type, not needed by user
- */
-typedef boost::unordered_map< struct bufferevent*, boost::shared_ptr<CallbackMap> > BEVToCallbackMap;
-
-class Client;
-
-/*
- * Internal type, not needed by user
- */
-class CxnContext {
-public:
-    CxnContext(Client *client, struct event_base *base,
-            boost::unordered_set<struct bufferevent *> *backpressuredBevs,
-            BEVToCallbackMap *callbacks,
-            bool *invocationBlockedOnBackpressure,
-            boost::shared_ptr<voltdb::StatusListener> listener,
-            std::vector<std::pair<struct bufferevent *, boost::shared_ptr<CxnContext> > > *bevs,
-            std::string hostname)
-        : m_client(client), m_base(base), m_lengthOrMessage(true), m_nextLength(4),
-          m_backpressuredBevs(backpressuredBevs),
-          m_callbacks(callbacks), m_invocationBlockedOnBackpressure(invocationBlockedOnBackpressure),
-          m_listener(listener),
-          m_bevs(bevs),
-          m_hostname(hostname) {}
-    Client *m_client;
-    struct event_base *m_base;
-    bool m_lengthOrMessage;
-    int32_t m_nextLength;
-    boost::unordered_set<struct bufferevent *> *m_backpressuredBevs;
-    BEVToCallbackMap *m_callbacks;
-    bool *m_invocationBlockedOnBackpressure;
-    boost::shared_ptr<voltdb::StatusListener> m_listener;
-    std::vector<std::pair<struct bufferevent *, boost::shared_ptr<CxnContext> > > *m_bevs;
-    std::string m_hostname;
-};
-
+class ClientImpl;
 /*
  * A VoltDB client for invoking stored procedures on a VoltDB instance. The client and the
  * shared pointers it returns are not thread safe. If you need more parallelism you run multiple processes
@@ -101,27 +55,76 @@ public:
     void createConnection(std::string hostname, std::string username, std::string password) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
 
     /*
-     * Synchronously invoke a stored procedure and return a the response.
+     * Synchronously invoke a stored procedure and return a the response. Callbacks for asynchronous requests
+     * submitted earlier may be invoked before this method returns.
+     * @throws NoConnectionsException No connections to submit the request on
+     * @throws UninitializedParamsException Some or all of the parameters for the stored procedure were not set
+     * @throws LibEventException An unknown error occured in libevent
      */
     boost::shared_ptr<InvocationResponse> invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
+
+    /*
+     * Asynchronously invoke a stored procedure. Returns immediately if there is no backpressure, but if there is
+     * backpressure this method will block until there is none. If a status listener is registered it will notified
+     * of the backpressure and will have an opportunity to prevent this method from blocking. Callbacks
+     * for asynchronous requests will not be invoked until run() or runOnce() is invoked.
+     * @throws NoConnectionsException No connections to submit the request on
+     * @throws UninitializedParamsException Some or all of the parameters for the stored procedure were not set
+     * @throws LibEventException An unknown error occured in libevent
+     */
     void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
+
+    /*
+     * Run the event loop once and process pending events. This writes requests to any ready connections
+     * and reads all responses and invokes the appropriate callbacks. Returns immediately after performing
+     * all available work, or after the loop is broken by a callback.
+     * @throws NoConnectionsException No connections to the database so there is no work to be done
+     * @throws LibEventException An unknown error occured in libevent
+     */
     void runOnce() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
+
+    /*
+     * Enter the event loop and process pending events indefinitely. This writes requests to any ready connections
+     * and reads all responses and invokes the appropriate callbacks. Returns immediately after performing
+     * all available work, or after the loop is broken by a callback.
+     * @throws NoConnectionsException No connections to the database so there is no work to be done
+     * @throws LibEventException An unknown error occured in libevent
+     */
     void run() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
+
+    /*
+     * Enter the event loop and process pending events until all responses have been received and then return.
+     * It is possible for drain to exit without having received all responses if a callback requests that the event
+     * loop break in which case false will be returned.
+     * @throws NoConnectionsException No connections to the database so there is no work to be done
+     * @throws LibEventException An unknown error occured in libevent
+     * @return true if all requests were drained and false otherwise
+     */
+    bool drain() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
+
+    /*
+     * Create a client with no status listener registered
+     */
     static boost::shared_ptr<Client> create() throw(voltdb::LibEventException);
+
+    /*
+     * Create a client with a status listener
+     */
     static boost::shared_ptr<Client> create(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::LibEventException);
+
     ~Client();
 private:
+    /*
+     * Disable various constructors and assignment
+     */
     Client() throw(voltdb::LibEventException);
-    Client(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::LibEventException);
-    struct event_base *m_base;
-    int64_t m_nextRequestId;
-    size_t m_nextConnectionIndex;
-    std::vector<std::pair<struct bufferevent *, boost::shared_ptr<CxnContext> > > m_bevs;
-    boost::unordered_set<struct bufferevent *> m_backpressuredBevs;
-    BEVToCallbackMap m_callbacks;
-    boost::shared_ptr<voltdb::StatusListener> m_listener;
-    bool m_invocationBlockedOnBackpressure;
-    bool m_loopBreakRequested;
+    Client(const Client &other);
+    Client& operator = (const Client& other);
+
+    //Actual constructor
+    Client(ClientImpl *m_impl);
+
+    ClientImpl *m_impl;
 };
 }
 

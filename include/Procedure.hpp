@@ -29,12 +29,22 @@
 #include "ByteBuffer.hpp"
 
 namespace voltdb {
+
+/*
+ * Description of a stored procedure and its parameters that must be provided to the API
+ * in order to invoke a stored procedure
+ */
 class Procedure {
 public:
+    /*
+     * Construct a Procedure with the specified name and specified signature (parameters)
+     */
     Procedure(std::string name, std::vector<Parameter> parameters) : m_name(name), m_params(parameters) {}
 
     /**
-     * Retrieve the parameter set and set the client data for the next invocation
+     * Retrieve the parameter set associated with the procedure so that the parameters can be set
+     * with actual values. The pointer to the parameter set can be retained
+     * as long as the Procedure itself is still valid, and can be reused after each invocation.
      */
     ParameterSet* params() {
         m_params.reset();

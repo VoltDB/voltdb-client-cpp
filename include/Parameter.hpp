@@ -25,12 +25,32 @@
 #define VOLTDB_PARAMETER_HPP_
 #include "WireType.h"
 namespace voltdb {
+/*
+ * Class describing a single parameter specifying its type and whether it is an array
+ * of values
+ */
 class Parameter {
 public:
+    /*
+     * Default construct for compatablity with std::vector
+     */
     Parameter() : m_type(WIRE_TYPE_INVALID), m_array(false) {}
+
+    /*
+     * Constructor for setting both type and arrayedness
+     */
     Parameter(WireType type, bool array) : m_type(type), m_array(array) {}
+
+    /*
+     * Constructor for setting just the type. Assumes the value is not an array
+     */
     Parameter(WireType type) : m_type(type), m_array(false) {}
+
+    /*
+     * Copy constructor for compatablity with std::vector
+     */
     Parameter(const Parameter &other) : m_type(other.m_type), m_array(other.m_array) {}
+
     WireType m_type;
     bool m_array;
 };

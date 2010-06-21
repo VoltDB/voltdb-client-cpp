@@ -32,6 +32,12 @@ namespace voltdb {
 //The int used for storage and return values
 typedef ttmath::Int<2> TTInt;
 
+/*
+ * A class for constructing Decimal values with the fixed precision and scale supported by VoltDB
+ * from the wire representation and from string representations. It is expected that users will
+ * want to use their own precision math library to handle the values and most libraries accept
+ * data to/from strings
+ */
 class Decimal {
 public:
 
@@ -41,6 +47,9 @@ public:
     static const uint16_t kMaxDecScale = 12;
     static const int64_t kMaxScaleFactor = 1000000000000;
 
+    /*
+     * Construct a decimal value from a string.
+     */
     Decimal(std::string txt) {
         if (txt.length() == 0) {
             throw StringToDecimalException();
@@ -104,6 +113,9 @@ public:
         getDecimal() = whole;
     }
 
+    /*
+     * Construct a Decimal value from the VoltDB wire representation
+     */
     Decimal(char data[16]) {
         ByteBuffer buf(data, 16);
         int64_t *longStorage = reinterpret_cast<int64_t*>(m_data);
@@ -112,22 +124,34 @@ public:
         longStorage[0] = buf.getInt64();
     }
 
+    /*
+     * Retrieve a decimal value as an TTInt with a fixed scale and precision
+     */
     TTInt& getDecimal() {
         void *retval = reinterpret_cast<void*>(m_data);
         return *reinterpret_cast<TTInt*>(retval);
     }
 
+    /*
+     * Retrieve a decimal value as an TTInt with a fixed scale and precision
+     */
     const TTInt& getDecimal() const {
         const void *retval = reinterpret_cast<const void*>(m_data);
         return *reinterpret_cast<const TTInt*>(retval);
     }
 
+    /*
+     * Serialize a Decimal value to the provided ByteBuffer
+     */
     void serializeTo(ByteBuffer *buffer) {
         TTInt val = getDecimal();
         buffer->putInt64(*reinterpret_cast<int64_t*>(&val.table[1]));
         buffer->putInt64(*reinterpret_cast<int64_t*>(&val.table[0]));
     }
 
+    /*
+     * Convert a Decimal value to a string representation
+     */
     std::string toString() {
         assert(!isNull());
         std::ostringstream buffer;
@@ -155,6 +179,9 @@ public:
         return buffer.str();
     }
 
+    /*
+     * Returns true if the Decimal value represents SQL NULL and false otherwise.
+     */
     bool isNull() {
         TTInt min;
         min.SetMin();

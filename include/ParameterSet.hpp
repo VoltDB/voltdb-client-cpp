@@ -33,21 +33,20 @@
 
 namespace voltdb {
 class Procedure;
+
+/*
+ * Class for setting the parameters to a stored procedure one at a time. Parameters must be set from first
+ * to last, and every parameter must set for each invocation.
+ */
 class ParameterSet {
     friend class Procedure;
-private:
-    ParameterSet(std::vector<Parameter> parameters) : m_parameters(parameters), m_buffer(8192), m_currentParam(0) {
-        m_buffer.putInt16(static_cast<int16_t>(m_parameters.size()));
-    }
-    void validateType(WireType type, bool isArray) {
-        if (m_parameters[m_currentParam].m_type != type ||
-                m_currentParam > m_parameters.size() ||
-                m_parameters[m_currentParam].m_array != isArray) {
-            throw ParamMismatchException();
-        }
-    }
 public:
 
+    /**
+     * Add a decimal value for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addDecimal(Decimal val) {
         validateType(WIRE_TYPE_DECIMAL, false);
         m_buffer.ensureRemaining(sizeof(Decimal) + 1);
@@ -57,6 +56,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add an array of decimal values for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addDecimal(std::vector<Decimal> vals) {
         validateType(WIRE_TYPE_DECIMAL, true);
         m_buffer.ensureRemaining(4 + (sizeof(Decimal) * vals.size()));
@@ -70,6 +74,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add a timestamp value for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addTimestamp(int64_t val) {
         validateType(WIRE_TYPE_TIMESTAMP, false);
         m_buffer.ensureRemaining(9);
@@ -79,6 +88,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add an array of timestamp values for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addTimestamp(std::vector<int64_t> vals) {
         validateType(WIRE_TYPE_TIMESTAMP, true);
         m_buffer.ensureRemaining(4 + (sizeof(int64_t) * vals.size()));
@@ -92,6 +106,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add an int64_t/BIGINT value for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addInt64(int64_t val) {
         validateType(WIRE_TYPE_BIGINT, false);
         m_buffer.ensureRemaining(9);
@@ -101,6 +120,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add an array of int64_t/BIGINT values for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addInt64(std::vector<int64_t> vals) {
         validateType(WIRE_TYPE_BIGINT, true);
         m_buffer.ensureRemaining(4 + (sizeof(int64_t) * vals.size()));
@@ -114,6 +138,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add an int32_t/INTEGER value for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addInt32(int32_t val) {
         validateType(WIRE_TYPE_INTEGER, false);
         m_buffer.ensureRemaining(5);
@@ -123,6 +152,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add an array of int32_t/INTEGER values for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addInt32(std::vector<int32_t> vals) {
         validateType(WIRE_TYPE_INTEGER, true);
         m_buffer.ensureRemaining(4 + (sizeof(int32_t) * vals.size()));
@@ -136,6 +170,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add an int16_t/SMALLINT value for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addInt16(int16_t val) {
         validateType(WIRE_TYPE_SMALLINT, false);
         m_buffer.ensureRemaining(3);
@@ -145,6 +184,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add an array of int16_t/SMALLINT values for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addInt16(std::vector<int16_t> vals) {
         validateType(WIRE_TYPE_SMALLINT, true);
         m_buffer.ensureRemaining(4 + (sizeof(int16_t) * vals.size()));
@@ -158,6 +202,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add an int8_t/TINYINT value for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addInt8(int8_t val) {
         validateType(WIRE_TYPE_TINYINT, false);
         m_buffer.ensureRemaining(2);
@@ -167,6 +216,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add an array of int8_t/TINYINT values for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addInt8(std::vector<int8_t> vals) {
         validateType(WIRE_TYPE_TINYINT, true);
         m_buffer.ensureRemaining(6 + (sizeof(int8_t) * vals.size()));
@@ -180,6 +234,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add a double value for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addDouble(double val) {
         validateType(WIRE_TYPE_FLOAT, false);
         m_buffer.ensureRemaining(9);
@@ -189,6 +248,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add an array of double values for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addDouble(std::vector<double> vals) {
         validateType(WIRE_TYPE_FLOAT, true);
         m_buffer.ensureRemaining(2 + (sizeof(double) * vals.size()));
@@ -202,6 +266,14 @@ public:
         return *this;
     }
 
+    /**
+     * Add null for the current parameter. The meaning of this can be tricky. This results in the SQL null
+     * value used by Volt being sent across the wire so that it will represent SQL NULL if inserted into the
+     * database. For numbers this the minimum representable value for the type. For strings this results in a null
+     * object reference being passed to the procedure.
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addNull() {
         if (m_currentParam > m_parameters.size()) {
             throw new ParamMismatchException();
@@ -212,6 +284,11 @@ public:
         return *this;
     }
 
+    /**
+     * Add a string value for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addString(std::string val) {
         validateType(WIRE_TYPE_STRING, false);
         m_buffer.ensureRemaining(5 + val.size());
@@ -220,6 +297,12 @@ public:
         m_currentParam++;
         return *this;
     }
+
+    /**
+     * Add an array of string values for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addString(std::vector<std::string> vals) {
         validateType(WIRE_TYPE_STRING, true);
         int32_t totalStringLength = 0;
@@ -238,6 +321,12 @@ public:
         m_currentParam++;
         return *this;
     }
+
+    /**
+     * Reset the parameter set so that a new set of parameters can be added. It is not necessary
+     * to call this between invocations because the API will call it after the procedure this parameter
+     * set is associated with is invoked.
+     */
     void reset() {
         m_buffer.clear();
         m_currentParam = 0;
@@ -258,7 +347,21 @@ public:
         buffer->put(&m_buffer);
         reset();
     }
+
 private:
+
+    ParameterSet(std::vector<Parameter> parameters) : m_parameters(parameters), m_buffer(8192), m_currentParam(0) {
+        m_buffer.putInt16(static_cast<int16_t>(m_parameters.size()));
+    }
+
+    void validateType(WireType type, bool isArray) {
+        if (m_parameters[m_currentParam].m_type != type ||
+                m_currentParam > m_parameters.size() ||
+                m_parameters[m_currentParam].m_array != isArray) {
+            throw ParamMismatchException();
+        }
+    }
+
     std::vector<Parameter> m_parameters;
     ScopedByteBuffer m_buffer;
     uint32_t m_currentParam;

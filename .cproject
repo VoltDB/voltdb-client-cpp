@@ -21,7 +21,7 @@
 <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.target.gnu.platform.base.1905390109" name="Debug Platform" osList="linux,hpux,aix,qnx" superClass="cdt.managedbuild.target.gnu.platform.base"/>
 <builder buildPath="${workspace_loc:/cpp_api/}" id="cdt.managedbuild.target.gnu.builder.base.827439916" keepEnvironmentInBuildfile="true" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="false" parallelizationNumber="8" superClass="cdt.managedbuild.target.gnu.builder.base"/>
 <tool id="cdt.managedbuild.tool.gnu.archiver.base.1582836221" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
-<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.1576917158" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
+<tool command="${CCACHE} g++" id="cdt.managedbuild.tool.gnu.cpp.compiler.base.1576917158" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
 <option id="gnu.cpp.compiler.option.include.paths.1903998086" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 <listOptionValue builtIn="false" value="&quot;${HOME}/include&quot;"/>
 <listOptionValue builtIn="false" value="../include"/>
@@ -59,6 +59,10 @@
 <listOptionValue builtIn="false" value="&quot;../Library Debug&quot;"/>
 <listOptionValue builtIn="false" value="&quot;../Library Release&quot;"/>
 </option>
+<option id="gnu.cpp.link.option.other.793151878" name="Other options (-Xlinker [option])" superClass="gnu.cpp.link.option.other" valueType="stringList">
+<listOptionValue builtIn="false" value="-rpath=../Library\ Debug"/>
+<listOptionValue builtIn="false" value="-rpath=../Library\ Release"/>
+</option>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1442079564" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 <additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -73,7 +77,7 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="src/WireType.cpp|src/Table.cpp|src/RowBuilder.cpp|src/Client.cpp|src/AsyncHelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="src/ClientImpl.cpp|src/WireType.cpp|src/Table.cpp|src/RowBuilder.cpp|src/Client.cpp|src/AsyncHelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>
@@ -769,7 +773,7 @@
 <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.target.gnu.platform.base.249887952" name="Debug Platform" osList="linux,hpux,aix,qnx" superClass="cdt.managedbuild.target.gnu.platform.base"/>
 <builder buildPath="${workspace_loc:/cpp_api/}" id="cdt.managedbuild.target.gnu.builder.base.1448101041" keepEnvironmentInBuildfile="true" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="8" superClass="cdt.managedbuild.target.gnu.builder.base"/>
 <tool id="cdt.managedbuild.tool.gnu.archiver.base.408446279" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
-<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.2036431205" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
+<tool command="${CCACHE} g++" id="cdt.managedbuild.tool.gnu.cpp.compiler.base.2036431205" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
 <option id="gnu.cpp.compiler.option.include.paths.2007011106" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 <listOptionValue builtIn="false" value="&quot;${HOME}/include&quot;"/>
 <listOptionValue builtIn="false" value="../include"/>
@@ -782,7 +786,7 @@
 <option id="gnu.cpp.compiler.option.debugging.level.470726422" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 <option id="gnu.cpp.compiler.option.optimization.level.1994548028" name="Optimization Level" superClass="gnu.cpp.compiler.option.optimization.level" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 <option id="gnu.cpp.compiler.option.warnings.toerrors.2069751686" name="Warnings as errors (-Werror)" superClass="gnu.cpp.compiler.option.warnings.toerrors" value="true" valueType="boolean"/>
-<option id="gnu.cpp.compiler.option.other.other.38481992" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -fno-strict-aliasing -fPIC" valueType="string"/>
+<option id="gnu.cpp.compiler.option.other.other.38481992" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -fno-strict-aliasing -fPIC -Wextra -Wno-unused-parameter -Wno-type-limits -fno-strict-aliasing" valueType="string"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.387845824" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.c.compiler.base.789434591" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">
@@ -807,6 +811,9 @@
 <option id="gnu.cpp.link.option.libs.1579040297" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="event"/>
 <listOptionValue builtIn="false" value="ssl"/>
+</option>
+<option id="gnu.cpp.link.option.other.1247336377" name="Other options (-Xlinker [option])" superClass="gnu.cpp.link.option.other" valueType="stringList">
+<listOptionValue builtIn="false" value="-rpath=${HOME}/lib"/>
 </option>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1870037879" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
@@ -1513,7 +1520,7 @@
 <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.target.gnu.platform.base.1147857304" name="Debug Platform" osList="linux,hpux,aix,qnx" superClass="cdt.managedbuild.target.gnu.platform.base"/>
 <builder buildPath="${workspace_loc:/cpp_api/}" id="cdt.managedbuild.target.gnu.builder.base.760472357" keepEnvironmentInBuildfile="true" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="false" parallelizationNumber="8" superClass="cdt.managedbuild.target.gnu.builder.base"/>
 <tool id="cdt.managedbuild.tool.gnu.archiver.base.104365806" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
-<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.677071505" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
+<tool command="${CCACHE} g++" id="cdt.managedbuild.tool.gnu.cpp.compiler.base.677071505" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
 <option id="gnu.cpp.compiler.option.include.paths.802234131" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 <listOptionValue builtIn="false" value="&quot;${HOME}/include&quot;"/>
 <listOptionValue builtIn="false" value="../include"/>
@@ -1554,19 +1561,23 @@
 <listOptionValue builtIn="false" value="&quot;../Library Release&quot;"/>
 </option>
 <option id="gnu.cpp.link.option.shared.581987934" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared"/>
+<option id="gnu.cpp.link.option.other.275539153" name="Other options (-Xlinker [option])" superClass="gnu.cpp.link.option.other" valueType="stringList">
+<listOptionValue builtIn="false" value="-rpath=../Library\ Debug"/>
+<listOptionValue builtIn="false" value="-rpath=../Library\ Release"/>
+</option>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1247769774" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 <additionalInput kind="additionalinput" paths="$(LIBS)"/>
 </inputType>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.assembler.base.2104065452" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.base">
-<option id="gnu.both.asm.option.include.paths.1607701459" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath"/>
+<option id="gnu.both.asm.option.include.paths.1607701459" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths"/>
 <inputType id="cdt.managedbuild.tool.gnu.assembler.input.1432045487" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 </tool>
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry excluding="src/WireType.cpp|src/Table.cpp|src/RowBuilder.cpp|src/Client.cpp|src/HelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+<entry excluding="src/ClientImpl.cpp|src/WireType.cpp|src/Table.cpp|src/RowBuilder.cpp|src/Client.cpp|src/HelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>
@@ -2263,7 +2274,7 @@
 <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.target.gnu.platform.base.676671182" name="Debug Platform" osList="linux,hpux,aix,qnx" superClass="cdt.managedbuild.target.gnu.platform.base"/>
 <builder buildPath="${workspace_loc:/cpp_api/}" id="cdt.managedbuild.target.gnu.builder.base.256799232" keepEnvironmentInBuildfile="true" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="8" superClass="cdt.managedbuild.target.gnu.builder.base"/>
 <tool id="cdt.managedbuild.tool.gnu.archiver.base.1800998103" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
-<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.2004750011" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
+<tool command="${CCACHE} g++" id="cdt.managedbuild.tool.gnu.cpp.compiler.base.2004750011" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
 <option id="gnu.cpp.compiler.option.include.paths.16262342" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 <listOptionValue builtIn="false" value="&quot;${HOME}/include&quot;"/>
 <listOptionValue builtIn="false" value="../include"/>
@@ -2271,19 +2282,17 @@
 <option id="gnu.cpp.compiler.option.preprocessor.def.252371850" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
 <listOptionValue builtIn="false" value="__STDC_LIMIT_MACROS"/>
 <listOptionValue builtIn="false" value="BOOST_SP_DISABLE_THREADS"/>
-<listOptionValue builtIn="false" value="DEBUG"/>
 </option>
 <option id="gnu.cpp.compiler.option.debugging.level.1171847320" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 <option id="gnu.cpp.compiler.option.optimization.level.1652876392" name="Optimization Level" superClass="gnu.cpp.compiler.option.optimization.level" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
 <option id="gnu.cpp.compiler.option.warnings.toerrors.1937178712" name="Warnings as errors (-Werror)" superClass="gnu.cpp.compiler.option.warnings.toerrors" value="true" valueType="boolean"/>
-<option id="gnu.cpp.compiler.option.other.other.31963800" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -fno-strict-aliasing -fPIC" valueType="string"/>
+<option id="gnu.cpp.compiler.option.other.other.31963800" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -fno-strict-aliasing -fPIC -Wextra -Wno-unused-parameter -Wno-type-limits -fno-strict-aliasing" valueType="string"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.268559897" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.c.compiler.base.1028077848" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">
 <option id="gnu.c.compiler.option.preprocessor.def.symbols.986691023" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
 <listOptionValue builtIn="false" value="__STDC_LIMIT_MACROS"/>
 <listOptionValue builtIn="false" value="BOOST_SP_DISABLE_THREADS"/>
-<listOptionValue builtIn="false" value="DEBUG"/>
 </option>
 <option id="gnu.c.compiler.option.include.paths.605710455" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 <listOptionValue builtIn="false" value="&quot;${HOME}/include&quot;"/>
@@ -2301,6 +2310,9 @@
 <option id="gnu.cpp.link.option.libs.246474598" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="event"/>
 <listOptionValue builtIn="false" value="ssl"/>
+</option>
+<option id="gnu.cpp.link.option.other.380153930" name="Other options (-Xlinker [option])" superClass="gnu.cpp.link.option.other" valueType="stringList">
+<listOptionValue builtIn="false" value="-rpath=${HOME}/lib"/>
 </option>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1668029126" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
