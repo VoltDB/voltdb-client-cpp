@@ -35,13 +35,28 @@
 #include <sstream>
 
 namespace voltdb {
-class Row {
 
+/*
+ * Representation of a row of tabular data from a Table. Every row contains a shared pointer
+ * to its origin table which may also contain a shared pointer to the message the table was originally
+ * from. Retain references with care to avoid memory leaks.
+ */
+class Row {
 public:
+    /*
+     * Construct a row from a buffer containing the row data.
+     */
     Row(SharedByteBuffer rowData, boost::shared_ptr<std::vector<voltdb::Column> > columns) :
         m_data(rowData), m_columns(columns), m_wasNull(false), m_offsets(columns->size()), m_hasCalculatedOffsets(false) {
     }
 
+    /*
+     * Retrieve the value at the specified column index as a Decimal. The type of the column
+     * must be Decimal.
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return Decimal value at the specified column
+     */
     Decimal getDecimal(int32_t column) {
         validateType(WIRE_TYPE_DECIMAL, column);
         char data[16];
@@ -51,6 +66,13 @@ public:
         return retval;
     }
 
+    /*
+     * Retrieve the value at the specified column index as a Timestamp. The type of the column
+     * must be Timestamp.
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return Timestamp value at the specified column
+     */
     int64_t getTimestamp(int32_t column) {
         validateType(WIRE_TYPE_TIMESTAMP, column);
         int64_t retval = m_data.getInt64(getOffset(column));
@@ -58,6 +80,13 @@ public:
         return retval;
     }
 
+    /*
+     * Retrieve the value at the specified column index as an int64_t/BIGINT. The type of the column
+     * must be BIGINT, INTEGER, SMALLINT, or TINYINT.
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return int64 value at the specified column
+     */
     int64_t getInt64(int32_t column) {
         WireType type = validateType(WIRE_TYPE_BIGINT, column);
         int64_t retval;
@@ -84,6 +113,13 @@ public:
         return retval;
     }
 
+    /*
+     * Retrieve the value at the specified column index as an int32_t/INTEGER. The type of the column
+     * must be INTEGER, SMALLINT, or TINYINT.
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return int32 value at the specified column
+     */
     int32_t getInt32(int32_t column) {
         WireType type = validateType(WIRE_TYPE_INTEGER, column);
         int32_t retval;
@@ -106,6 +142,13 @@ public:
         return retval;
     }
 
+    /*
+     * Retrieve the value at the specified column index as an int16_t/SMALLINT. The type of the column
+     * must be SMALLINT, or TINYINT.
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return int16 value at the specified column
+     */
     int16_t getInt16(int32_t column) {
         WireType type = validateType(WIRE_TYPE_SMALLINT, column);
         int16_t retval;
@@ -124,6 +167,13 @@ public:
         return retval;
     }
 
+    /*
+     * Retrieve the value at the specified column index as an int8_t/TINYINT. The type of the column
+     * must be TINYINT.
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return int8 value at the specified column
+     */
     int8_t getInt8(int32_t column) {
         validateType(WIRE_TYPE_TINYINT, column);
         int8_t retval = m_data.getInt8(getOffset(column));
@@ -133,6 +183,13 @@ public:
         return retval;
     }
 
+    /*
+     * Retrieve the value at the specified column index as a double. The type of the column
+     * must be FLOAT.
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return double value at the specified column
+     */
     double getDouble(int32_t column) {
         validateType(WIRE_TYPE_FLOAT, column);
         double retval = m_data.getDouble(getOffset(column));
@@ -142,11 +199,23 @@ public:
         return retval;
     }
 
+    /*
+     * Retrieve the value at the specified column index as an string. The type of the column
+     * must be STRING.
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return String value at the specified column
+     */
     std::string getString(int32_t column) {
         validateType(WIRE_TYPE_STRING, column);
         return m_data.getString(getOffset(column), m_wasNull);
     }
 
+    /*
+     * Returns true if the value at the specified column index is NULL and false otherwise
+     * @throws InvalidColumnException The index of the column was invalid.
+     * @return true if the value is NULL and false otherwise
+     */
     bool isNull(int32_t column) {
         if (column < 0 || column >= static_cast<ssize_t>(m_columns->size())) {
             throw InvalidColumnException();
@@ -175,34 +244,90 @@ public:
         return wasNull();
     }
 
+    /*
+     * Retrieve the value from the column with the specified name as a Decimal. The type of the column
+     * must be Decimal.
+     * @throws InvalidColumnException No column with the specified name exists or the type of the getter
+     * does not match the column type.
+     * @return Decimal value at the specified column
+     */
     Decimal getDecimal(std::string cname) {
         return getDecimal(getColumnIndexByName(cname));
     }
 
+    /*
+     * Retrieve the value from the column with the specified name as a Timestamp. The type of the column
+     * must be Timestamp.
+     * @throws InvalidColumnException No column with the specified name exists or the type of the getter
+     * does not match the column type.
+     * @return Timestamp value at the specified column
+     */
     int64_t getTimestamp(std::string cname) {
         return getTimestamp(getColumnIndexByName(cname));
     }
 
+    /*
+     * Retrieve the value from the column with the specified name as a int64_t/BIGINT. The type of the column
+     * must be BIGINT, INTEGER, SMALLINT, TINYINT.
+     * @throws InvalidColumnException No column with the specified name exists or the type of the getter
+     * does not match the column type.
+     * @return int64 value at the specified column
+     */
     int64_t getInt64(std::string cname) {
         return getInt64(getColumnIndexByName(cname));
     }
 
+    /*
+     * Retrieve the value from the column with the specified name as a int32_t/INTEGER. The type of the column
+     * must be INTEGER, SMALLINT, TINYINT.
+     * @throws InvalidColumnException No column with the specified name exists or the type of the getter
+     * does not match the column type.
+     * @return int32 value at the specified column
+     */
     int32_t getInt32(std::string cname) {
         return getInt32(getColumnIndexByName(cname));
     }
 
+    /*
+     * Retrieve the value from the column with the specific name as a int16_t/SMALLINT. The type of the column
+     * must be SMALLINT, TINYINT.
+     * @throws InvalidColumnException No column with the specified name exists or the type of the getter
+     * does not match the column type.
+     * @return int16 value at the specified column
+     */
     int16_t getInt16(std::string cname) {
         return getInt16(getColumnIndexByName(cname));
     }
 
+    /*
+     * Retrieve the value from the column with the specific name as a int8_t/TINYINT. The type of the column
+     * must be TINYINT.
+     * @throws InvalidColumnException No column with the specified name exists or the type of the getter
+     * does not match the column type.
+     * @return int8 value at the specified column
+     */
     int8_t getInt8(std::string cname) {
         return getInt8(getColumnIndexByName(cname));
     }
 
+    /*
+     * Retrieve the value from the column with the specific name as a double. The type of the column
+     * must be FLOAT.
+     * @throws InvalidColumnException No column with the specified name exists or the type of the getter
+     * does not match the column type.
+     * @return double value at the specified column
+     */
     double getDouble(std::string cname) {
         return getDouble(getColumnIndexByName(cname));
     }
 
+    /*
+     * Retrieve the value from the column with the specific name as a std::string. The type of the column
+     * must be STRING.
+     * @throws InvalidColumnException No column with the specified name exists or the type of the getter
+     * does not match the column type.
+     * @return string value at the specified column
+     */
     std::string getString(std::string cname) {
         return getString(getColumnIndexByName(cname));
     }
