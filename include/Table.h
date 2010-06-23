@@ -58,6 +58,21 @@ public:
     int8_t getStatusCode();
 
     /*
+     * Retrieve the number of rows contained in this table
+     */
+    int32_t rowCount();
+
+    /*
+     * Retrieve a copy of the column metadata.
+     */
+    std::vector<voltdb::Column> columns();
+
+    /*
+     * Retrieve the number of columns in this table's schema.
+     */
+    int32_t columnCount();
+
+    /*
      * Returns a string representation of this table and all of its rows.
      */
     std::string toString();

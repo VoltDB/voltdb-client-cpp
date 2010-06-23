@@ -229,7 +229,7 @@ void ClientImpl::createConnection(std::string hostname, std::string username, st
         }
         AuthenticationRequest authRequest( username, "database", password );
         ScopedByteBuffer bb(authRequest.getSerializedSize());
-        authRequest.serializeTo(bb);
+        authRequest.serializeTo(&bb);
         struct evbuffer *evbuf = bufferevent_get_output(bev);
         if (evbuffer_add( evbuf, bb.bytes(), static_cast<size_t>(bb.remaining()))) {
             throw voltdb::LibEventException();

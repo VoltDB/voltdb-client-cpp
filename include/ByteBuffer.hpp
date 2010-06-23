@@ -88,10 +88,12 @@ namespace voltdb {
 
 #endif // unix or mac
 
+class ByteBufferTest;
 class ByteBuffer {
+    friend class ByteBufferTest;
 private:
     int32_t checkGetPutIndex(int32_t length) {
-        if (m_limit - m_position < length) {
+        if (m_limit - m_position < length || length < 0) {
             throw OverflowUnderflowException();
         }
         int32_t position = m_position;
@@ -100,19 +102,21 @@ private:
     }
 
     int32_t checkIndex(int32_t index, int32_t length) {
-        if ((index < 0) || (length > m_limit - index)) {
+        if ((index < 0) || (length > m_limit - index) || length < 0) {
             throw IndexOutOfBoundsException();
         }
         return index;
     }
 public:
-    void flip() {
+    ByteBuffer& flip() {
         m_limit = m_position;
         m_position = 0;
+        return *this;
     }
-    void clear() {
+    ByteBuffer& clear() {
         m_limit = m_capacity;
         m_position = 0;
+        return *this;
     }
 
     void get(char *storage, int32_t length) throw (OverflowUnderflowException) {
@@ -132,7 +136,7 @@ public:
 
     ByteBuffer& put(ByteBuffer *other) throw (OverflowUnderflowException) {
         int32_t oremaining = other->remaining();
-        if (oremaining < 0) {
+        if (oremaining == 0) {
             return *this;
         }
         ::memcpy(&m_buffer[checkGetPutIndex(oremaining)],
@@ -295,7 +299,7 @@ public:
     }
 
     ByteBuffer& limit(int32_t newLimit) throw (IndexOutOfBoundsException) {
-        if (newLimit > m_capacity) {
+        if (newLimit > m_capacity || newLimit < 0) {
             throw IndexOutOfBoundsException();
         }
         m_limit = newLimit;
@@ -307,7 +311,9 @@ public:
     }
 
     ByteBuffer slice() {
-        return ByteBuffer(&m_buffer[m_position], m_limit - m_position);
+        ByteBuffer retval(&m_buffer[m_position], m_limit - m_position);
+        m_position = m_limit;
+        return retval;
     }
 
     virtual bool isExpandable() {
@@ -335,10 +341,17 @@ public:
      * Create a byte buffer backed by the provided storage. Does not handle memory ownership
      */
     ByteBuffer(char *buffer, int32_t capacity) :
-        m_buffer(buffer), m_position(0), m_capacity(capacity), m_limit(capacity) {}
+        m_buffer(buffer), m_position(0), m_capacity(capacity), m_limit(capacity) {
+        if (buffer == NULL) {
+            throw NullPointerException();
+        }
+    }
 
     ByteBuffer(const ByteBuffer &other) :
         m_buffer(other.m_buffer), m_position(other.m_position), m_capacity(other.m_capacity), m_limit(other.m_limit) {
+        if (m_buffer == NULL) {
+            throw NullPointerException();
+        }
     }
 
     virtual ~ByteBuffer() {}
@@ -372,25 +385,27 @@ class ExpandableByteBuffer : public ByteBuffer {
 public:
     void ensureRemaining(int32_t amount)  throw(NonExpandableBufferException) {
         if (remaining() < amount) {
-            ensureCapacity(amount);
+            ensureCapacity(position() + amount);
         }
     }
     void ensureRemainingExact(int32_t amount)  throw(NonExpandableBufferException) {
         if (remaining() < amount) {
-            ensureCapacityExact(amount);
+            ensureCapacityExact(position() + amount);
         }
     }
     void ensureCapacity(int32_t capacity)  throw(NonExpandableBufferException) {
-        int32_t newCapacity = capacity;
-        while (newCapacity < capacity) {
-            newCapacity *= 2;
+        if (m_capacity < capacity) {
+            int32_t newCapacity = m_capacity;
+            while (newCapacity < capacity) {
+                newCapacity *= 2;
+            }
+            char *newBuffer = new char[newCapacity];
+            ::memcpy(newBuffer, m_buffer, static_cast<uint32_t>(m_position));
+            m_buffer = newBuffer;
+            resetRef(newBuffer);
+            m_capacity = newCapacity;
+            m_limit = newCapacity;
         }
-        char *newBuffer = new char[newCapacity];
-        ::memcpy(newBuffer, m_buffer, static_cast<uint32_t>(m_position));
-        m_buffer = newBuffer;
-        resetRef(newBuffer);
-        m_capacity = newCapacity;
-        m_limit = newCapacity;
     }
 
     void ensureCapacityExact(int32_t capacity)  throw(NonExpandableBufferException) {

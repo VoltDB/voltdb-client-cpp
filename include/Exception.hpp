@@ -38,6 +38,15 @@ public:
     }
 };
 
+class NullPointerException : public Exception {
+public:
+    NullPointerException() :
+        Exception() {}
+    virtual const char* what() const throw() {
+        return "Found a null pointer where an address was expected";
+    }
+};
+
 /*
  * Thrown when attempting to retrieve a column from a Row using a column
  * index that is < 0, > num columns, or when using a getter with an inappropriate data type

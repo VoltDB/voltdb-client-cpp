@@ -57,6 +57,19 @@ namespace voltdb {
         return TableIterator(m_buffer.slice(), m_columns, m_rowCount);
     }
 
+    int32_t Table::rowCount() {
+        return m_rowCount;
+    }
+
+    int32_t Table::columnCount() {
+        return m_columns->size();
+    }
+
+    std::vector<voltdb::Column> Table::columns() {
+        return *m_columns;
+    }
+
+
     std::string Table::toString() {
         std::ostringstream ostream;
         toString(ostream, std::string(""));

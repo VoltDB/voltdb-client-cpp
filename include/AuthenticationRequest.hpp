@@ -38,16 +38,16 @@ public:
         + 4 //length prefix
         + 1; //version number
     }
-    void serializeTo(ByteBuffer &buffer) {
-        buffer.position(4);
-        buffer.putInt8(0);
-        buffer.putString(m_service);
-        buffer.putString(m_username);
+    void serializeTo(ByteBuffer *buffer) {
+        buffer->position(4);
+        buffer->putInt8(0);
+        buffer->putString(m_service);
+        buffer->putString(m_username);
         unsigned char hashBytes[20];
         SHA1( reinterpret_cast<const unsigned char*>(m_password.data()), m_password.size(), hashBytes);
-        buffer.put(reinterpret_cast<char*>(hashBytes), 20);
-        buffer.flip();
-        buffer.putInt32(0, buffer.limit() - 4);
+        buffer->put(reinterpret_cast<char*>(hashBytes), 20);
+        buffer->flip();
+        buffer->putInt32(0, buffer->limit() - 4);
     }
 private:
     std::string m_username;
