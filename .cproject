@@ -3401,6 +3401,7 @@
 								</option>
 								<option id="gnu.cpp.link.option.other.868758831" name="Other options (-Xlinker [option])" superClass="gnu.cpp.link.option.other" valueType="stringList">
 									<listOptionValue builtIn="false" value="-rpath=../Library\ Debug"/>
+									<listOptionValue builtIn="false" value="&quot;-rpath=${HOME}/lib&quot;"/>
 									<listOptionValue builtIn="false" value="-rpath=../Library\ Release"/>
 								</option>
 								<option id="gnu.cpp.link.option.shared.359486629" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared"/>

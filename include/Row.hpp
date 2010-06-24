@@ -233,11 +233,11 @@ public:
         case WIRE_TYPE_SMALLINT:
             getInt64(column); break;
         case WIRE_TYPE_TINYINT:
-            m_data.getInt8(getOffset(column)); break;
+            getInt8(column); break;
         case WIRE_TYPE_FLOAT:
-            m_data.getDouble(getOffset(column)); break;
+            getDouble(column); break;
         case WIRE_TYPE_STRING:
-            m_data.getString(getOffset(column), m_wasNull); break;
+            getString(column); break;
         default:
             assert(false);
         }
@@ -394,6 +394,14 @@ public:
             }
         }
     }
+
+    int32_t columnCount() {
+        return m_columns->size();
+    }
+
+    std::vector<voltdb::Column> columns() {
+        return *m_columns;
+    }
 private:
     WireType validateType(WireType type, int32_t index)  throw (InvalidColumnException) {
         if (index < 0 ||
@@ -412,17 +420,17 @@ private:
             if (type != WIRE_TYPE_BIGINT) throw InvalidColumnException();
             break;
         case WIRE_TYPE_INTEGER:
-            if (type != WIRE_TYPE_BIGINT || type != WIRE_TYPE_INTEGER) throw InvalidColumnException();
+            if (type != WIRE_TYPE_BIGINT && type != WIRE_TYPE_INTEGER) throw InvalidColumnException();
             break;
         case WIRE_TYPE_SMALLINT:
-            if (type != WIRE_TYPE_BIGINT ||
-                    type != WIRE_TYPE_INTEGER ||
+            if (type != WIRE_TYPE_BIGINT &&
+                    type != WIRE_TYPE_INTEGER &&
                     type != WIRE_TYPE_SMALLINT) throw InvalidColumnException();
             break;
         case WIRE_TYPE_TINYINT:
-            if (type != WIRE_TYPE_BIGINT ||
-                    type != WIRE_TYPE_INTEGER ||
-                    type != WIRE_TYPE_SMALLINT ||
+            if (type != WIRE_TYPE_BIGINT &&
+                    type != WIRE_TYPE_INTEGER &&
+                    type != WIRE_TYPE_SMALLINT &&
                     type != WIRE_TYPE_TINYINT) throw InvalidColumnException();
             break;
         case WIRE_TYPE_FLOAT:

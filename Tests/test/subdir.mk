@@ -5,16 +5,22 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
 ../test/ByteBufferTest.cpp \
+../test/ClientTest.cpp \
+../test/MockVoltDB.cpp \
 ../test/SerializationTest.cpp \
 ../test/Tests.cpp 
 
 OBJS += \
 ./test/ByteBufferTest.o \
+./test/ClientTest.o \
+./test/MockVoltDB.o \
 ./test/SerializationTest.o \
 ./test/Tests.o 
 
 CPP_DEPS += \
 ./test/ByteBufferTest.d \
+./test/ClientTest.d \
+./test/MockVoltDB.d \
 ./test/SerializationTest.d \
 ./test/Tests.d 
 

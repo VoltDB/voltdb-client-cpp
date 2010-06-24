@@ -31,6 +31,7 @@
 #include <boost/shared_ptr.hpp>
 
 namespace voltdb {
+class MockVoltDB;
 class ClientImpl;
 /*
  * A VoltDB client for invoking stored procedures on a VoltDB instance. The client and the
@@ -42,6 +43,7 @@ class ClientImpl;
  * and responses are processed.
  */
 class Client {
+    friend class MockVoltDB;
 public:
     /*
      * Create a connection to the VoltDB process running at the specified host authenticating

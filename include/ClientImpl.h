@@ -19,21 +19,10 @@
 
 namespace voltdb {
 
-class CxnContext {
-
-/*
- * Data associated with a specific connection
- */
-public:
-    CxnContext(std::string name) : m_name(name), m_nextLength(4), m_lengthOrMessage(true) {
-
-    }
-    const std::string m_name;
-    int32_t m_nextLength;
-    bool m_lengthOrMessage;
-};
-
+class CxnContext;
+class MockVoltDB;
 class ClientImpl {
+    friend class MockVoltDB;
 public:
     friend class Client;
 
@@ -79,9 +68,9 @@ public:
     bool drain() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
     ~ClientImpl();
 
-    void regularReadCallback(struct bufferevent *bev, void *ctx);
-    void regularEventCallback(struct bufferevent *bev, short events, void *ctx);
-    void regularWriteCallback(struct bufferevent *bev, void *ctx);
+    void regularReadCallback(struct bufferevent *bev);
+    void regularEventCallback(struct bufferevent *bev, short events);
+    void regularWriteCallback(struct bufferevent *bev);
 
 private:
     ClientImpl() throw(voltdb::LibEventException);

@@ -22,8 +22,9 @@ public:
      * voltdb::ClientCallbackException.
      * @param exception The exception thrown by the callback
      * @param callback Instance of the callback that threw the exception
+     * @return true if the event loop should terminate and false otherwise
      */
-    virtual void uncaughtException(
+    virtual bool uncaughtException(
             std::exception exception,
             boost::shared_ptr<voltdb::ProcedureCallback> callback) = 0;
 
@@ -31,8 +32,9 @@ public:
      * Notify the client application that a connection to the database was lost
      * @param hostname Name of the host that the connection was lost to
      * @param connectionsLeft Number of connections to the database remaining
+     * @return true if the event loop should terminate and false otherwise
      */
-    virtual void connectionLost(std::string hostname, int32_t connectionsLeft) = 0;
+    virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) = 0;
 
     /*
      * Notify the client application that backpressure occured

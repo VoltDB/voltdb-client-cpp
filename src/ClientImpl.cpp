@@ -28,6 +28,8 @@
 
 namespace voltdb {
 
+static bool voltdb_clientimpl_debug_init_libevent = false;
+
 class PendingConnection {
 public:
     PendingConnection(struct event_base *base)
@@ -39,6 +41,19 @@ public:
     AuthenticationResponse m_response;
     struct timeval m_post_connect_wait;
     bool m_loginExchangeCompleted;
+};
+
+class CxnContext {
+/*
+ * Data associated with a specific connection
+ */
+public:
+    CxnContext(std::string name) : m_name(name), m_nextLength(4), m_lengthOrMessage(true) {
+
+    }
+    const std::string m_name;
+    int32_t m_nextLength;
+    bool m_lengthOrMessage;
 };
 
 /**
@@ -54,7 +69,7 @@ public:
    @param bev the bufferevent that triggered the callback
    @param ctx the user specified context for this bufferevent
  */
-void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
+static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
     PendingConnection *pc = reinterpret_cast<PendingConnection*>(ctx);
     struct evbuffer *evbuf = bufferevent_get_input(bev);
     if (pc->m_authenticationResponseLength < 0) {
@@ -97,14 +112,14 @@ void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
 
    @param ctx the user specified context for this bufferevent
 */
-void authenticationEventCallback(struct bufferevent *bev, short events, void *ctx) {
+static void authenticationEventCallback(struct bufferevent *bev, short events, void *ctx) {
     PendingConnection *pc = reinterpret_cast<PendingConnection*>(ctx);
     if (events & BEV_EVENT_CONNECTED) {
     } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
         pc->m_status = false;
         pc->m_loginExchangeCompleted = true;
     }
-
+    event_base_loopexit(pc->m_base, NULL);
 }
 
 /**
@@ -120,17 +135,17 @@ void authenticationEventCallback(struct bufferevent *bev, short events, void *ct
    @param bev the bufferevent that triggered the callback
    @param ctx the user specified context for this bufferevent
  */
-void regularReadCallback(struct bufferevent *bev, void *ctx) {
+static void regularReadCallback(struct bufferevent *bev, void *ctx) {
     ClientImpl *impl = reinterpret_cast<ClientImpl*>(ctx);
-    impl->regularReadCallback(bev, ctx);
+    impl->regularReadCallback(bev);
 }
 
 /*
  * Only has to handle the case where there is an error or EOF
  */
-void regularEventCallback(struct bufferevent *bev, short events, void *ctx) {
+static void regularEventCallback(struct bufferevent *bev, short events, void *ctx) {
     ClientImpl *impl = reinterpret_cast<ClientImpl*>(ctx);
-    impl->regularEventCallback(bev, events, ctx);
+    impl->regularEventCallback(bev, events);
 }
 
 /**
@@ -146,9 +161,9 @@ void regularEventCallback(struct bufferevent *bev, short events, void *ctx) {
    @param bev the bufferevent that triggered the callback
    @param ctx the user specified context for this bufferevent
  */
-void regularWriteCallback(struct bufferevent *bev, void *ctx) {
+static void regularWriteCallback(struct bufferevent *bev, void *ctx) {
     ClientImpl *impl = reinterpret_cast<ClientImpl*>(ctx);
-    impl->regularWriteCallback(bev, ctx);
+    impl->regularWriteCallback(bev);
 }
 
 ClientImpl::~ClientImpl() {
@@ -162,11 +177,14 @@ ClientImpl::~ClientImpl() {
 }
 
 ClientImpl::ClientImpl() throw(voltdb::LibEventException) :
-        m_nextRequestId(0), m_nextConnectionIndex(0),
+        m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
         m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false),
         m_isDraining(false), m_outstandingRequests(0) {
 #ifdef DEBUG
-    event_enable_debug_mode();
+    if (!voltdb_clientimpl_debug_init_libevent) {
+        event_enable_debug_mode();
+        voltdb_clientimpl_debug_init_libevent = true;
+    }
 #endif
     m_base = event_base_new();
     assert(m_base);
@@ -176,11 +194,14 @@ ClientImpl::ClientImpl() throw(voltdb::LibEventException) :
 }
 
 ClientImpl::ClientImpl(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::LibEventException) :
-        m_nextRequestId(0), m_nextConnectionIndex(0), m_listener(listener),
+        m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0), m_listener(listener),
         m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false), m_isDraining(false),
         m_outstandingRequests(0) {
 #ifdef DEBUG
-    event_enable_debug_mode();
+    if (!voltdb_clientimpl_debug_init_libevent) {
+        event_enable_debug_mode();
+        voltdb_clientimpl_debug_init_libevent = true;
+    }
 #endif
     m_base = event_base_new();
     assert(m_base);
@@ -302,6 +323,9 @@ boost::shared_ptr<InvocationResponse> ClientImpl::invoke(Procedure &proc) throw 
 }
 
 void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
+    if (callback.get() == NULL) {
+        throw voltdb::NullPointerException();
+    }
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
@@ -358,6 +382,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
                 }
             } else {
                 bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+                break;
             }
         }
     }
@@ -396,7 +421,7 @@ void ClientImpl::run() throw (voltdb::Exception, voltdb::NoConnectionsException,
     m_loopBreakRequested = false;
 }
 
-void ClientImpl::regularReadCallback(struct bufferevent *bev, void *ctx) {
+void ClientImpl::regularReadCallback(struct bufferevent *bev) {
     struct evbuffer *evbuf = bufferevent_get_input(bev);
     boost::shared_ptr<CxnContext> context = m_contexts[bev];
     int32_t remaining = static_cast<int32_t>(evbuffer_get_length(evbuf));
@@ -423,12 +448,10 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev, void *ctx) {
             boost::shared_ptr<CallbackMap> callbackMap = m_callbacks[bev];
             CallbackMap::iterator i = callbackMap->find(response->clientData());
             try {
-                if (i->second->callback(response)) {
-                    breakEventLoop = true;
-                }
-            } catch (std::exception e) {
+                breakEventLoop |= i->second->callback(response);
+            } catch (std::exception &e) {
                 if (m_listener.get() != NULL) {
-                    m_listener->uncaughtException( e, i->second);
+                    breakEventLoop |= m_listener->uncaughtException( e, i->second);
                 }
             }
             callbackMap->erase(i);
@@ -452,18 +475,19 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev, void *ctx) {
         event_base_loopbreak( m_base );
     }
 }
-void ClientImpl::regularEventCallback(struct bufferevent *bev, short events, void *ctx) {
+void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
     if (events & BEV_EVENT_CONNECTED) {
         assert(false);
     } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
         /*
          * First drain anything in the read buffer
          */
-        regularReadCallback(bev, ctx);
+        regularReadCallback(bev);
 
+        bool breakEventLoop = false;
         //Notify client that a connection was lost
         if (m_listener.get() != NULL) {
-            m_listener->connectionLost( m_contexts[bev]->m_name, m_bevs.size() - 1);
+            breakEventLoop |= m_listener->connectionLost( m_contexts[bev]->m_name, m_bevs.size() - 1);
         }
 
         /*
@@ -472,15 +496,14 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events, voi
          */
         BEVToCallbackMap::iterator callbackMapIter = m_callbacks.find(bev);
         boost::shared_ptr<CallbackMap> callbackMap = callbackMapIter->second;
-        bool breakEventLoop = false;
         for (CallbackMap::iterator i =  callbackMap->begin();
                 i != callbackMap->end(); i++) {
             try {
-                breakEventLoop =
+                breakEventLoop |=
                         i->second->callback(boost::shared_ptr<voltdb::InvocationResponse>(new InvocationResponse()));
-            } catch (std::exception e) {
+            } catch (std::exception &e) {
                 if (m_listener.get() != NULL) {
-                    m_listener->uncaughtException( e, i->second);
+                    breakEventLoop |= m_listener->uncaughtException( e, i->second);
                 }
             }
             m_outstandingRequests--;
@@ -488,10 +511,6 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events, voi
 
         if (m_isDraining && m_outstandingRequests == 0) {
             breakEventLoop = true;
-        }
-
-        if (breakEventLoop) {
-            event_base_loopbreak( m_base );
         }
 
         //Remove the callback map from the callbacks map
@@ -509,10 +528,15 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events, voi
                 break;
             }
         }
+
+        bufferevent_free(bev);
+        if (breakEventLoop || m_bevs.size() == 0) {
+            event_base_loopbreak( m_base );
+        }
     }
 }
 
-void ClientImpl::regularWriteCallback(struct bufferevent *bev, void *ctx) {
+void ClientImpl::regularWriteCallback(struct bufferevent *bev) {
     boost::unordered_set<struct bufferevent*>::iterator iter =
             m_backpressuredBevs.find(bev);
     if (iter != m_backpressuredBevs.end()) {
