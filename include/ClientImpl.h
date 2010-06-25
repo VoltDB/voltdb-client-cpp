@@ -73,8 +73,8 @@ public:
     void regularWriteCallback(struct bufferevent *bev);
 
 private:
-    ClientImpl() throw(voltdb::LibEventException);
-    ClientImpl(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::LibEventException);
+    ClientImpl() throw(voltdb::Exception, voltdb::LibEventException);
+    ClientImpl(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::Exception, voltdb::LibEventException);
 
     struct event_base *m_base;
     int64_t m_nextRequestId;

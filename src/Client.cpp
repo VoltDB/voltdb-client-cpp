@@ -9,10 +9,10 @@
 
 namespace voltdb {
 
-boost::shared_ptr<Client> Client::create() throw(voltdb::LibEventException) {
+boost::shared_ptr<Client> Client::create() throw(voltdb::Exception, voltdb::LibEventException) {
     return boost::shared_ptr<Client>(new Client(new ClientImpl()));
 }
-boost::shared_ptr<Client> Client::create(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::LibEventException) {
+boost::shared_ptr<Client> Client::create(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::Exception, voltdb::LibEventException) {
     return boost::shared_ptr<Client>(new Client(new ClientImpl(listener)));
 }
 

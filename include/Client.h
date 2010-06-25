@@ -107,12 +107,12 @@ public:
     /*
      * Create a client with no status listener registered
      */
-    static boost::shared_ptr<Client> create() throw(voltdb::LibEventException);
+    static boost::shared_ptr<Client> create() throw(voltdb::Exception, voltdb::LibEventException);
 
     /*
      * Create a client with a status listener
      */
-    static boost::shared_ptr<Client> create(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::LibEventException);
+    static boost::shared_ptr<Client> create(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::Exception, voltdb::LibEventException);
 
     ~Client();
 private:

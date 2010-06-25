@@ -74,6 +74,8 @@ CPPUNIT_TEST( testLostConnectionBreaksEventLoop );
 CPPUNIT_TEST( testBreakEventLoopViaCallback );
 CPPUNIT_TEST( testCallbackThrows );
 CPPUNIT_TEST( testBackpressure );
+CPPUNIT_TEST( testDrain );
+CPPUNIT_TEST( testLostConnectionDuringDrain );
 CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -102,7 +104,7 @@ public:
         Procedure proc("Insert", signature);
         ParameterSet *params = proc.params();
         params->addString("Hello").addString("World").addString("English");
-        m_voltdb->filenameForNextMessage("invocation_response_success.msg");
+        m_voltdb->filenameForNextResponse("invocation_response_success.msg");
         boost::shared_ptr<InvocationResponse> response = (*m_client)->invoke(proc);
         CPPUNIT_ASSERT(response->success());
         CPPUNIT_ASSERT(response->statusString() == "");
@@ -129,7 +131,7 @@ public:
         Procedure proc("Insert", signature);
         ParameterSet *params = proc.params();
         params->addString("Hello").addString("World").addString("English");
-        m_voltdb->filenameForNextMessage("invocation_response_success.msg");
+        m_voltdb->filenameForNextResponse("invocation_response_success.msg");
 
         SyncCallback *cb = new SyncCallback();
         boost::shared_ptr<ProcedureCallback> callback(cb);
@@ -207,7 +209,7 @@ public:
         SyncCallback *cb = new SyncCallback();
         boost::shared_ptr<ProcedureCallback> callback(cb);
         (*m_client)->invoke(proc, callback);
-        m_voltdb->hangupOnNextRequest();
+        m_voltdb->hangupOnRequestCount(1);
 
         proc.params();
         boost::shared_ptr<InvocationResponse> syncResponse = (*m_client)->invoke(proc);
@@ -252,7 +254,7 @@ public:
         SyncCallback *cb = new SyncCallback();
         boost::shared_ptr<ProcedureCallback> callback(cb);
         (*m_client)->invoke(proc, callback);
-        m_voltdb->hangupOnNextRequest();
+        m_voltdb->hangupOnRequestCount(1);
 
         (*m_client)->run();
         (*m_client)->runOnce();
@@ -276,7 +278,7 @@ public:
         Procedure proc("Insert", signature);
         ParameterSet *params = proc.params();
         params->addString("Hello").addString("World").addString("English");
-        m_voltdb->filenameForNextMessage("invocation_response_success.msg");
+        m_voltdb->filenameForNextResponse("invocation_response_success.msg");
 
         BreakingSyncCallback *cb = new BreakingSyncCallback();
         boost::shared_ptr<ProcedureCallback> callback(cb);
@@ -322,7 +324,7 @@ public:
         Procedure proc("Insert", signature);
         ParameterSet *params = proc.params();
         params->addString("Hello").addString("World").addString("English");
-        m_voltdb->filenameForNextMessage("invocation_response_success.msg");
+        m_voltdb->filenameForNextResponse("invocation_response_success.msg");
 
         ThrowingCallback *cb = new ThrowingCallback();
         boost::shared_ptr<ProcedureCallback> callback(cb);
@@ -364,7 +366,68 @@ public:
             (*m_client)->invoke(proc, callback);
             (*m_client)->runOnce();
         }
-//        (*m_client)->invoke(proc);
+    }
+
+    class CountingCallback : public voltdb::ProcedureCallback {
+    public:
+        CountingCallback(int32_t count) : m_count(count) {}
+
+        bool callback(boost::shared_ptr<voltdb::InvocationResponse> response) throw (voltdb::Exception) {
+            m_count--;
+
+            CPPUNIT_ASSERT(response->success());
+            return false;
+        }
+        int32_t m_count;
+    };
+
+    void testDrain() {
+        m_voltdb->filenameForNextResponse("invocation_response_success.msg");
+        (*m_client)->createConnection("localhost", "hello", "world");
+        std::vector<Parameter> signature;
+        Procedure proc("Insert", signature);
+
+        CountingCallback *cb = new CountingCallback(5);
+        boost::shared_ptr<ProcedureCallback> callback(cb);
+        for (int ii = 0; ii < 5; ii++) {
+            (*m_client)->invoke( proc, callback);
+        }
+        (*m_client)->drain();
+        CPPUNIT_ASSERT(cb->m_count == 0);
+    }
+
+    class CountingSuccessAndConnectionLost : public voltdb::ProcedureCallback {
+    public:
+        CountingSuccessAndConnectionLost() : m_success(0), m_connectionLost(0) {}
+
+        bool callback(boost::shared_ptr<voltdb::InvocationResponse> response) throw (voltdb::Exception) {
+            if (response->success()) {
+                m_success++;
+            } else {
+                CPPUNIT_ASSERT(response->statusCode() == voltdb::STATUS_CODE_CONNECTION_LOST);
+                m_connectionLost++;
+            }
+            return false;
+        }
+        int32_t m_success;
+        int32_t m_connectionLost;
+    };
+
+    void testLostConnectionDuringDrain() {
+        m_voltdb->filenameForNextResponse("invocation_response_success.msg");
+        (*m_client)->createConnection("localhost", "hello", "world");
+        std::vector<Parameter> signature;
+        Procedure proc("Insert", signature);
+
+        CountingSuccessAndConnectionLost *cb = new CountingSuccessAndConnectionLost();
+        boost::shared_ptr<ProcedureCallback> callback(cb);
+        for (int ii = 0; ii < 5; ii++) {
+            (*m_client)->invoke( proc, callback);
+        }
+        m_voltdb->hangupOnRequestCount(3);
+        (*m_client)->drain();
+        CPPUNIT_ASSERT(cb->m_success == 2);
+        CPPUNIT_ASSERT(cb->m_connectionLost == 3);
     }
 
 private:

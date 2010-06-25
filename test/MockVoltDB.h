@@ -45,12 +45,12 @@ public:
             evutil_socket_t sock, struct sockaddr *addr, int len);
     ~MockVoltDB();
 
-    void filenameForNextMessage(std::string filename) {
-        m_filenameForNextMessage = filename;
+    void filenameForNextResponse(std::string filename) {
+        m_filenameForNextResponse = filename;
     }
 
-    void hangupOnNextRequest() {
-        m_hangupOnNextRequest = true;
+    void hangupOnRequestCount(int32_t count) {
+        m_hangupOnRequestCounter = count;
     }
 
     void dontRead() {
@@ -61,8 +61,8 @@ private:
     struct evconnlistener *m_listener;
     boost::unordered_set<struct bufferevent*> m_connections;
     boost::unordered_map<struct bufferevent*, boost::shared_ptr<CxnContext> > m_contexts;
-    std::string m_filenameForNextMessage;
-    bool m_hangupOnNextRequest;
+    std::string m_filenameForNextResponse;
+    int32_t m_hangupOnRequestCounter;
     bool m_dontRead;
 };
 }

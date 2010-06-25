@@ -176,7 +176,7 @@ ClientImpl::~ClientImpl() {
     event_base_free(m_base);
 }
 
-ClientImpl::ClientImpl() throw(voltdb::LibEventException) :
+ClientImpl::ClientImpl() throw(voltdb::Exception, voltdb::LibEventException) :
         m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
         m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false),
         m_isDraining(false), m_outstandingRequests(0) {
@@ -193,7 +193,7 @@ ClientImpl::ClientImpl() throw(voltdb::LibEventException) :
     }
 }
 
-ClientImpl::ClientImpl(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::LibEventException) :
+ClientImpl::ClientImpl(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::Exception, voltdb::LibEventException) :
         m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0), m_listener(listener),
         m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false), m_isDraining(false),
         m_outstandingRequests(0) {
