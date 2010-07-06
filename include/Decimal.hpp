@@ -24,7 +24,12 @@
 #ifndef VOLT_DECIMAL_HPP_
 #define VOLT_DECIMAL_HPP_
 #include <string>
+/*
+ * ASM doesn't compile on 32-bit Ubuntu 10.04
+ */
+#if !defined _M_X64 && !defined __x86_64__
 #define TTMATH_NOASM
+#endif
 #include "ttmath/ttmathint.h"
 #include "Exception.hpp"
 #include <sstream>
