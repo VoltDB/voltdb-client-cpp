@@ -24,13 +24,18 @@
 #ifndef VOLT_DECIMAL_HPP_
 #define VOLT_DECIMAL_HPP_
 #include <string>
+#define TTMATH_NOASM
 #include "ttmath/ttmathint.h"
 #include "Exception.hpp"
 #include <sstream>
 
 namespace voltdb {
 //The int used for storage and return values
+#ifdef TTMATH_PLATFORM64
 typedef ttmath::Int<2> TTInt;
+#else
+typedef ttmath::Int<4> TTInt;
+#endif
 
 /*
  * A class for constructing Decimal values with the fixed precision and scale supported by VoltDB
@@ -45,12 +50,12 @@ public:
     // Precision and scale (inherent in the schema)
     static const uint16_t kMaxDecPrec = 38;
     static const uint16_t kMaxDecScale = 12;
-    static const int64_t kMaxScaleFactor = 1000000000000;
 
     /*
      * Construct a decimal value from a string.
      */
     Decimal(std::string txt) {
+        const TTInt kMaxScaleFactor("1000000000000");
         if (txt.length() == 0) {
             throw StringToDecimalException();
         }
@@ -153,6 +158,7 @@ public:
      * Convert a Decimal value to a string representation
      */
     std::string toString() {
+        const TTInt kMaxScaleFactor("1000000000000");
         assert(!isNull());
         std::ostringstream buffer;
         TTInt scaledValue = getDecimal();

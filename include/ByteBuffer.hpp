@@ -69,10 +69,10 @@ namespace voltdb {
 
 #else // unix in general
 
-#undef htons
-#undef ntohs
-#define htons(x) static_cast<uint16_t>((((x) >> 8) & 0xff) | (((x) & 0xff) << 8))
-#define ntohs(x) static_cast<uint16_t>((((x) >> 8) & 0xff) | (((x) & 0xff) << 8))
+//#undef htons
+//#undef ntohs
+//#define htons(x) static_cast<uint16_t>((((x) >> 8) & 0xff) | (((x) & 0xff) << 8))
+//#define ntohs(x) static_cast<uint16_t>((((x) >> 8) & 0xff) | (((x) & 0xff) << 8))
 
 #ifdef __bswap_64 // recent linux
 
