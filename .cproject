@@ -38,7 +38,7 @@
 								<option id="gnu.cpp.compiler.option.warnings.pedantic.error.1883945192" name="Pedantic warnings as errors (-pedantic-errors)" superClass="gnu.cpp.compiler.option.warnings.pedantic.error" value="false" valueType="boolean"/>
 								<option id="gnu.cpp.compiler.option.warnings.pedantic.1336955680" name="Pedantic (-pedantic)" superClass="gnu.cpp.compiler.option.warnings.pedantic" value="false" valueType="boolean"/>
 								<option id="gnu.cpp.compiler.option.other.other.1415974153" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0" valueType="string"/>
-								<option id="gnu.cpp.compiler.option.warnings.allwarn.1172929298" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="false" valueType="boolean"/>
+								<option id="gnu.cpp.compiler.option.warnings.allwarn.1172929298" name="All warnings (-Wall)" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="false" valueType="boolean"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.195554570" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.1472137014" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">
@@ -1706,7 +1706,7 @@
 								<option id="gnu.cpp.compiler.option.warnings.pedantic.error.1628443905" name="Pedantic warnings as errors (-pedantic-errors)" superClass="gnu.cpp.compiler.option.warnings.pedantic.error" value="false" valueType="boolean"/>
 								<option id="gnu.cpp.compiler.option.warnings.pedantic.1805413702" name="Pedantic (-pedantic)" superClass="gnu.cpp.compiler.option.warnings.pedantic" value="false" valueType="boolean"/>
 								<option id="gnu.cpp.compiler.option.other.other.455864300" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0" valueType="string"/>
-								<option id="gnu.cpp.compiler.option.warnings.allwarn.2119560337" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="false" valueType="boolean"/>
+								<option id="gnu.cpp.compiler.option.warnings.allwarn.2119560337" name="All warnings (-Wall)" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="false" valueType="boolean"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.902033293" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.1482487486" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">
@@ -3376,7 +3376,7 @@
 								<option id="gnu.cpp.compiler.option.warnings.pedantic.1484438135" name="Pedantic (-pedantic)" superClass="gnu.cpp.compiler.option.warnings.pedantic" value="false" valueType="boolean"/>
 								<option id="gnu.cpp.compiler.option.other.other.178621166" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0" valueType="string"/>
 								<option id="gnu.cpp.compiler.option.preprocessor.preprocess.874058413" name="Preprocess only (-E)" superClass="gnu.cpp.compiler.option.preprocessor.preprocess" value="false" valueType="boolean"/>
-								<option id="gnu.cpp.compiler.option.warnings.allwarn.1439707844" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="false" valueType="boolean"/>
+								<option id="gnu.cpp.compiler.option.warnings.allwarn.1439707844" name="All warnings (-Wall)" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="false" valueType="boolean"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1165602726" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.820363139" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">
@@ -3402,6 +3402,7 @@
 								<option id="gnu.cpp.link.option.paths.1463624092" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;../Library Debug&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;../Library Release&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${HOME}/lib&quot;"/>
 								</option>
 								<option id="gnu.cpp.link.option.other.868758831" name="Other options (-Xlinker [option])" superClass="gnu.cpp.link.option.other" valueType="stringList">
 									<listOptionValue builtIn="false" value="-rpath=../Library\ Debug"/>
