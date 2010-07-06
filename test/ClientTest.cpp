@@ -37,7 +37,9 @@ namespace voltdb {
 
 class DelegatingListener : public StatusListener {
 public:
-    StatusListener *m_listener;
+   StatusListener *m_listener;
+   DelegatingListener() : m_listener(NULL) {
+   }
    virtual bool uncaughtException(
            std::exception exception,
            boost::shared_ptr<voltdb::ProcedureCallback> callback) {
