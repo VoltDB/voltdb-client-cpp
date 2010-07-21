@@ -54,7 +54,7 @@ public:
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(std::string hostname, std::string username, std::string password) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
+    void createConnection(std::string hostname, std::string username, std::string password, short port = 21212) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
 
     /*
      * Synchronously invoke a stored procedure and return a the response. Callbacks for asynchronous requests

@@ -26,9 +26,10 @@ void
 Client::createConnection(
         std::string hostname,
         std::string username,
-        std::string password)
+        std::string password,
+        short port)
 throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
-    m_impl->createConnection(hostname, username, password);
+    m_impl->createConnection(hostname, username, password, port);
 }
 
 /*

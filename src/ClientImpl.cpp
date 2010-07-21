@@ -228,7 +228,7 @@ private:
     bool m_success;
 };
 
-void ClientImpl::createConnection(std::string hostname, std::string username, std::string password) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+void ClientImpl::createConnection(std::string hostname, std::string username, std::string password, short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE);
     FreeBEVOnFailure protector(bev);
     if (bev == NULL) {
@@ -236,7 +236,7 @@ void ClientImpl::createConnection(std::string hostname, std::string username, st
     }
     PendingConnection pc(m_base);
     bufferevent_setcb(bev, authenticationReadCallback, NULL, authenticationEventCallback, &pc);
-    if (bufferevent_socket_connect_hostname(bev, NULL, AF_INET, hostname.c_str(), 21212) != 0) {
+    if (bufferevent_socket_connect_hostname(bev, NULL, AF_INET, hostname.c_str(), port) != 0) {
         throw voltdb::LibEventException();
     }
     if (event_base_dispatch(m_base) == -1) {

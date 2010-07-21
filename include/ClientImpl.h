@@ -44,10 +44,11 @@ public:
      * @param hostname Hostname or IP address to connect to
      * @param username Username to provide for authentication
      * @param password Password to provide for authentication
+     * @param port Port to connect to
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(std::string hostname, std::string username, std::string password) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
+    void createConnection(std::string hostname, std::string username, std::string password, short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
 
     /*
      * Synchronously invoke a stored procedure and return a the response.
