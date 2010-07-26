@@ -18,9 +18,28 @@ Source contains the compilation units for the shared library as well as the exam
 
 Build instructions
 
-The C++ client library depends on openssl (libssl), libevent 2.05, and boost. libevent 2.05 is beta and is not packaged with any distros so you will have to build it yourself. The good news is that it compiles easily on CentOS 5 and Ubuntu 10.04. Eclipse is being used to manage the project and auto-generate the makefiles. Don't commit changes to the makefiles because they will be overwritten by Eclipse. The project is configured to add ${HOME}/lib and ${HOME}/include so that you can build libevent 2.05 and install it into your home directory. You should be able to get the boost headers from a package for your distro. For instance "sudo apt-get install libboost-all-dev" works on Ubuntu. OpenSSL is "sudo apt-get install libssl-dev" on Ubuntu.
+The C++ client library depends on openssl (libssl), libevent 2.05, and boost. libevent 2.05 is beta and is not packaged with any distros so you will have to build it yourself. The good news is that it compiles easily on CentOS 5 and Ubuntu 10.04. Additionally, tests require CPPUnit. Eclipse is being used to manage the project and auto-generate the makefiles. Don't commit changes to the makefiles because they will be overwritten by Eclipse.
 
-There are five build configurations right now. HelloWorld, AsyncHelloWorld, Library Debug, Library Release, and Tests. The first two build example applications that can be used with the Hello World example from the distribution. The next two build a .so with different settings. To build each one you can cd into the appropriate directory and type "make" and it should build and produce the result file in the same directory. The HelloWorld and AsyncHelloWorld examples depend on the .so file so you need to have the debug or release library built.
+You should be able to get the boost, openssl and cppunit headers from a package for your distro. For example:
+
+    * sudo apt-get install libboost-all-dev
+    * sudo apt-get install libssl-dev
+    * sudo apt-get install libcppunit-dev
+
+The project is configured to add ${HOME}/lib and ${HOME}/include so that you can build libevent 2.05 and install it under ${HOME} home directory. Alternately, you can set CPLUS_INCLUDE_PATH and LIBRARY_PATH accordingly. For example, if you built libevent with --prefix=${HOME}/local:
+
+    * export LIBRARY_PATH=${HOME}/local/lib
+    * export CPLUS_INCLUDE_PATH=${HOME}/local/include/
+
+There are five build configurations right now. HelloWorld, AsyncHelloWorld, Library Debug, Library Release, and Tests. The first two build example applications that can be used with the Hello World example from the distribution. The next two build a .so with different settings. To build each one you can cd into the appropriate directory and type "make" and it should build and produce the result file in the same directory. The HelloWorld and AsyncHelloWorld examples depend on the .so file so you need to have the debug or release library built.  For example:
+
+    * cd Library\ Debug
+    * make
+    * cd ../Tests
+    * make
+    * cd ../HelloWorld
+    * make
+
 
 Building libevent 2.05
 
@@ -31,8 +50,6 @@ make verify
 make install
 
 The reason you want to install it into your home directory is that you will be working outside the package system and you don't want to sully your system directory. This leaves the upgrade path open when libevent 2 comes as a package from your distro.
-
-The C++ client API is single threaded. The shared pointers that are returned are not thread safe and the Client instances are not thread safe. Because it is single threaded your application has to provide its thread to the API to do network IO and invoke callbacks. At key points your application can call run() to enter an event loop that will not exit until a callback returns true. An application can also call runOnce() or spin in a loop on runOnce(). runOnce() does network IO and invokes callbacks, but returns immediately after all pending events have been handled.
 
 Running the tests
 
