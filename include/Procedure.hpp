@@ -58,6 +58,9 @@ public:
                 + 8; //client data
     }
 
+#ifdef SWIG
+%ignore serializeTo;
+#endif
     void serializeTo(ByteBuffer *buffer, int64_t clientData) {
         buffer->position(4);
         buffer->putInt8(0);

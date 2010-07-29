@@ -121,8 +121,8 @@ static void acceptCallback(struct evconnlistener *listener,
 }
 
 
-MockVoltDB::MockVoltDB(boost::shared_ptr<Client> client) : m_base(client->m_impl->m_base), m_listener(NULL),
-        m_hangupOnRequestCounter(-1), m_dontRead(false) {
+MockVoltDB::MockVoltDB(Client client) : m_base(client.m_impl->m_base), m_listener(NULL),
+        m_hangupOnRequestCounter(-1), m_dontRead(false), m_client(client)  {
     struct sockaddr_in sin;
     ::memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
@@ -139,7 +139,7 @@ MockVoltDB::MockVoltDB(boost::shared_ptr<Client> client) : m_base(client->m_impl
                     (struct sockaddr*)&sin,
                     sizeof(sin));
     if (!m_listener) {
-        throw new LibEventException();
+        throw LibEventException();
     }
 }
 

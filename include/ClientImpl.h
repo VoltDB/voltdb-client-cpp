@@ -53,8 +53,9 @@ public:
     /*
      * Synchronously invoke a stored procedure and return a the response.
      */
-    boost::shared_ptr<InvocationResponse> invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
+    InvocationResponse invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
     void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
+    void invoke(Procedure &proc, ProcedureCallback *callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
     void runOnce() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
     void run() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
 

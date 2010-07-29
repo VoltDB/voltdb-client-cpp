@@ -339,6 +339,10 @@ public:
         }
         return m_buffer.position();
     }
+
+#ifdef SWIG
+%ignore serializeTo;
+#endif
     void serializeTo(ByteBuffer *buffer) {
         if (m_currentParam != m_parameters.size()) {
             throw UninitializedParamsException();

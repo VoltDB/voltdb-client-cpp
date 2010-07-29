@@ -39,12 +39,12 @@ class CountingCallback : public voltdb::ProcedureCallback {
 public:
     CountingCallback(int32_t count) : m_count(count) {}
 
-    bool callback(boost::shared_ptr<voltdb::InvocationResponse> response) throw (voltdb::Exception) {
+    bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
         m_count--;
 
         //Print the error response if there was a problem
-        if (response->failure()) {
-            std::cout << response->toString();
+        if (response.failure()) {
+            std::cout << response.toString();
         }
 
         //If the callback has been invoked count times, return true to break event loop
@@ -64,8 +64,8 @@ private:
  */
 class PrintingCallback : public voltdb::ProcedureCallback {
 public:
-    bool callback(boost::shared_ptr<voltdb::InvocationResponse> response) throw (voltdb::Exception) {
-        std::cout << response->toString();
+    bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
+        std::cout << response.toString();
         return true;
     }
 };
@@ -74,8 +74,8 @@ int main(int argc, char **argv) {
     /*
      * Instantiate a client and connect to the database.
      */
-    boost::shared_ptr<voltdb::Client> client = voltdb::Client::create();
-    client->createConnection("localhost", "program", "password");
+    voltdb::Client client = voltdb::Client::create();
+    client.createConnection("localhost", "program", "password");
 
     /*
      * Describe the stored procedure to be invoked
@@ -93,25 +93,25 @@ int main(int argc, char **argv) {
      */
     voltdb::ParameterSet* params = procedure.params();
     params->addString("Hello").addString("World").addString("English");
-    client->invoke(procedure, callback);
+    client.invoke(procedure, callback);
 
     params->addString("Bonjour").addString("Monde").addString("French");
-    client->invoke(procedure, callback);
+    client.invoke(procedure, callback);
 
     params->addString("Hola").addString("Mundo").addString("Spanish");
-    client->invoke(procedure, callback);
+    client.invoke(procedure, callback);
 
     params->addString("Hej").addString("Verden").addString("Danish");
-    client->invoke(procedure, callback);
+    client.invoke(procedure, callback);
 
     params->addString("Ciao").addString("Mondo").addString("Italian");
-    client->invoke(procedure, callback);
+    client.invoke(procedure, callback);
 
     /*
      * Run the client event loop to poll the network and invoke callbacks.
      * The event loop will break on an error or when a callback returns true
      */
-    client->run();
+    client.run();
 
     /*
      * Describe procedure to retrieve message
@@ -123,12 +123,12 @@ int main(int argc, char **argv) {
      * Retrieve the message
      */
     selectProc.params()->addString("Spanish");
-    client->invoke(selectProc, boost::shared_ptr<PrintingCallback>(new PrintingCallback()));
+    client.invoke(selectProc, boost::shared_ptr<PrintingCallback>(new PrintingCallback()));
 
     /*
      * Invoke event loop
      */
-    client->run();
+    client.run();
 
     return 0;
 }

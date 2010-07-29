@@ -67,6 +67,9 @@ enum StatusCode {
 class InvocationResponse {
 public:
 
+#ifdef SWIG
+    %ignore InvocationResponse();
+#endif
     /*
      * Default constructor generates an error response indicating the connection
      * to the database was lost
@@ -78,14 +81,17 @@ public:
         m_appStatusCode(INT8_MIN),
         m_appStatusString(std::string("")),
         m_clusterRoundTripTime(0),
-        m_results(0) {
+        m_results() {
     }
 
+#ifdef SWIG
+    %ignore InvocationResponse(boost::shared_array<char> data, int32_t length);
+#endif
     /*
      * Constructor for taking shared ownership of a message buffer
      * containing a response to a stored procedure invocation
      */
-    InvocationResponse(boost::shared_array<char> data, int32_t length) {
+    InvocationResponse(boost::shared_array<char> data, int32_t length) : m_results(0) {
         SharedByteBuffer buffer(data, length);
         int8_t version = buffer.getInt8();
         assert(version == 0);
@@ -107,13 +113,13 @@ public:
             buffer.position(position + buffer.getInt32());
         }
         size_t resultCount = static_cast<size_t>(buffer.getInt16());
-        m_results = std::vector<boost::shared_ptr<voltdb::Table> >(resultCount);
+        m_results.resize(resultCount);
         int32_t startLimit = buffer.limit();
         for (size_t ii = 0; ii < resultCount; ii++) {
             int32_t tableLength = buffer.getInt32();
             assert(tableLength >= 4);
             buffer.limit(buffer.position() + tableLength);
-            m_results[ii] = boost::shared_ptr<voltdb::Table>(new voltdb::Table(buffer.slice()));
+            m_results[ii] = voltdb::Table(buffer.slice());
             buffer.limit(startLimit);
         }
     }
@@ -165,7 +171,7 @@ public:
     /*
      * Returns a vector of tables containing result data returned by the stored procedure
      */
-    std::vector<boost::shared_ptr<voltdb::Table> > results() { return m_results; }
+    std::vector<voltdb::Table> results() { return m_results; }
 
     /*
      * Generate a string representation of the contents of the message
@@ -178,7 +184,7 @@ public:
         ostream << "Cluster Round Trip Time: " << clusterRoundTripTime() << std::endl;
         for (size_t ii = 0; ii < m_results.size(); ii++) {
             ostream << "Result Table " << ii << std::endl;
-            m_results[ii]->toString(ostream, std::string("    "));
+            m_results[ii].toString(ostream, std::string("    "));
         }
         return ostream.str();
     }
@@ -190,7 +196,7 @@ private:
     int8_t m_appStatusCode;
     std::string m_appStatusString;
     int32_t m_clusterRoundTripTime;
-    std::vector<boost::shared_ptr<voltdb::Table> > m_results;
+    std::vector<voltdb::Table> m_results;
 };
 }
 

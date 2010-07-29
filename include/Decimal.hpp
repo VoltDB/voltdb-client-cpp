@@ -56,6 +56,8 @@ public:
     static const uint16_t kMaxDecPrec = 38;
     static const uint16_t kMaxDecScale = 12;
 
+    Decimal() {}
+
     /*
      * Construct a decimal value from a string.
      */
@@ -153,6 +155,9 @@ public:
     /*
      * Serialize a Decimal value to the provided ByteBuffer
      */
+#ifdef SWIG
+%ignore serializeTo;
+#endif
     void serializeTo(ByteBuffer *buffer) {
         TTInt val = getDecimal();
         buffer->putInt64(*reinterpret_cast<int64_t*>(&val.table[1]));

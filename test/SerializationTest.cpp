@@ -173,17 +173,17 @@ void testInvocationResponseSelect() {
     CPPUNIT_ASSERT(response.statusString() == "");
     CPPUNIT_ASSERT(response.results().size() == 1);
     CPPUNIT_ASSERT(response.clusterRoundTripTime() == 0);
-    boost::shared_ptr<Table> results = response.results()[0];
-    CPPUNIT_ASSERT(results->getStatusCode() == -128);
-    CPPUNIT_ASSERT(results->rowCount() == 1);
-    CPPUNIT_ASSERT(results->columnCount() == 2);
-    std::vector<voltdb::Column> columns = results->columns();
+    Table results = response.results()[0];
+    CPPUNIT_ASSERT(results.getStatusCode() == -128);
+    CPPUNIT_ASSERT(results.rowCount() == 1);
+    CPPUNIT_ASSERT(results.columnCount() == 2);
+    std::vector<voltdb::Column> columns = results.columns();
     CPPUNIT_ASSERT(columns.size() == 2);
     CPPUNIT_ASSERT(columns[0].m_name == "HELLO");
     CPPUNIT_ASSERT(columns[0].m_type == WIRE_TYPE_STRING);
     CPPUNIT_ASSERT(columns[1].m_name == "WORLD");
     CPPUNIT_ASSERT(columns[1].m_type == WIRE_TYPE_STRING);
-    TableIterator iterator = results->iterator();
+    TableIterator iterator = results.iterator();
     int resultCount = 0;
     while (iterator.hasNext()) {
         Row r = iterator.next();

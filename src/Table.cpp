@@ -25,21 +25,21 @@
 #include "Row.hpp"
 
 namespace voltdb {
-
     Table::Table(SharedByteBuffer buffer) : m_buffer(buffer) {
         buffer.position(5);
         size_t columnCount = static_cast<size_t>(buffer.getInt16());
         assert(columnCount > 0);
-        m_columns =
-                boost::shared_ptr<std::vector< voltdb::Column> >(
-                        new std::vector< voltdb::Column>(columnCount));
+        boost::shared_ptr<std::vector< voltdb::Column> > columns(
+                                new std::vector< voltdb::Column>(columnCount));
+        m_columns = columns;
+
         std::vector<int8_t> types(columnCount);
         for (size_t ii = 0; ii < columnCount; ii++) {
             types[ii] = buffer.getInt8();
         }
         for (size_t ii = 0; ii < columnCount; ii++) {
             bool wasNull = false;
-            (*m_columns)[ii] = voltdb::Column(buffer.getString(wasNull), static_cast<WireType>(types[ii]));
+            m_columns->at(ii) = voltdb::Column(buffer.getString(wasNull), static_cast<WireType>(types[ii]));
             assert(!wasNull);
         }
         m_rowStart = m_buffer.getInt32(0) + 4;

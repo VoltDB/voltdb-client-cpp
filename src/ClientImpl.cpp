@@ -264,7 +264,8 @@ void ClientImpl::createConnection(std::string hostname, std::string username, st
             m_contexts[bev] =
                     boost::shared_ptr<CxnContext>(
                             new CxnContext(hostname));
-            m_callbacks[bev] = boost::shared_ptr<CallbackMap>(new CallbackMap());
+            boost::shared_ptr<CallbackMap> callbackMap(new CallbackMap());
+            m_callbacks[bev] = callbackMap;
             bufferevent_setcb(
                     bev,
                     voltdb::regularReadCallback,
@@ -287,18 +288,18 @@ void ClientImpl::createConnection(std::string hostname, std::string username, st
  */
 class SyncCallback : public ProcedureCallback {
 public:
-    SyncCallback(boost::shared_ptr<InvocationResponse> *responseOut) : m_responseOut(responseOut) {
+    SyncCallback(InvocationResponse *responseOut) : m_responseOut(responseOut) {
     }
 
-    bool callback(boost::shared_ptr<InvocationResponse> response) throw (voltdb::Exception) {
+    bool callback(InvocationResponse response) throw (voltdb::Exception) {
         (*m_responseOut) = response;
         return true;
     }
 private:
-    boost::shared_ptr<InvocationResponse> *m_responseOut;
+    InvocationResponse *m_responseOut;
 };
 
-boost::shared_ptr<InvocationResponse> ClientImpl::invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
+InvocationResponse ClientImpl::invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
@@ -307,7 +308,7 @@ boost::shared_ptr<InvocationResponse> ClientImpl::invoke(Procedure &proc) throw 
     int64_t clientData = m_nextRequestId++;
     proc.serializeTo(&sbb, clientData);
     struct bufferevent *bev = m_bevs[m_nextConnectionIndex++ % m_bevs.size()];
-    boost::shared_ptr<InvocationResponse> response;
+    InvocationResponse response;
     boost::shared_ptr<ProcedureCallback> callback(new SyncCallback(&response));
     struct evbuffer *evbuf = bufferevent_get_output(bev);
     if (evbuffer_add(evbuf, sbb.bytes(), static_cast<size_t>(sbb.remaining()))) {
@@ -320,6 +321,20 @@ boost::shared_ptr<InvocationResponse> ClientImpl::invoke(Procedure &proc) throw 
     }
     m_loopBreakRequested = false;
     return response;
+}
+
+class DummyCallback : public ProcedureCallback {
+public:
+    ProcedureCallback *m_callback;
+    DummyCallback(ProcedureCallback *callback) : m_callback(callback) {}
+    bool callback(InvocationResponse response) throw (voltdb::Exception) {
+        return m_callback->callback(response);
+    }
+};
+
+void ClientImpl::invoke(Procedure &proc, ProcedureCallback *callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
+    boost::shared_ptr<ProcedureCallback> wrapper(new DummyCallback(callback));
+    invoke(proc, wrapper);
 }
 
 void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
@@ -444,9 +459,9 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
             context->m_lengthOrMessage = true;
             evbuffer_remove( evbuf, messageBytes.get(), static_cast<size_t>(context->m_nextLength));
             remaining -= context->m_nextLength;
-            boost::shared_ptr<InvocationResponse> response(new InvocationResponse(messageBytes, context->m_nextLength));
+            InvocationResponse response(messageBytes, context->m_nextLength);
             boost::shared_ptr<CallbackMap> callbackMap = m_callbacks[bev];
-            CallbackMap::iterator i = callbackMap->find(response->clientData());
+            CallbackMap::iterator i = callbackMap->find(response.clientData());
             try {
                 breakEventLoop |= i->second->callback(response);
             } catch (std::exception &e) {
@@ -500,7 +515,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
                 i != callbackMap->end(); i++) {
             try {
                 breakEventLoop |=
-                        i->second->callback(boost::shared_ptr<voltdb::InvocationResponse>(new InvocationResponse()));
+                        i->second->callback(InvocationResponse());
             } catch (std::exception &e) {
                 if (m_listener.get() != NULL) {
                     breakEventLoop |= m_listener->uncaughtException( e, i->second);

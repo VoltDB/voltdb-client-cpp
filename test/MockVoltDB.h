@@ -30,14 +30,14 @@
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 #include <vector>
+#include "Client.h"
 
 namespace voltdb {
-class Client;
 class CxnContext;
 class MockVoltDB {
     friend class ClientTest;
 public:
-    MockVoltDB(boost::shared_ptr<Client> client);
+    MockVoltDB(Client client);
     void readCallback(struct bufferevent *bev);
     void eventCallback(struct bufferevent *bev, short events);
     void writeCallback(struct bufferevent *bev);
@@ -56,6 +56,8 @@ public:
     void dontRead() {
         m_dontRead = true;
     }
+
+    Client* client() { return &m_client; }
 private:
     struct event_base *m_base;
     struct evconnlistener *m_listener;
@@ -64,6 +66,7 @@ private:
     std::string m_filenameForNextResponse;
     int32_t m_hangupOnRequestCounter;
     bool m_dontRead;
+    Client m_client;
 };
 }
 

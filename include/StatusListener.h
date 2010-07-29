@@ -43,6 +43,8 @@ public:
      * or false if the library should wait until there is a connection without backpressure and then queue it.
      */
     virtual bool backpressure(bool hasBackpressure) = 0;
+
+    virtual ~StatusListener() {}
 };
 }
 

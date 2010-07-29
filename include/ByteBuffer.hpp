@@ -349,9 +349,9 @@ public:
 
     ByteBuffer(const ByteBuffer &other) :
         m_buffer(other.m_buffer), m_position(other.m_position), m_capacity(other.m_capacity), m_limit(other.m_limit) {
-        if (m_buffer == NULL) {
+/*        if (m_buffer == NULL) {
             throw NullPointerException();
-        }
+        }*/
     }
 
     virtual ~ByteBuffer() {}
@@ -374,7 +374,7 @@ private:
         return &m_buffer[checkIndex(index, length)];
     }
 protected:
-    ByteBuffer() {};
+    ByteBuffer() : m_buffer(NULL), m_position(0), m_capacity(0), m_limit(0) {};
     char *  m_buffer;
     int32_t m_position;
     int32_t m_capacity;
@@ -427,7 +427,7 @@ public:
 protected:
     ExpandableByteBuffer(const ExpandableByteBuffer &other) : ByteBuffer(other) {
     }
-    ExpandableByteBuffer();
+    ExpandableByteBuffer() : ByteBuffer() {}
     ExpandableByteBuffer(char *data, int32_t length) : ByteBuffer(data, length) {}
     virtual void resetRef(char *data) = 0;
 private:
@@ -435,8 +435,7 @@ private:
 
 class SharedByteBuffer : public ExpandableByteBuffer {
 public:
-    SharedByteBuffer(const SharedByteBuffer &other) : ExpandableByteBuffer(other), m_ref(other.m_ref) {
-    }
+    SharedByteBuffer(const SharedByteBuffer &other) : ExpandableByteBuffer(other), m_ref(other.m_ref) {}
 
     SharedByteBuffer& operator = (const SharedByteBuffer& other) {
         m_ref = other.m_ref;
@@ -445,6 +444,8 @@ public:
         m_limit = other.m_limit;
         return *this;
     }
+
+    SharedByteBuffer() : ExpandableByteBuffer() {};
 
     SharedByteBuffer slice() {
         SharedByteBuffer retval(m_ref, &m_buffer[m_position], m_limit - m_position);
@@ -460,7 +461,6 @@ protected:
         m_ref.reset(data);
     }
 private:
-    SharedByteBuffer() {};
     SharedByteBuffer(boost::shared_array<char> ref, char *data, int32_t length) : ExpandableByteBuffer(data, length), m_ref(ref) {}
     boost::shared_array<char> m_ref;
 };
@@ -495,7 +495,7 @@ private:
     }
     ScopedByteBuffer(const ScopedByteBuffer &other) : ExpandableByteBuffer(other) {
     }
-    ScopedByteBuffer() {};
+    ScopedByteBuffer() : ExpandableByteBuffer(), m_ref()  {};
     boost::scoped_array<char> m_ref;
 };
 

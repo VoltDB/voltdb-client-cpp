@@ -29,6 +29,7 @@
 #include <vector>
 #include "Column.hpp"
 #include <sstream>
+#include <iostream>
 
 namespace voltdb {
 class TableIterator;
@@ -45,6 +46,10 @@ public:
      * to the shared buffer indefinitely so watch out for unwanted memory retension.
      */
     Table(SharedByteBuffer buffer);
+    Table() {}
+
+    ~Table() {
+    }
 
     /*
      * Returns an iterator for iterating over the rows of this table

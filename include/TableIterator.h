@@ -43,6 +43,11 @@ public:
     /*
      * Construct an iterator for the table rows with the specified column schema and row count
      */
+#ifdef SWIG
+%ignore TableIterator(voltdb::SharedByteBuffer rows,
+            boost::shared_ptr<std::vector<voltdb::Column> > columns,
+            int32_t rowCount);
+#endif
     TableIterator(
             voltdb::SharedByteBuffer rows,
             boost::shared_ptr<std::vector<voltdb::Column> > columns,
