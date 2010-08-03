@@ -34,6 +34,14 @@ public:
     Column(WireType type) : m_name(""), m_type(type) {}
     std::string m_name;
     WireType m_type;
+
+    std::string name() {
+        return m_name;
+    }
+
+    WireType type() {
+        return m_type;
+    }
 };
 }
 #endif /* COLUMN_HPP_ */
