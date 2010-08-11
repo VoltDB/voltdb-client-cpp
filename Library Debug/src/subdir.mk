@@ -6,6 +6,7 @@
 CPP_SRCS += \
 ../src/Client.cpp \
 ../src/ClientImpl.cpp \
+../src/ConnectionPool.cpp \
 ../src/RowBuilder.cpp \
 ../src/Table.cpp \
 ../src/WireType.cpp 
@@ -13,6 +14,7 @@ CPP_SRCS += \
 OBJS += \
 ./src/Client.o \
 ./src/ClientImpl.o \
+./src/ConnectionPool.o \
 ./src/RowBuilder.o \
 ./src/Table.o \
 ./src/WireType.o 
@@ -20,6 +22,7 @@ OBJS += \
 CPP_DEPS += \
 ./src/Client.d \
 ./src/ClientImpl.d \
+./src/ConnectionPool.d \
 ./src/RowBuilder.d \
 ./src/Table.d \
 ./src/WireType.d 
