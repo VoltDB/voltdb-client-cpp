@@ -170,6 +170,7 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     Client client = voltdb::Client::create(delegatingListener);
     client.createConnection(hostname, username, password, port);
     boost::shared_ptr<ClientStuff> stuff(new ClientStuff(client, identifier, delegatingListener));
+    stuff->m_listener->m_listener = listener;
     (*m_borrowedClients)->push_back(stuff);
     return client;
 }
