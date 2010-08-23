@@ -61,7 +61,7 @@ public:
      * not match the type of the get method.
      * @return Decimal value at the specified column
      */
-    Decimal getDecimal(int32_t column) {
+    Decimal getDecimal(int32_t column) throw(voltdb::InvalidColumnException) {
         validateType(WIRE_TYPE_DECIMAL, column);
         char data[16];
         m_data.get(getOffset(column), data, 16);
@@ -77,7 +77,7 @@ public:
      * not match the type of the get method.
      * @return Timestamp value at the specified column
      */
-    int64_t getTimestamp(int32_t column) {
+    int64_t getTimestamp(int32_t column) throw(voltdb::InvalidColumnException) {
         validateType(WIRE_TYPE_TIMESTAMP, column);
         int64_t retval = m_data.getInt64(getOffset(column));
         if (retval == INT64_MIN) m_wasNull = true;
@@ -91,7 +91,7 @@ public:
      * not match the type of the get method.
      * @return int64 value at the specified column
      */
-    int64_t getInt64(int32_t column) {
+    int64_t getInt64(int32_t column) throw(voltdb::InvalidColumnException) {
         WireType type = validateType(WIRE_TYPE_BIGINT, column);
         int64_t retval;
         switch (type) {
@@ -124,7 +124,7 @@ public:
      * not match the type of the get method.
      * @return int32 value at the specified column
      */
-    int32_t getInt32(int32_t column) {
+    int32_t getInt32(int32_t column) throw(voltdb::InvalidColumnException) {
         WireType type = validateType(WIRE_TYPE_INTEGER, column);
         int32_t retval;
         switch (type) {
@@ -153,7 +153,7 @@ public:
      * not match the type of the get method.
      * @return int16 value at the specified column
      */
-    int16_t getInt16(int32_t column) {
+    int16_t getInt16(int32_t column) throw(voltdb::InvalidColumnException) {
         WireType type = validateType(WIRE_TYPE_SMALLINT, column);
         int16_t retval;
         switch (type) {
@@ -178,7 +178,7 @@ public:
      * not match the type of the get method.
      * @return int8 value at the specified column
      */
-    int8_t getInt8(int32_t column) {
+    int8_t getInt8(int32_t column) throw(voltdb::InvalidColumnException) {
         validateType(WIRE_TYPE_TINYINT, column);
         int8_t retval = m_data.getInt8(getOffset(column));
         if (retval == INT8_MIN) {
@@ -194,7 +194,7 @@ public:
      * not match the type of the get method.
      * @return double value at the specified column
      */
-    double getDouble(int32_t column) {
+    double getDouble(int32_t column) throw(voltdb::InvalidColumnException) {
         validateType(WIRE_TYPE_FLOAT, column);
         double retval = m_data.getDouble(getOffset(column));
         if (retval < -1.7976931348623157E+308) {
@@ -210,7 +210,7 @@ public:
      * not match the type of the get method.
      * @return String value at the specified column
      */
-    std::string getString(int32_t column) {
+    std::string getString(int32_t column) throw(voltdb::InvalidColumnException) {
         validateType(WIRE_TYPE_STRING, column);
         return m_data.getString(getOffset(column), m_wasNull);
     }
@@ -220,7 +220,7 @@ public:
      * @throws InvalidColumnException The name of the column was invalid.
      * @return true if the value is NULL and false otherwise
      */
-    bool isNull(int32_t column) {
+    bool isNull(int32_t column) throw(voltdb::InvalidColumnException) {
         if (column < 0 || column >= static_cast<ssize_t>(m_columns->size())) {
             throw InvalidColumnException();
         }
@@ -255,7 +255,7 @@ public:
      * does not match the column type.
      * @return Decimal value at the specified column
      */
-    Decimal getDecimal(std::string cname) {
+    Decimal getDecimal(std::string cname) throw(voltdb::InvalidColumnException) {
         return getDecimal(getColumnIndexByName(cname));
     }
 
@@ -266,7 +266,7 @@ public:
      * does not match the column type.
      * @return Timestamp value at the specified column
      */
-    int64_t getTimestamp(std::string cname) {
+    int64_t getTimestamp(std::string cname) throw(voltdb::InvalidColumnException) {
         return getTimestamp(getColumnIndexByName(cname));
     }
 
@@ -277,7 +277,7 @@ public:
      * does not match the column type.
      * @return int64 value at the specified column
      */
-    int64_t getInt64(std::string cname) {
+    int64_t getInt64(std::string cname) throw(voltdb::InvalidColumnException) {
         return getInt64(getColumnIndexByName(cname));
     }
 
@@ -288,7 +288,7 @@ public:
      * does not match the column type.
      * @return int32 value at the specified column
      */
-    int32_t getInt32(std::string cname) {
+    int32_t getInt32(std::string cname) throw(voltdb::InvalidColumnException) {
         return getInt32(getColumnIndexByName(cname));
     }
 
@@ -299,7 +299,7 @@ public:
      * does not match the column type.
      * @return int16 value at the specified column
      */
-    int16_t getInt16(std::string cname) {
+    int16_t getInt16(std::string cname) throw(voltdb::InvalidColumnException) {
         return getInt16(getColumnIndexByName(cname));
     }
 
@@ -310,7 +310,7 @@ public:
      * does not match the column type.
      * @return int8 value at the specified column
      */
-    int8_t getInt8(std::string cname) {
+    int8_t getInt8(std::string cname) throw(voltdb::InvalidColumnException) {
         return getInt8(getColumnIndexByName(cname));
     }
 
@@ -321,7 +321,7 @@ public:
      * does not match the column type.
      * @return double value at the specified column
      */
-    double getDouble(std::string cname) {
+    double getDouble(std::string cname) throw(voltdb::InvalidColumnException) {
         return getDouble(getColumnIndexByName(cname));
     }
 
@@ -332,7 +332,7 @@ public:
      * does not match the column type.
      * @return string value at the specified column
      */
-    std::string getString(std::string cname) {
+    std::string getString(std::string cname) throw(voltdb::InvalidColumnException) {
         return getString(getColumnIndexByName(cname));
     }
 
@@ -341,7 +341,7 @@ public:
      * @throws InvalidColumnException The name of the column was invalid.
      * @return true if the value is NULL and false otherwise
      */
-    bool isNull(std::string cname) {
+    bool isNull(std::string cname) throw(voltdb::InvalidColumnException) {
         int32_t column = getColumnIndexByName(cname);
         return isNull(column);
     }
