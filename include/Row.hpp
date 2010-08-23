@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include "Decimal.hpp"
 #include <sstream>
+#include <boost/algorithm/string.hpp>
 
 namespace voltdb {
 
@@ -451,7 +452,7 @@ private:
 
     int32_t getColumnIndexByName(std::string name) {
         for (int32_t ii = 0; ii < static_cast<ssize_t>(m_columns->size()); ii++) {
-            if (m_columns->at(static_cast<size_t>(ii)).m_name == name) {
+            if (boost::iequals(m_columns->at(static_cast<size_t>(ii)).m_name, name)) {
                 return ii;
             }
         }
