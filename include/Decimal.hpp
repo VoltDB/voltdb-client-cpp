@@ -51,11 +51,6 @@ typedef ttmath::Int<4> TTInt;
 class Decimal {
 public:
 
-    // Constants for Decimal type
-    // Precision and scale (inherent in the schema)
-    static const uint16_t kMaxDecPrec = 38;
-    static const uint16_t kMaxDecScale = 12;
-
     Decimal() {}
 
     /*
@@ -204,6 +199,12 @@ public:
         return getDecimal() == min;
     }
 private:
+
+    // Constants for Decimal type
+    // Precision and scale (inherent in the schema)
+    static const uint16_t kMaxDecPrec = 38;
+    static const uint16_t kMaxDecScale = 12;
+
     char m_data[16];
 };
 }
