@@ -88,7 +88,7 @@ public:
      * @throws UninitializedParamsException Some or all of the parameters for the stored procedure were not set
      * @throws LibEventException An unknown error occured in libevent
      */
-    void invokeAsync(voltdb::Procedure &proc, voltdb::ProcedureCallback *callback) throw (voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::Exception);
+    void invoke(voltdb::Procedure &proc, voltdb::ProcedureCallback *callback) throw (voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::Exception);
 
     /*
      * Run the event loop once and process pending events. This writes requests to any ready connections

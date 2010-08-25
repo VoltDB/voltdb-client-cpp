@@ -71,7 +71,7 @@ throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedP
 }
 
 void
-Client::invokeAsync(
+Client::invoke(
         Procedure &proc,
         ProcedureCallback *callback)
 throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
