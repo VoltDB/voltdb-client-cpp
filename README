@@ -73,3 +73,4 @@ Known Issues
 
 One of the serialization tests doesn't pass when compiled and run on Ubuntu 10.04 32-bit. The problem is specific to the serialization of Decimal values. Avoid using Decimal values on 32-bit platforms until CLIENTAPI-2 is fixed. https://issues.voltdb.com/browse/CLIENTAPI-2
 
+Uncaught exception handler may be provided with the wrong procedure callback pointer if it ends up being wrapped internally. The wrapper is provided instead of the callback. See https://issues.voltdb.com/browse/CLIENTAPI-33
