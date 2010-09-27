@@ -197,7 +197,7 @@ public:
     double getDouble(int32_t column) throw(voltdb::InvalidColumnException) {
         validateType(WIRE_TYPE_FLOAT, column);
         double retval = m_data.getDouble(getOffset(column));
-        if (retval < -1.7976931348623157E+308) {
+        if (retval <= -1.7E+308) {
             m_wasNull = true;
         }
         return retval;

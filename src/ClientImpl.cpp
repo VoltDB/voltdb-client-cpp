@@ -383,7 +383,11 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
         } else {
             bool callEventLoop = true;
             if (m_listener.get() != NULL) {
-                callEventLoop = !m_listener->backpressure(true);
+                try {
+                    callEventLoop = !m_listener->backpressure(true);
+                } catch (std::exception e) {
+                    std::cerr << "Exception thrown on invocation of backpressure callback: " << e.what() << std::endl;
+                }
             }
             if (callEventLoop) {
                 m_invocationBlockedOnBackpressure = true;
@@ -466,7 +470,11 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
                 breakEventLoop |= i->second->callback(response);
             } catch (std::exception &e) {
                 if (m_listener.get() != NULL) {
-                    breakEventLoop |= m_listener->uncaughtException( e, i->second, response);
+                    try {
+                        breakEventLoop |= m_listener->uncaughtException( e, i->second, response);
+                    } catch (std::exception e) {
+                        std::cerr << "Uncaught exception handler threw exception: " << e.what() << std::endl;
+                    }
                 }
             }
             callbackMap->erase(i);
@@ -502,7 +510,11 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         bool breakEventLoop = false;
         //Notify client that a connection was lost
         if (m_listener.get() != NULL) {
-            breakEventLoop |= m_listener->connectionLost( m_contexts[bev]->m_name, m_bevs.size() - 1);
+            try {
+                breakEventLoop |= m_listener->connectionLost( m_contexts[bev]->m_name, m_bevs.size() - 1);
+            } catch (std::exception e) {
+                std::cerr << "Status listener threw exception on connection lost: " << e.what() << std::endl;
+            }
         }
 
         /*

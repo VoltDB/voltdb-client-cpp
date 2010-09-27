@@ -36,6 +36,7 @@ public:
         if (m_listener != NULL) {
             return m_listener->uncaughtException(exception, callback, response);
         } else {
+            std::cerr << exception.what() << std::endl;
             return false;
         }
     }
