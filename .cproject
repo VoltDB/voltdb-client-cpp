@@ -56,6 +56,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.base.1318285234" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.base">
 								<option id="gnu.cpp.link.option.libs.422838822" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="voltcpp"/>
+									<listOptionValue builtIn="false" value="boost_thread"/>
 								</option>
 								<option id="gnu.cpp.link.option.paths.270121165" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;../Library Debug&quot;"/>
@@ -79,7 +80,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="test|src/ClientImpl.cpp|src/WireType.cpp|src/Table.cpp|src/RowBuilder.cpp|src/Client.cpp|src/AsyncHelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="test|src/ClientImpl.cpp|src/WireType.cpp|src/Table.cpp|src/RowBuilder.cpp|src/Client.cpp|src/AsyncHelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm|src/ClientConfig.cpp|src/ConnectionPool.cpp" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -1726,6 +1727,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.base.1609900687" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.base">
 								<option id="gnu.cpp.link.option.libs.475887330" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="voltcpp"/>
+									<listOptionValue builtIn="false" value="boost_thread"/>
 								</option>
 								<option id="gnu.cpp.link.option.paths.1326997080" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;../Library Debug&quot;"/>
@@ -1748,7 +1750,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="test|src/ClientImpl.cpp|src/WireType.cpp|src/Table.cpp|src/RowBuilder.cpp|src/Client.cpp|src/HelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="test|src/ClientImpl.cpp|src/WireType.cpp|src/Table.cpp|src/RowBuilder.cpp|src/Client.cpp|src/HelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm|src/ClientConfig.cpp|src/ConnectionPool.cpp" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -3396,6 +3398,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.base.176404289" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.base">
 								<option id="gnu.cpp.link.option.libs.1969811807" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="voltcpp"/>
+									<listOptionValue builtIn="false" value="boost_thread"/>
 									<listOptionValue builtIn="false" value="cppunit"/>
 									<listOptionValue builtIn="false" value="boost_filesystem"/>
 								</option>
@@ -3424,7 +3427,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="src/HelloWorld.cpp|src/ClientImpl.cpp|src/WireType.cpp|src/Table.cpp|src/RowBuilder.cpp|src/Client.cpp|src/AsyncHelloWorld.cpp|src/ByteBufferTest.cpp|include/ttmath/ttmathuint_x86_64_msvc.asm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="include/ttmath/ttmathuint_x86_64_msvc.asm|src/*" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

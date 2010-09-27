@@ -25,14 +25,16 @@
 #define VOLTDB_CLIENT_H_
 
 #include <string>
-#include "ProcedureCallback.hpp"
 #include "Procedure.hpp"
 #include "StatusListener.h"
 #include <boost/shared_ptr.hpp>
+#include "ClientConfig.h"
 
 namespace voltdb {
 class MockVoltDB;
 class ClientImpl;
+class ProcedureCallback;
+
 /*
  * A VoltDB client for invoking stored procedures on a VoltDB instance. The client and the
  * shared pointers it returns are not thread safe. If you need more parallelism you run multiple processes
@@ -47,14 +49,12 @@ class Client {
 public:
     /*
      * Create a connection to the VoltDB process running at the specified host authenticating
-     * using the provided username and password.
+     * using the username and password provided when this client was constructed
      * @param hostname Hostname or IP address to connect to
-     * @param username Username to provide for authentication
-     * @param password Password to provide for authentication
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(std::string hostname, std::string username, std::string password, short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
+    void createConnection(std::string hostname, short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
 
     /*
      * Synchronously invoke a stored procedure and return a the response. Callbacks for asynchronous requests
@@ -119,18 +119,9 @@ public:
     bool drain() throw (voltdb::NoConnectionsException, voltdb::LibEventException, voltdb::Exception);
 
     /*
-     * Create a client with no status listener registered
+     * Create a client with the specified configuration
      */
-    static Client create() throw(voltdb::LibEventException, voltdb::Exception);
-
-    /*
-     * Create a client with a status listener
-     */
-#ifdef SWIG
-    %ignore create(boost::shared_ptr<voltdb::StatusListener> listener);
-#endif
-    static Client create(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::LibEventException, voltdb::Exception);
-    static Client create(voltdb::StatusListener *listener) throw(voltdb::LibEventException, voltdb::Exception);
+    static Client create(voltdb::ClientConfig config = voltdb::ClientConfig()) throw(voltdb::LibEventException, voltdb::Exception);
 
     ~Client();
 private:

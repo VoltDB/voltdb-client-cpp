@@ -21,37 +21,31 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef VOLTDB_AUTHENTICATIONMESSAGE_HPP_
-#define VOLTDB_AUTHENTICATIONMESSAGE_HPP_
-#include "ByteBuffer.hpp"
+#ifndef VOLTDB_CLIENTCONFIG_H_
+#define VOLTDB_CLIENTCONFIG_H_
+#include <string>
+#include "StatusListener.h"
+#include <boost/shared_ptr.hpp>
 
 namespace voltdb {
-class AuthenticationRequest {
+class ClientConfig {
 public:
-    AuthenticationRequest(std::string username, std::string service, unsigned char* passwordHash) :
-        m_username(username), m_service(service), m_passwordHash(passwordHash) {}
-    int32_t getSerializedSize() {
-        return 8 + //String length prefixes
-        20 + //SHA-1 hash of PW
-        m_username.size() +
-        m_service.size()
-        + 4 //length prefix
-        + 1; //version number
-    }
-    void serializeTo(ByteBuffer *buffer) {
-        buffer->position(4);
-        buffer->putInt8(0);
-        buffer->putString(m_service);
-        buffer->putString(m_username);
-        buffer->put(reinterpret_cast<char*>(m_passwordHash), 20);
-        buffer->flip();
-        buffer->putInt32(0, buffer->limit() - 4);
-    }
-private:
+    ClientConfig(
+            std::string username = std::string(""),
+            std::string password = std::string(""));
+    ClientConfig(
+            std::string username,
+            std::string password,
+            boost::shared_ptr<StatusListener> listener);
+    ClientConfig(
+            std::string username,
+            std::string password,
+            StatusListener *listener);
     std::string m_username;
-    std::string m_service;
-    unsigned char* m_passwordHash;
+    std::string m_password;
+    boost::shared_ptr<StatusListener> m_listener;
+    int32_t m_maxOutstandingRequests;
 };
 }
 
-#endif /* VOLTDB_AUTHENTICATIONMESSAGE_HPP_ */
+#endif /* VOLTDB_CLIENTCONFIG_H_ */

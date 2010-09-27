@@ -1,8 +1,24 @@
-/*
- * ClientImpl.h
+/* This file is part of VoltDB.
+ * Copyright (C) 2008-2010 VoltDB L.L.C.
  *
- *  Created on: Jun 21, 2010
- *      Author: aweisberg
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+ * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #ifndef VOLTDB_CLIENTIMPL_H_
@@ -14,13 +30,14 @@
 #include "ProcedureCallback.hpp"
 #include "StatusListener.h"
 #include "Procedure.hpp"
-#include "Client.h"
 #include <boost/shared_ptr.hpp>
+#include "ClientConfig.h"
 
 namespace voltdb {
 
 class CxnContext;
 class MockVoltDB;
+class Client;
 class ClientImpl {
     friend class MockVoltDB;
 public:
@@ -40,15 +57,13 @@ public:
 
     /*
      * Create a connection to the VoltDB process running at the specified host authenticating
-     * using the provided username and password.
+     * using the username and password provided when this client was constructed
      * @param hostname Hostname or IP address to connect to
-     * @param username Username to provide for authentication
-     * @param password Password to provide for authentication
      * @param port Port to connect to
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(std::string hostname, std::string username, std::string password, short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
+    void createConnection(std::string hostname, short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
 
     /*
      * Synchronously invoke a stored procedure and return a the response.
@@ -75,8 +90,7 @@ public:
     void regularWriteCallback(struct bufferevent *bev);
 
 private:
-    ClientImpl() throw(voltdb::Exception, voltdb::LibEventException);
-    ClientImpl(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::Exception, voltdb::LibEventException);
+    ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException);
 
     struct event_base *m_base;
     int64_t m_nextRequestId;
@@ -89,7 +103,16 @@ private:
     bool m_invocationBlockedOnBackpressure;
     bool m_loopBreakRequested;
     bool m_isDraining;
+    bool m_instanceIdIsSet;
     int32_t m_outstandingRequests;
+    //Identifier of the database instance this client is connected to
+    int64_t m_clusterStartTime;
+    int32_t m_leaderAddress;
+
+    std::string m_username;
+    unsigned char m_passwordHash[20];
+    const int32_t m_maxOutstandingRequests;
+
 };
 }
 #endif /* VOLTDB_CLIENTIMPL_H_ */

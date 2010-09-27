@@ -25,6 +25,7 @@
 #include "AuthenticationResponse.hpp"
 #include "AuthenticationRequest.hpp"
 #include <event2/buffer.h>
+#include <openssl/sha.h>
 
 namespace voltdb {
 
@@ -176,27 +177,11 @@ ClientImpl::~ClientImpl() {
     event_base_free(m_base);
 }
 
-ClientImpl::ClientImpl() throw(voltdb::Exception, voltdb::LibEventException) :
-        m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
-        m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false),
-        m_isDraining(false), m_outstandingRequests(0) {
-#ifdef DEBUG
-    if (!voltdb_clientimpl_debug_init_libevent) {
-        event_enable_debug_mode();
-        voltdb_clientimpl_debug_init_libevent = true;
-    }
-#endif
-    m_base = event_base_new();
-    assert(m_base);
-    if (!m_base) {
-        throw voltdb::LibEventException();
-    }
-}
-
-ClientImpl::ClientImpl(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::Exception, voltdb::LibEventException) :
-        m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0), m_listener(listener),
+ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException) :
+        m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0), m_listener(config.m_listener),
         m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false), m_isDraining(false),
-        m_outstandingRequests(0) {
+        m_instanceIdIsSet(false), m_outstandingRequests(0), m_username(config.m_username),
+        m_maxOutstandingRequests(config.m_maxOutstandingRequests) {
 #ifdef DEBUG
     if (!voltdb_clientimpl_debug_init_libevent) {
         event_enable_debug_mode();
@@ -208,6 +193,7 @@ ClientImpl::ClientImpl(boost::shared_ptr<voltdb::StatusListener> listener) throw
     if (!m_base) {
         throw voltdb::LibEventException();
     }
+    SHA1( reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size(), m_passwordHash);
 }
 
 class FreeBEVOnFailure {
@@ -228,7 +214,7 @@ private:
     bool m_success;
 };
 
-void ClientImpl::createConnection(std::string hostname, std::string username, std::string password, short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+void ClientImpl::createConnection(std::string hostname, short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE);
     FreeBEVOnFailure protector(bev);
     if (bev == NULL) {
@@ -248,7 +234,7 @@ void ClientImpl::createConnection(std::string hostname, std::string username, st
         if (bufferevent_enable(bev, EV_READ)) {
             throw voltdb::LibEventException();
         }
-        AuthenticationRequest authRequest( username, "database", password );
+        AuthenticationRequest authRequest( m_username, "database", m_passwordHash );
         ScopedByteBuffer bb(authRequest.getSerializedSize());
         authRequest.serializeTo(&bb);
         struct evbuffer *evbuf = bufferevent_get_output(bev);
@@ -259,6 +245,16 @@ void ClientImpl::createConnection(std::string hostname, std::string username, st
             throw voltdb::LibEventException();
         }
         if (pc.m_status) {
+            if (!m_instanceIdIsSet) {
+                m_instanceIdIsSet = true;
+                m_clusterStartTime = pc.m_response.clusterStartTime();
+                m_leaderAddress = pc.m_response.leaderAddress();
+            } else {
+                if (m_clusterStartTime != pc.m_response.clusterStartTime() ||
+                        m_leaderAddress != pc.m_response.leaderAddress()) {
+                    throw ClusterInstanceMismatchException();
+                }
+            }
             bufferevent_setwatermark( bev, EV_READ, 4, 262144);
             m_bevs.push_back(bev);
             m_contexts[bev] =
@@ -370,14 +366,18 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
      */
     struct bufferevent *bev = NULL;
     while (true) {
-        for (size_t ii = 0; ii < m_bevs.size(); ii++) {
-            bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
-            if (m_backpressuredBevs.find(bev) != m_backpressuredBevs.end()) {
-                bev = NULL;
-            } else {
-                break;
+        //Assume backpressure if the number of outstanding requests is too large
+        if (m_outstandingRequests <= m_maxOutstandingRequests) {
+            for (size_t ii = 0; ii < m_bevs.size(); ii++) {
+                bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+                if (m_backpressuredBevs.find(bev) != m_backpressuredBevs.end()) {
+                    bev = NULL;
+                } else {
+                    break;
+                }
             }
         }
+
         if (bev) {
             break;
         } else {
@@ -466,7 +466,7 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
                 breakEventLoop |= i->second->callback(response);
             } catch (std::exception &e) {
                 if (m_listener.get() != NULL) {
-                    breakEventLoop |= m_listener->uncaughtException( e, i->second);
+                    breakEventLoop |= m_listener->uncaughtException( e, i->second, response);
                 }
             }
             callbackMap->erase(i);
@@ -518,7 +518,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
                         i->second->callback(InvocationResponse());
             } catch (std::exception &e) {
                 if (m_listener.get() != NULL) {
-                    breakEventLoop |= m_listener->uncaughtException( e, i->second);
+                    breakEventLoop |= m_listener->uncaughtException( e, i->second, InvocationResponse());
                 }
             }
             m_outstandingRequests--;

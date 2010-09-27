@@ -30,8 +30,10 @@
 #include "ParameterSet.hpp"
 #include "Procedure.hpp"
 #include "WireType.h"
+#include "ProcedureCallback.hpp"
 #include <vector>
 #include "InvocationResponse.hpp"
+#include "ClientConfig.h"
 
 namespace voltdb {
 
@@ -42,9 +44,10 @@ public:
    }
    virtual bool uncaughtException(
            std::exception exception,
-           boost::shared_ptr<voltdb::ProcedureCallback> callback) {
+           boost::shared_ptr<voltdb::ProcedureCallback> callback,
+           InvocationResponse response) {
        if (m_listener != NULL) {
-           return m_listener->uncaughtException(exception, callback);
+           return m_listener->uncaughtException(exception, callback, response);
        }
        return false;
    }
@@ -83,7 +86,7 @@ CPPUNIT_TEST_SUITE_END();
 public:
     void setUp() {
         m_dlistener = new boost::shared_ptr<DelegatingListener>(new DelegatingListener());
-        m_voltdb.reset(new MockVoltDB(Client::create(*m_dlistener)));
+        m_voltdb.reset(new MockVoltDB(Client::create(ClientConfig("hello", "world", *m_dlistener))));
         m_client = m_voltdb->client();
     }
 
@@ -93,11 +96,11 @@ public:
     }
 
     void testConnect() {
-        m_client->createConnection("localhost", "hello", "world");
+        m_client->createConnection("localhost");
     }
 
     void testSyncInvoke() {
-        m_client->createConnection("localhost", "hello", "world");
+        m_client->createConnection("localhost");
         std::vector<Parameter> signature;
         signature.push_back(Parameter(WIRE_TYPE_STRING));
         signature.push_back(Parameter(WIRE_TYPE_STRING));
@@ -127,7 +130,7 @@ public:
     };
 
     void testAsyncInvoke() {
-        (m_client)->createConnection("localhost", "hello", "world");
+        (m_client)->createConnection("localhost");
         std::vector<Parameter> signature;
         signature.push_back(Parameter(WIRE_TYPE_STRING));
         signature.push_back(Parameter(WIRE_TYPE_STRING));
@@ -189,7 +192,8 @@ public:
            Listener() : reported(false) {}
             virtual bool uncaughtException(
                     std::exception exception,
-                    boost::shared_ptr<voltdb::ProcedureCallback> callback) {
+                    boost::shared_ptr<voltdb::ProcedureCallback> callback,
+                    InvocationResponse response) {
                 CPPUNIT_ASSERT(false);
                 return false;
             }
@@ -204,7 +208,7 @@ public:
             }
         }  listener;
         (*m_dlistener)->m_listener = &listener;
-        (m_client)->createConnection("localhost", "hello", "world");
+        (m_client)->createConnection("localhost");
 
         std::vector<Parameter> signature;
         Procedure proc("Insert", signature);
@@ -234,7 +238,8 @@ public:
         public:
             virtual bool uncaughtException(
                     std::exception exception,
-                    boost::shared_ptr<voltdb::ProcedureCallback> callback) {
+                    boost::shared_ptr<voltdb::ProcedureCallback> callback,
+                    InvocationResponse response) {
                 CPPUNIT_ASSERT(false);
                 return false;
             }
@@ -248,8 +253,8 @@ public:
             }
         }  listener;
         (*m_dlistener)->m_listener = &listener;
-        (m_client)->createConnection("localhost", "hello", "world");
-        (m_client)->createConnection("localhost", "hello", "world");
+        (m_client)->createConnection("localhost");
+        (m_client)->createConnection("localhost");
 
         std::vector<Parameter> signature;
         Procedure proc("Insert", signature);
@@ -274,7 +279,7 @@ public:
     };
 
     void testBreakEventLoopViaCallback() {
-        (m_client)->createConnection("localhost", "hello", "world");
+        (m_client)->createConnection("localhost");
         std::vector<Parameter> signature;
         signature.push_back(Parameter(WIRE_TYPE_STRING));
         signature.push_back(Parameter(WIRE_TYPE_STRING));
@@ -305,7 +310,8 @@ public:
            Listener() : reported(false) {}
             virtual bool uncaughtException(
                     std::exception exception,
-                    boost::shared_ptr<voltdb::ProcedureCallback> callback) {
+                    boost::shared_ptr<voltdb::ProcedureCallback> callback,
+                    InvocationResponse response) {
                 reported = true;
                 return true;
             }
@@ -320,7 +326,7 @@ public:
         }  listener;
         (*m_dlistener)->m_listener = &listener;
 
-        (m_client)->createConnection("localhost", "hello", "world");
+        (m_client)->createConnection("localhost");
         std::vector<Parameter> signature;
         signature.push_back(Parameter(WIRE_TYPE_STRING));
         signature.push_back(Parameter(WIRE_TYPE_STRING));
@@ -344,7 +350,8 @@ public:
            Listener() : reported(false) {}
             virtual bool uncaughtException(
                     std::exception exception,
-                    boost::shared_ptr<voltdb::ProcedureCallback> callback) {
+                    boost::shared_ptr<voltdb::ProcedureCallback> callback,
+                    InvocationResponse response) {
                 CPPUNIT_ASSERT(false);
                 return true;
             }
@@ -360,7 +367,7 @@ public:
         }  listener;
         (*m_dlistener)->m_listener = &listener;
 
-        (m_client)->createConnection("localhost", "hello", "world");
+        (m_client)->createConnection("localhost");
         std::vector<Parameter> signature;
         Procedure proc("Insert", signature);
         SyncCallback *cb = new SyncCallback();
@@ -387,7 +394,7 @@ public:
 
     void testDrain() {
         m_voltdb->filenameForNextResponse("invocation_response_success.msg");
-        (m_client)->createConnection("localhost", "hello", "world");
+        (m_client)->createConnection("localhost");
         std::vector<Parameter> signature;
         Procedure proc("Insert", signature);
 
@@ -419,7 +426,7 @@ public:
 
     void testLostConnectionDuringDrain() {
         m_voltdb->filenameForNextResponse("invocation_response_success.msg");
-        (m_client)->createConnection("localhost", "hello", "world");
+        (m_client)->createConnection("localhost");
         std::vector<Parameter> signature;
         Procedure proc("Insert", signature);
 

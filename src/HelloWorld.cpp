@@ -28,14 +28,16 @@
 #include "WireType.h"
 #include "Parameter.hpp"
 #include "ParameterSet.hpp"
+#include "ClientConfig.h"
 #include <vector>
 
 int main(int argc, char **argv) {
     /*
      * Instantiate a client and connect to the database.
      */
+    voltdb::ClientConfig config("program", "password");
     voltdb::Client client = voltdb::Client::create();
-    client.createConnection("localhost", "program", "password");
+    client.createConnection("localhost");
 
     /*
      * Describe the stored procedure to be invoked

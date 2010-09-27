@@ -359,8 +359,8 @@ private:
     }
 
     void validateType(WireType type, bool isArray) {
-        if (m_parameters[m_currentParam].m_type != type ||
-                m_currentParam > m_parameters.size() ||
+        if (m_currentParam >= m_parameters.size() ||
+                m_parameters[m_currentParam].m_type != type ||
                 m_parameters[m_currentParam].m_array != isArray) {
             throw ParamMismatchException();
         }

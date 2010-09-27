@@ -9,33 +9,9 @@
 
 namespace voltdb {
 
-class DummyStatusListener : public StatusListener {
-public:
-    StatusListener *m_listener;
-    DummyStatusListener(StatusListener *listener) : m_listener(listener) {}
-    bool uncaughtException(std::exception exception, boost::shared_ptr<voltdb::ProcedureCallback> callback) {
-        return m_listener->uncaughtException(exception, callback);
-    }
-    bool connectionLost(std::string hostname, int32_t connectionsLeft) {
-        bool retval = m_listener->connectionLost(hostname, connectionsLeft);
-        return retval;
-    }
-    bool backpressure(bool hasBackpressure) {
-        return m_listener->backpressure(hasBackpressure);
-    }
-};
-
-Client Client::create() throw(voltdb::Exception, voltdb::LibEventException) {
-    Client client(new ClientImpl());
+Client Client::create(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException) {
+    Client client(new ClientImpl(config));
     return client;
-}
-Client Client::create(boost::shared_ptr<voltdb::StatusListener> listener) throw(voltdb::Exception, voltdb::LibEventException) {
-    Client client(new ClientImpl(listener));
-    return client;
-}
-Client Client::create(voltdb::StatusListener *listener) throw(voltdb::Exception, voltdb::LibEventException) {
-    boost::shared_ptr<voltdb::StatusListener> wrapper(new DummyStatusListener(listener));
-    return Client::create(wrapper);
 }
 
 Client::Client(ClientImpl *impl) : m_impl(impl) {}
@@ -46,11 +22,9 @@ Client::~Client() {
 void
 Client::createConnection(
         std::string hostname,
-        std::string username,
-        std::string password,
         short port)
 throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
-    m_impl->createConnection(hostname, username, password, port);
+    m_impl->createConnection(hostname, port);
 }
 
 /*

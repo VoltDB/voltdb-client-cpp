@@ -27,6 +27,8 @@
 #include <iostream>
 #include <boost/scoped_ptr.hpp>
 #include <cstdio>
+#include "InvocationResponse.hpp"
+#include "ClientConfig.h"
 
 namespace voltdb {
 
@@ -48,9 +50,10 @@ public:
 
     bool uncaughtException(
             std::exception exception,
-            boost::shared_ptr<voltdb::ProcedureCallback> callback) {
+            boost::shared_ptr<voltdb::ProcedureCallback> callback,
+            InvocationResponse response) {
         if (m_listener != NULL) {
-            return m_listener->uncaughtException(exception, callback);
+            return m_listener->uncaughtException(exception, callback, response);
         }
         return false;
     }
@@ -79,11 +82,11 @@ public:
     ClientStuff(
             voltdb::Client client,
             std::string identifier,
-            boost::shared_ptr<DelegatingStatusListener> listener) :
+            DelegatingStatusListener *listener) :
     m_identifier(identifier), m_listener(listener), m_client(client)
     {}
     std::string m_identifier;
-    boost::shared_ptr<DelegatingStatusListener> m_listener;
+    DelegatingStatusListener *m_listener;
     voltdb::Client m_client;
 };
 
@@ -166,9 +169,9 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     }
 
     // no connection available, make a new one
-    boost::shared_ptr<DelegatingStatusListener> delegatingListener(new DelegatingStatusListener());
-    Client client = voltdb::Client::create(delegatingListener);
-    client.createConnection(hostname, username, password, port);
+    DelegatingStatusListener *delegatingListener = new DelegatingStatusListener();
+    Client client = voltdb::Client::create(ClientConfig( username, password, delegatingListener));
+    client.createConnection(hostname, port);
     boost::shared_ptr<ClientStuff> stuff(new ClientStuff(client, identifier, delegatingListener));
     stuff->m_listener->m_listener = listener;
     (*m_borrowedClients)->push_back(stuff);

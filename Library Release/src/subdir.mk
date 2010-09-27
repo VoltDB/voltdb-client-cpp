@@ -5,6 +5,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
 ../src/Client.cpp \
+../src/ClientConfig.cpp \
 ../src/ClientImpl.cpp \
 ../src/ConnectionPool.cpp \
 ../src/RowBuilder.cpp \
@@ -13,6 +14,7 @@ CPP_SRCS += \
 
 OBJS += \
 ./src/Client.o \
+./src/ClientConfig.o \
 ./src/ClientImpl.o \
 ./src/ConnectionPool.o \
 ./src/RowBuilder.o \
@@ -21,6 +23,7 @@ OBJS += \
 
 CPP_DEPS += \
 ./src/Client.d \
+./src/ClientConfig.d \
 ./src/ClientImpl.d \
 ./src/ConnectionPool.d \
 ./src/RowBuilder.d \

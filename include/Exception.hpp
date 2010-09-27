@@ -180,6 +180,14 @@ public:
         return "Lib event generated an unexpected error";
     }
 };
+
+class ClusterInstanceMismatchException : public voltdb::Exception {
+public:
+    ClusterInstanceMismatchException() : Exception() {}
+    virtual const char* what() const throw() {
+        return "Attempted to connect a client to two separate VoltDB clusters";
+    }
+};
 }
 
 #endif /* VOLTDB_EXCEPTION_HPP_ */
