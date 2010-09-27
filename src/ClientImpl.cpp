@@ -181,7 +181,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0), m_listener(config.m_listener),
         m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false), m_isDraining(false),
         m_instanceIdIsSet(false), m_outstandingRequests(0), m_username(config.m_username),
-        m_maxOutstandingRequests(config.m_maxOutstandingRequests) {
+        m_maxOutstandingRequests(config.m_maxOutstandingRequests), m_ignoreBackpressure(false) {
 #ifdef DEBUG
     if (!voltdb_clientimpl_debug_init_libevent) {
         event_enable_debug_mode();
@@ -366,6 +366,11 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
      */
     struct bufferevent *bev = NULL;
     while (true) {
+        if (m_ignoreBackpressure) {
+            bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+            break;
+        }
+
         //Assume backpressure if the number of outstanding requests is too large
         if (m_outstandingRequests <= m_maxOutstandingRequests) {
             for (size_t ii = 0; ii < m_bevs.size(); ii++) {
@@ -384,7 +389,9 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
             bool callEventLoop = true;
             if (m_listener.get() != NULL) {
                 try {
+                    m_ignoreBackpressure = true;
                     callEventLoop = !m_listener->backpressure(true);
+                    m_ignoreBackpressure = false;
                 } catch (std::exception e) {
                     std::cerr << "Exception thrown on invocation of backpressure callback: " << e.what() << std::endl;
                 }
@@ -467,11 +474,15 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
             boost::shared_ptr<CallbackMap> callbackMap = m_callbacks[bev];
             CallbackMap::iterator i = callbackMap->find(response.clientData());
             try {
+                m_ignoreBackpressure = true;
                 breakEventLoop |= i->second->callback(response);
+                m_ignoreBackpressure = false;
             } catch (std::exception &e) {
                 if (m_listener.get() != NULL) {
                     try {
+                        m_ignoreBackpressure = true;
                         breakEventLoop |= m_listener->uncaughtException( e, i->second, response);
+                        m_ignoreBackpressure = false;
                     } catch (std::exception e) {
                         std::cerr << "Uncaught exception handler threw exception: " << e.what() << std::endl;
                     }
@@ -511,7 +522,9 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         //Notify client that a connection was lost
         if (m_listener.get() != NULL) {
             try {
+                m_ignoreBackpressure = true;
                 breakEventLoop |= m_listener->connectionLost( m_contexts[bev]->m_name, m_bevs.size() - 1);
+                m_ignoreBackpressure = false;
             } catch (std::exception e) {
                 std::cerr << "Status listener threw exception on connection lost: " << e.what() << std::endl;
             }

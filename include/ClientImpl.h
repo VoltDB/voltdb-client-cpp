@@ -113,6 +113,8 @@ private:
     unsigned char m_passwordHash[20];
     const int32_t m_maxOutstandingRequests;
 
+    bool m_ignoreBackpressure;
+
 };
 }
 #endif /* VOLTDB_CLIENTIMPL_H_ */
