@@ -6,15 +6,8 @@
 CPP_SRCS += \
 ../src/AsyncHelloWorld.cpp 
 
-C_SRCS += \
-../src/sha1.c 
-
 OBJS += \
-./src/AsyncHelloWorld.o \
-./src/sha1.o 
-
-C_DEPS += \
-./src/sha1.d 
+./src/AsyncHelloWorld.o 
 
 CPP_DEPS += \
 ./src/AsyncHelloWorld.d 
@@ -25,13 +18,6 @@ src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
 	g++ -D__STDC_LIMIT_MACROS -DBOOST_SP_DISABLE_THREADS -DDEBUG -I"${HOME}/include" -I../include -O0 -g3 -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
-	@echo 'Finished building: $<'
-	@echo ' '
-
-src/%.o: ../src/%.c
-	@echo 'Building file: $<'
-	@echo 'Invoking: GCC C Compiler'
-	gcc -D__STDC_LIMIT_MACROS -DBOOST_SP_DISABLE_THREADS -DDEBUG -I"${HOME}/include" -I../include -O2 -g -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
