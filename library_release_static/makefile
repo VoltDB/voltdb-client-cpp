@@ -9,7 +9,7 @@ RM := rm
 # All of the sources participating in the build are defined here
 -include sources.mk
 -include subdir.mk
--include test/subdir.mk
+-include src/subdir.mk
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)
@@ -38,19 +38,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: Tests
+all: libvoltcpp.a
 
 # Tool invocations
-Tests: $(OBJS) $(USER_OBJS)
+libvoltcpp.a: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
-	@echo 'Invoking: GCC C++ Linker'
-	g++ -L../library_debug -L"${HOME}/lib" -L../library_release -Xlinker -rpath=../library_debug -Xlinker -rpath=../library_release -o"Tests" $(OBJS) $(USER_OBJS) $(LIBS)
+	@echo 'Invoking: GCC Archiver'
+	ar -r "libvoltcpp.a" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) Tests
+	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(ARCHIVES)$(CPP_DEPS)$(CXX_DEPS)$(C_UPPER_DEPS) libvoltcpp.a
 	-@echo ' '
 
 .PHONY: all clean dependents
