@@ -49,6 +49,7 @@
 								</option>
 								<option id="gnu.c.compiler.option.include.paths.61670424" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${HOME}/include&quot;"/>
+									<listOptionValue builtIn="false" value="../include"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.859611893" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -893,15 +894,12 @@
 								<option id="gnu.cpp.link.option.paths.869847807" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths"/>
 								<option defaultValue="true" id="gnu.cpp.link.option.shared.930658427" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared" valueType="boolean"/>
 								<option id="gnu.cpp.link.option.libs.1579040297" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
-									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="rt"/>
 								</option>
 								<option id="gnu.cpp.link.option.other.1247336377" name="Other options (-Xlinker [option])" superClass="gnu.cpp.link.option.other"/>
 								<option id="gnu.cpp.link.option.userobjs.1509781430" name="Other objects" superClass="gnu.cpp.link.option.userobjs" valueType="userObjs">
 									<listOptionValue builtIn="false" value="&quot;${HOME}/lib/libevent.a&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${HOME}/lib/libcrypto.a&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${HOME}/lib/libboost_thread.a&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${HOME}/lib/libssl.a&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1870037879" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
@@ -1719,6 +1717,7 @@
 								</option>
 								<option id="gnu.c.compiler.option.include.paths.492901360" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${HOME}/include&quot;"/>
+									<listOptionValue builtIn="false" value="../include"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1692227331" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -1728,16 +1727,15 @@
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.base.1609900687" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.base">
 								<option id="gnu.cpp.link.option.libs.475887330" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="voltcpp"/>
-									<listOptionValue builtIn="false" value="boost_thread"/>
 								</option>
 								<option id="gnu.cpp.link.option.paths.1326997080" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
-									<listOptionValue builtIn="false" value="&quot;../Library Debug&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../Library Release&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;../library_debug&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;../library_release&quot;"/>
 								</option>
 								<option id="gnu.cpp.link.option.shared.581987934" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared"/>
 								<option id="gnu.cpp.link.option.other.275539153" name="Other options (-Xlinker [option])" superClass="gnu.cpp.link.option.other" valueType="stringList">
-									<listOptionValue builtIn="false" value="-rpath=../Library\ Debug"/>
-									<listOptionValue builtIn="false" value="-rpath=../Library\ Release"/>
+									<listOptionValue builtIn="false" value="-rpath=../library_debug"/>
+									<listOptionValue builtIn="false" value="-rpath=../library_release"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1247769774" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
@@ -2567,16 +2565,13 @@
 								<option id="gnu.cpp.link.option.paths.480877263" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths"/>
 								<option defaultValue="true" id="gnu.cpp.link.option.shared.1201477851" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared" valueType="boolean"/>
 								<option id="gnu.cpp.link.option.libs.246474598" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
-									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="rt"/>
 								</option>
 								<option id="gnu.cpp.link.option.other.380153930" name="Other options (-Xlinker [option])" superClass="gnu.cpp.link.option.other"/>
 								<option id="gnu.cpp.link.option.flags.858722780" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="" valueType="string"/>
 								<option id="gnu.cpp.link.option.userobjs.645905883" name="Other objects" superClass="gnu.cpp.link.option.userobjs" valueType="userObjs">
 									<listOptionValue builtIn="false" value="&quot;${HOME}/lib/libevent.a&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${HOME}/lib/libcrypto.a&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${HOME}/lib/libboost_thread.a&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${HOME}/lib/libssl.a&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1668029126" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
@@ -4243,7 +4238,7 @@
 									<listOptionValue builtIn="false" value="&quot;${HOME}/include&quot;"/>
 									<listOptionValue builtIn="false" value="../include"/>
 								</option>
-								<option id="gnu.c.compiler.option.misc.other.1507125538" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -fPIC" valueType="string"/>
+								<option id="gnu.c.compiler.option.misc.other.1507125538" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -fPIC" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.153052456" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.base.243001042" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.base">
