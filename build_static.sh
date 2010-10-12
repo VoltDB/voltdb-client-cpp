@@ -22,10 +22,12 @@ ar rcs libvoltcpp.a tmp/volt/* tmp/event/* tmp/boost_system/* tmp/boost_thread/*
 mkdir package
 mkdir package/include
 cd include
-cp -r ByteBuffer.hpp Client.h ClientConfig.h Column.hpp ConnectionPool.h Decimal.hpp Exception.hpp InvocationResponse.hpp Parameter.hpp ParameterSet.hpp Procedure.hpp ProcedureCallback.hpp Row.hpp RowBuilder.h StatusListener.h Table.h TableIterator.h WireType.h ttmath/*.h boost ../package/include
+cp -r ByteBuffer.hpp Client.h ClientConfig.h Column.hpp ConnectionPool.h Decimal.hpp Exception.hpp InvocationResponse.hpp Parameter.hpp ParameterSet.hpp Procedure.hpp ProcedureCallback.hpp Row.hpp RowBuilder.h StatusListener.h Table.h TableIterator.h WireType.h ttmath ../package/include
 cd ..
 cp libvoltcpp.a package
-tar cvfz volt_cpp.tgz package/*
-strip package/libvoltcpp.a
-tar cvfz volt_cpp_stripped.tgz package/*
+cd package
+tar cvfz ../volt_cpp.tgz *
+strip -d --strip-unneeded libvoltcpp.a
+tar cvfz ../volt_cpp_stripped.tgz *
+cd ..
 rm -fr tmp
