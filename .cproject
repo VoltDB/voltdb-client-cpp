@@ -2557,7 +2557,7 @@
 									<listOptionValue builtIn="false" value="&quot;${HOME}/include&quot;"/>
 									<listOptionValue builtIn="false" value="../include"/>
 								</option>
-								<option id="gnu.c.compiler.option.misc.other.133244537" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -fPIC" valueType="string"/>
+								<option id="gnu.c.compiler.option.misc.other.133244537" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -fPIC" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1239275970" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.base.1741734192" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.base">
@@ -3418,7 +3418,7 @@
 									<listOptionValue builtIn="false" value="-rpath=../library_release"/>
 								</option>
 								<option id="gnu.cpp.link.option.shared.359486629" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared"/>
-								<option id="gnu.cpp.link.option.userobjs.989116860" name="Other objects" superClass="gnu.cpp.link.option.userobjs" valueType="userObjs"/>
+								<option id="gnu.cpp.link.option.userobjs.989116860" name="Other objects" superClass="gnu.cpp.link.option.userobjs"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.405442243" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -4241,7 +4241,9 @@
 								</option>
 								<option id="gnu.c.compiler.option.include.paths.5715382" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${HOME}/include&quot;"/>
+									<listOptionValue builtIn="false" value="../include"/>
 								</option>
+								<option id="gnu.c.compiler.option.misc.other.1507125538" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -fPIC" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.153052456" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.base.243001042" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.base">
