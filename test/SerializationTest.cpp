@@ -41,7 +41,7 @@
 #include "Table.h"
 #include "TableIterator.h"
 #include "Row.hpp"
-#include <openssl/sha.h>
+#include "sha1.h"
 
 namespace voltdb {
 class SerializationTest : public CppUnit::TestFixture {
@@ -77,7 +77,10 @@ void testAuthenticationRequest() {
     SharedByteBuffer generated(new char[8192], 8192);
     unsigned char hashedPassword[20];
     std::string password("world");
-    SHA1( reinterpret_cast<const unsigned char*>(password.data()), password.size(), hashedPassword);
+    SHA1_CTX context;
+    SHA1_Init(&context);
+    SHA1_Update( &context, reinterpret_cast<const unsigned char*>(password.data()), password.size());
+    SHA1_Final ( &context, hashedPassword);
     AuthenticationRequest request( "hello", "database", hashedPassword);
     request.serializeTo(&generated);
     CPPUNIT_ASSERT(original.remaining() == generated.remaining());

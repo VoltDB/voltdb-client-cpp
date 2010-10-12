@@ -25,7 +25,7 @@
 #include "AuthenticationResponse.hpp"
 #include "AuthenticationRequest.hpp"
 #include <event2/buffer.h>
-#include <openssl/sha.h>
+#include "sha1.h"
 
 namespace voltdb {
 
@@ -193,7 +193,10 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
     if (!m_base) {
         throw voltdb::LibEventException();
     }
-    SHA1( reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size(), m_passwordHash);
+    SHA1_CTX context;
+    SHA1_Init(&context);
+    SHA1_Update( &context, reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size());
+    SHA1_Final ( &context, m_passwordHash);
 }
 
 class FreeBEVOnFailure {

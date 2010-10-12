@@ -12,6 +12,9 @@ CPP_SRCS += \
 ../src/Table.cpp \
 ../src/WireType.cpp 
 
+C_SRCS += \
+../src/sha1.c 
+
 OBJS += \
 ./src/Client.o \
 ./src/ClientConfig.o \
@@ -19,7 +22,11 @@ OBJS += \
 ./src/ConnectionPool.o \
 ./src/RowBuilder.o \
 ./src/Table.o \
-./src/WireType.o 
+./src/WireType.o \
+./src/sha1.o 
+
+C_DEPS += \
+./src/sha1.d 
 
 CPP_DEPS += \
 ./src/Client.d \
@@ -36,6 +43,13 @@ src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
 	g++ -D__STDC_LIMIT_MACROS -DBOOST_SP_DISABLE_THREADS -I"${HOME}/include" -I../include -O3 -g3 -c -fPIC -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/%.o: ../src/%.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: GCC C Compiler'
+	gcc -D__STDC_LIMIT_MACROS -DBOOST_SP_DISABLE_THREADS -I"${HOME}/include" -O2 -g -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
