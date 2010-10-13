@@ -42,7 +42,7 @@ CPP_DEPS += \
 src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -D__STDC_LIMIT_MACROS -DBOOST_SP_DISABLE_THREADS -I"${HOME}/include" -I../include -O3 -g3 -c -fPIC -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
+	g++ -DBOOST_SP_DISABLE_THREADS -D__STDC_LIMIT_MACROS -I"${HOME}/include" -I../include -O3 -g3 -c -fPIC -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
