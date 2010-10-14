@@ -1,3 +1,16 @@
+# warnings
+CPPFLAGS += -Wall -fmessage-length=0
+# weird crap
+CPPFLAGS += -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS
+# code output
+CPPFLAGS += -O3 -arch x86_64
+# headers
+CPPFLAGS += -I../include
+# libraries
+CPPFLAGS += -pthread
+
+LDFLAGS += -shared -dynamic -arch x86_64 -lpthread
+
 # Add inputs and outputs from these tool invocations to the build variables
 CPP_SRCS += \
 ../src/Client.cpp \
@@ -23,8 +36,6 @@ OBJS += \
 
 USER_OBJS := /usr/local/lib/libevent.a /usr/local/lib/libboost_thread.a
 
-LIBS := -lpthread
-
 RM := rm
 
 # All Target
@@ -34,14 +45,14 @@ all: libvoltcpp.dylib libvoltcpp.a
 src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -D__STDC_LIMIT_MACROS -I../include -O3 -c -fmessage-length=0 -fPIC -o $@ $?
+	$(CCACHE) $(COMPILE.cpp) -O3 -c -o $@ $?
 	@echo 'Finished building: $<'
 	@echo ' '
 
 src/%.o: ../src/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -D__STDC_LIMIT_MACROS -I../include -O3 -Wall -c -fmessage-length=0 -fPIC -o $@ $?
+	$(CCACHE) $(COMPILE.cpp) -c -o $@ $?
 	@echo 'Finished building: $<'
 	@echo ' '
 
@@ -57,7 +68,7 @@ libvoltcpp.a: $(OBJS) $(USER_OBJS)
 libvoltcpp.dylib: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	$(LINK.cpp) $(LDFLAGS) -shared -o $@ $^
+	g++ $(LDFLAGS) -o $@ $^
 	@echo 'Finished building target: $@'
 	@echo ' '
 
