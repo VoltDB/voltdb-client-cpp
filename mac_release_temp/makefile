@@ -9,7 +9,8 @@ CPPFLAGS += -I../include
 # libraries
 CPPFLAGS += -pthread
 
-LDFLAGS += -shared -dynamic -arch x86_64 -lpthread
+LDFLAGS += -shared -dynamic -dylib -arch x86_64 -lpthread
+LDFLAGS += -undefined suppress -flat_namespace
 
 # Add inputs and outputs from these tool invocations to the build variables
 CPP_SRCS += \
@@ -34,7 +35,7 @@ OBJS += \
 ./src/WireType.o \
 ./src/sha1.o
 
-USER_OBJS := /usr/local/lib/libevent.a /usr/local/lib/libboost_thread.a
+USER_OBJS := /usr/local/lib/libevent.a ./libboost_thread.a
 
 RM := rm
 
@@ -60,7 +61,7 @@ src/%.o: ../src/%.c
 libvoltcpp.a: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	$(AR) $(ARFLAGS) $@ $?
+	$(AR) $(ARFLAGS) $@ $(OBJS) ./third_party_obj/*.o
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -68,7 +69,7 @@ libvoltcpp.a: $(OBJS) $(USER_OBJS)
 libvoltcpp.dylib: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ $(LDFLAGS) -o $@ $^
+	$(LINK.cpp) $(LDFLAGS) -o $@ $^
 	@echo 'Finished building target: $@'
 	@echo ' '
 
