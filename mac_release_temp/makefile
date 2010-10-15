@@ -5,7 +5,7 @@ CPPFLAGS += -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS
 # code output
 CPPFLAGS += -O3 -arch x86_64
 # headers
-CPPFLAGS += -I../include
+CPPFLAGS += -I../include -I/usr/local/include
 # libraries
 CPPFLAGS += -pthread
 
@@ -35,7 +35,7 @@ OBJS += \
 ./src/WireType.o \
 ./src/sha1.o
 
-USER_OBJS := /usr/local/lib/libevent.a ./libboost_thread.a
+USER_OBJS := /usr/local/lib/libevent.a /usr/local/lib/libboost_thread.a
 
 RM := rm
 
@@ -46,19 +46,27 @@ all: libvoltcpp.dylib libvoltcpp.a
 src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	$(CCACHE) $(COMPILE.cpp) -O3 -c -o $@ $?
+	$(CCACHE) g++ -fmessage-length=0 -O3 -arch x86_64 \
+	-isysroot /Developer/SDKs/MacOSX10.5.sdk \
+	-mmacosx-version-min=10.5 \
+	-I../include -I/usr/local/include \
+	-c -o $@ $?
 	@echo 'Finished building: $<'
 	@echo ' '
 
 src/%.o: ../src/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	$(CCACHE) $(COMPILE.cpp) -c -o $@ $?
+	gcc -fmessage-length=0 -O3 -arch x86_64 \
+	-isysroot /Developer/SDKs/MacOSX10.5.sdk \
+	-mmacosx-version-min=10.5 \
+	-I../include -I/usr/local/include \
+	-c -o $@ $?
 	@echo 'Finished building: $<'
 	@echo ' '
 
 # Tool invocations
-libvoltcpp.a: $(OBJS) $(USER_OBJS)
+libvoltcpp.a: $(OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
 	$(AR) $(ARFLAGS) $@ $(OBJS) ./third_party_obj/*.o
@@ -66,10 +74,17 @@ libvoltcpp.a: $(OBJS) $(USER_OBJS)
 	@echo ' '
 
 # Tool invocations
-libvoltcpp.dylib: $(OBJS) $(USER_OBJS)
+libvoltcpp.dylib: $(OBJS) libvoltcpp.a
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	$(LINK.cpp) $(LDFLAGS) -o $@ $^
+	MACOSX_DEPLOYMENT_TARGET="10.5" \
+	g++ -arch x86_64 -dynamiclib -isysroot /Developer/SDKs/MacOSX10.5.sdk \
+	$(OBJS) ./third_party_obj/*.o -lpthread \
+	-install_name /usr/local/lib/libvoltcpp.dylib \
+	-mmacosx-version-min=10.5 -single_module \
+	-compatibility_version 1 -current_version 1 \
+	-o libvoltcpp.dylib
+
 	@echo 'Finished building target: $@'
 	@echo ' '
 
