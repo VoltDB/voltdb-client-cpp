@@ -7,6 +7,9 @@ invoke stored procedures and read responses.
 The Using VoltDB Guide explains how to use the CPP library in the
 chapter 12.1.2: Writing VoltDB Client Applications in C++.
 
+Binaries for 64-bit Linux and 64-bit OSX 10.5+ are provided. The
+linking instructions below apply to the Linux binaries.
+
 
 == Linking against libvoltdb.a
 
