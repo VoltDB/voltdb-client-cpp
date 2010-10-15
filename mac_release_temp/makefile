@@ -80,7 +80,6 @@ libvoltcpp.dylib: $(OBJS) libvoltcpp.a
 	MACOSX_DEPLOYMENT_TARGET="10.5" \
 	g++ -arch x86_64 -dynamiclib -isysroot /Developer/SDKs/MacOSX10.5.sdk \
 	$(OBJS) ./third_party_obj/*.o -lpthread \
-	-install_name /usr/local/lib/libvoltcpp.dylib \
 	-mmacosx-version-min=10.5 -single_module \
 	-compatibility_version 1 -current_version 1 \
 	-o libvoltcpp.dylib
