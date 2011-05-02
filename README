@@ -10,6 +10,13 @@ chapter 12.1.2: Writing VoltDB Client Applications in C++.
 Binaries for 64-bit Linux and 64-bit OSX 10.5+ are provided. The
 linking instructions below apply to the Linux binaries.
 
+== Building the kit samples
+In terminal go to the examples directory then run:
+
+./build.sh
+
+This will build the HelloWorld and AsyncHelloWorld applications
+that you can then run against a locally running HelloWorld database.
 
 == Linking against libvoltdb.a
 
