@@ -18,6 +18,10 @@ In terminal go to the examples directory then run:
 This will build the HelloWorld and AsyncHelloWorld applications
 that you can then run against a locally running HelloWorld database.
 
+You can additionally view the source code of the examples online at:
+
+     https://source.voltdb.com/browse/ClientAPI/cpp/trunk/examples
+
 == Linking against libvoltdb.a
 
 The following command will compile and link an example client
