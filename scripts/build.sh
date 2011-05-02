@@ -16,4 +16,7 @@ g++ -lrt -I../include/ -D__STDC_LIMIT_MACROS -DBOOST_SP_DISABLE_THREADS HelloWor
 echo "Building 'AsyncHellowWorld' application"
 g++ -lrt -I../include/ -D__STDC_LIMIT_MACROS -DBOOST_SP_DISABLE_THREADS AsyncHelloWorld.cpp $lib/libvoltcpp.a -o AsyncHelloWorld
 
+echo "Building 'Voter' application"
+g++ -lrt -I../include/ -D__STDC_LIMIT_MACROS -DBOOST_SP_DISABLE_THREADS Voter.cpp $lib/libvoltcpp.a -o Voter
+
 echo "Build complete.  Run ./HelloWorld or ./AsyncHelloWorld against a running HelloWorld database on localhost."

@@ -5,3 +5,8 @@ helloworld_s: HelloWorld.cpp libvoltcpp.a
 	
 helloworld_d: HelloWorld.cpp libvoltcpp.a
 	g++ -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -O3 -arch x86_64 -I./include -pthread HelloWorld.cpp libvoltcpp.dylib -o helloworld_d
+
+voter: Voter.cpp libvoltcpp.a
+	g++ -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -O3 -arch x86_64 -I./include -pthread Voter.cpp libvoltcpp.dylib -o voter
+
+
