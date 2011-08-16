@@ -2,7 +2,7 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
-USER_OBJS := ${HOME}/lib/libevent.a ${HOME}/lib/libboost_thread.a
+USER_OBJS := ${HOME}/lib/libevent.a
 
-LIBS := -lrt
+LIBS := -lrt -lpthread
 

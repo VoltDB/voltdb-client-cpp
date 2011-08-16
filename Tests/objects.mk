@@ -4,5 +4,5 @@
 
 USER_OBJS :=
 
-LIBS := -lcppunit -levent -lboost_filesystem -lvoltcpp
+LIBS := -lcppunit -lboost_system-mt -levent -lboost_filesystem-mt -lvoltcpp
 

@@ -26,8 +26,7 @@
 #include "Client.h"
 #include "StatusListener.h"
 #include <boost/unordered_map.hpp>
-#include <boost/thread/tss.hpp>
-#include <boost/thread.hpp>
+#include <pthread.h>
 #include <boost/shared_ptr.hpp>
 #include <string>
 
@@ -41,10 +40,11 @@ typedef boost::unordered_map<std::string, std::vector<boost::shared_ptr<ClientSt
 void cleanupOnScriptEnd(ClientSet *clients);
 
 /*
- * A VoltDB connection pool.
+ * A VoltDB connection pool. Geared towards invocation from scripting languages
+ * where a script will run, acquire several client instances, and then terminate.
  */
 class ConnectionPool {
-    friend void cleanupOnScriptEnd(ClientSet *);
+    friend void cleanupOnScriptEnd(void *);
 public:
     ConnectionPool();
     virtual ~ConnectionPool();
@@ -70,13 +70,30 @@ public:
     static voltdb::ConnectionPool* pool();
 
 private:
-    boost::thread_specific_ptr<ClientSet> *m_borrowedClients;
+    /**
+     * Thread local key for storing clients
+     */
+    pthread_key_t m_borrowedClients;
     ClientMap m_clients;
-    boost::mutex m_lock;
+    pthread_mutex_t m_lock;
 };
 
+/**
+ * Instantiate the global connection pool
+ * Should be invoked once at startup
+ */
 void onLoad();
+
+/**
+ * Free the global connection pool
+ * Should be invoked before shutdown to ensure all txns are flushed
+ * and things run valgrind clean
+ */
 void onUnload();
+
+/**
+ * Releases all clients that have been borrowed from the pool by the current thread
+ */
 void onScriptEnd();
 
 }

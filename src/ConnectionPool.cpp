@@ -93,14 +93,26 @@ public:
 /*
  * Short hand for an exception safe lock acquisition
  */
-typedef boost::lock_guard<boost::mutex> LockGuard;
+class LockGuard {
+public:
+    LockGuard(pthread_mutex_t &mutex) {
+        m_mutex = &mutex;
+        pthread_mutex_lock(m_mutex);
+    }
+    ~LockGuard() {
+        pthread_mutex_unlock(m_mutex);
+    }
+private:
+    pthread_mutex_t *m_mutex;
+};
 
 /*
  * Cleanup function used by thread local ptr to a list of clients
  * that were borrowed from the pool. It unsets the listener and returns the client
  * to the pool.
  */
-void cleanupOnScriptEnd(ClientSet *clients) {
+void cleanupOnScriptEnd(void *ptr) {
+    ClientSet *clients = reinterpret_cast<ClientSet*>(ptr);
     if (clients != NULL) {
         boost::scoped_ptr<ClientSet> guard(clients);
         for(ClientSet::iterator i = clients->begin(); i != clients->end(); i++) {
@@ -112,9 +124,9 @@ void cleanupOnScriptEnd(ClientSet *clients) {
     }
 }
 
-ConnectionPool::ConnectionPool() :
-        m_borrowedClients(new boost::thread_specific_ptr<ClientSet>(&cleanupOnScriptEnd)) {
-
+ConnectionPool::ConnectionPool() {
+    pthread_mutex_init(&m_lock, NULL);
+    pthread_key_create(&m_borrowedClients, &cleanupOnScriptEnd);
 }
 
 /*
@@ -122,10 +134,8 @@ ConnectionPool::ConnectionPool() :
  * needs acess to the members of ConnectionPool.
  */
 ConnectionPool::~ConnectionPool() {
-    /*
-     * Must delete here so that cleanupOnScriptEnd can do the right thing with access to gPool
-     */
-    delete m_borrowedClients;
+    pthread_mutex_destroy(&m_lock);
+    pthread_key_delete(m_borrowedClients);
 }
 
 /*
@@ -141,8 +151,10 @@ ConnectionPool::acquireClient(
         short port)
 throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     LockGuard guard(m_lock);
-    if (m_borrowedClients->get() == NULL) {
-        m_borrowedClients->reset(new ClientSet());
+    ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
+    if (clients == NULL) {
+        clients = new ClientSet();
+        pthread_setspecific( m_borrowedClients, static_cast<const void *>(clients));
     }
     char portBytes[16];
     int portInt = port;
@@ -163,7 +175,7 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
         } else {
             // otherwise return this connection
             clientStuff->m_listener->m_listener = listener;
-            (*m_borrowedClients)->push_back(clientStuff);
+            clients->push_back(clientStuff);
             return clientStuff->m_client;
         }
     }
@@ -174,7 +186,7 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     client.createConnection(hostname, port);
     boost::shared_ptr<ClientStuff> stuff(new ClientStuff(client, identifier, delegatingListener));
     stuff->m_listener->m_listener = listener;
-    (*m_borrowedClients)->push_back(stuff);
+    clients->push_back(stuff);
     return client;
 }
 
@@ -193,7 +205,9 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
  */
 void ConnectionPool::onScriptEnd() {
     LockGuard guard(m_lock);
-    m_borrowedClients->reset();
+    ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
+    delete clients;
+    pthread_setspecific( m_borrowedClients, NULL);
 }
 
 /*

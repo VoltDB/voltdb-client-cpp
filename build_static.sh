@@ -14,14 +14,8 @@ mkdir volt && cd volt
 ar x ../../library_release_static/libvoltcpp.a
 cd .. && mkdir event && cd event
 ar x $HOME/lib/libevent.a
-cd .. && mkdir boost_thread && cd boost_thread
-ar x $HOME/lib/libboost_thread.a
-cd .. && mkdir boost_system && cd boost_system
-ar x $HOME/lib/libboost_system.a
-cd .. && mkdir boost_filesystem && cd boost_filesystem
-ar x $HOME/lib/libboost_filesystem.a
 cd ../..
-ar rcs libvoltcpp.a tmp/volt/* tmp/event/* tmp/boost_system/* tmp/boost_thread/* tmp/boost_filesystem/* tmp/boost_thread/*
+ar rcs libvoltcpp.a tmp/volt/* tmp/event/*
 
 mkdir package
 mkdir package/include
