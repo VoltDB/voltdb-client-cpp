@@ -71,17 +71,13 @@ int main(int argc, char** argv) {
     // create a procedure instance for the Initialize procedure
     vector<voltdb::Parameter> initParamTypes(2);
     initParamTypes[0] = voltdb::Parameter(voltdb::WIRE_TYPE_INTEGER);
-    initParamTypes[1] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING, true);
+    initParamTypes[1] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
     voltdb::Procedure initialize("Initialize", initParamTypes);
     voltdb::ParameterSet *initParams = initialize.params();
 
     // invoke the Initialize procedure
     int64_t maxContestant = 4;
-    vector<string> contestantNames;
-    contestantNames.push_back("Edwina Burnam");
-    contestantNames.push_back("Tabatha Gehling");
-    contestantNames.push_back("Kelly Clauss");
-    contestantNames.push_back("Jessie Alloway");
+    string contestantNames = "Edwina Burnam,Tabatha Gehling,Kelly Clauss,Jessie Alloway";
     initParams->addInt32(maxContestant);
     initParams->addString(contestantNames);
     voltdb::InvocationResponse initResponse = client.invoke(initialize);
