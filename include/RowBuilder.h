@@ -23,11 +23,12 @@
 
 #ifndef VOLTDB_ROWBUILDER_H_
 #define VOLTDB_ROWBUILDER_H_
+
+#include <stdint.h>
+#include <boost/shared_ptr.hpp>
 #include "ByteBuffer.hpp"
 #include "WireType.h"
 #include "Column.hpp"
-#include "boost/shared_ptr.hpp"
-#include <stdint.h>
 #include "Exception.hpp"
 
 namespace voltdb {

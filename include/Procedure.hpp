@@ -23,6 +23,7 @@
 
 #ifndef VOLTDB_PROCEDURE_HPP_
 #define VOLTDB_PROCEDURE_HPP_
+
 #include <vector>
 #include <string>
 #include "ParameterSet.hpp"

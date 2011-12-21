@@ -23,8 +23,11 @@
 
 #ifndef VOLTDB_AUTHENTICATIONRESPONSE_HPP_
 #define VOLTDB_AUTHENTICATIONRESPONSE_HPP_
+
 #include "ByteBuffer.hpp"
+
 namespace voltdb {
+    
 class AuthenticationResponse {
 public:
     AuthenticationResponse() {}
@@ -62,6 +65,7 @@ private:
     int32_t m_leaderAddress;
     std::string m_buildString;
 };
+    
 }
 
 #endif /* VOLTDB_AUTHENTICATIONRESPONSE_HPP_ */

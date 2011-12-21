@@ -24,118 +24,176 @@
 #ifndef VOLTDB_CLIENT_H_
 #define VOLTDB_CLIENT_H_
 
-#include <string>
-#include "Procedure.hpp"
-#include "StatusListener.h"
+#include <map>
+#include <deque>
+#include <event2/event.h>
+#include <event2/bufferevent.h>
 #include <boost/shared_ptr.hpp>
-#include "ClientConfig.h"
+#include "Procedure.hpp"
+#include "AuthenticationResponse.hpp"
+#include "InvocationResponse.hpp"
 
 namespace voltdb {
+    
+// forward declarations used internally
+class CxnContext;
+class PreparedInvocation;
 class MockVoltDB;
-class ClientImpl;
-class ProcedureCallback;
+class Client;
 
-/*
- * A VoltDB client for invoking stored procedures on a VoltDB instance. The client and the
- * shared pointers it returns are not thread safe. If you need more parallelism you run multiple processes
- * and connect each process to a subset of the nodes in your VoltDB cluster.
- *
- * Because the client is single threaded it has no dedicated thread for doing network IO and invoking
- * callbacks. Applications must call run() and runOnce() periodically to ensure that requests are sent
- * and responses are processed.
- */
+//////////////////////////////////////////////////////////////
+//
+// CALLBACKS FOR ASYNCRONOUS CLIENT USAGE
+//
+//////////////////////////////////////////////////////////////
+    
+enum connection_event_type {
+    // the connection is ready to accept work
+    CONNECTED,
+    // the connection has been disconnected remotely or locally
+    CONNECTION_LOST,
+    // the connection is currently full of work and will reject subsequent work
+    BACKPRESSURE_ON,
+    // the connection is writable again
+    BACKPRESSURE_OFF
+};
+    
+struct connection_event {
+    connection_event_type type;
+    std::string hostname;
+    short port;
+    std::string info; // additional event description
+};
+    
+// function pointers for callbacks
+    
+// callback for connection changes
+typedef void (*voltdb_connection_callback)(Client*, struct connection_event);
+    
+// callback for procedures
+// void* is user_data, passed from Client::invoke(..) as payload
+typedef void (*voltdb_proc_callback)(Client*, InvocationResponse, void *);
+
+//////////////////////////////////////////////////////////////
+//
+// CLIENT CLASS FOR ACCESSING VOLTDB
+//
+//////////////////////////////////////////////////////////////
+    
 class Client {
     friend class MockVoltDB;
 public:
     /*
-     * Create a connection to the VoltDB process running at the specified host authenticating
+     * Construct a VoltDB client, with various configuration options.
+     * Initially not connected to any VoltDB nodes.
+     * When VoltDB isn't using authentication, any user/password is fine,
+     *  though using the empty string is convention.
      * using the username and password provided when this client was constructed
-     * @param hostname Hostname or IP address to connect to
-     * @throws voltdb::ConnectException An error occurs connecting or authenticating
-     * @throws voltdb::LibEventException libevent returns an error code
+     * 
+     * May throw voltdb::LibEventException
      */
-    void createConnection(std::string hostname, short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
-
-    /*
-     * Synchronously invoke a stored procedure and return a the response. Callbacks for asynchronous requests
-     * submitted earlier may be invoked before this method returns.
-     * @throws NoConnectionsException No connections to submit the request on
-     * @throws UninitializedParamsException Some or all of the parameters for the stored procedure were not set
-     * @throws LibEventException An unknown error occured in libevent
-     */
-    voltdb::InvocationResponse invoke(voltdb::Procedure &proc) throw (voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::Exception);
-
-    /*
-     * Asynchronously invoke a stored procedure. Returns immediately if there is no backpressure, but if there is
-     * backpressure this method will block until there is none. If a status listener is registered it will notified
-     * of the backpressure and will have an opportunity to prevent this method from blocking. Callbacks
-     * for asynchronous requests will not be invoked until run() or runOnce() is invoked.
-     * @throws NoConnectionsException No connections to submit the request on
-     * @throws UninitializedParamsException Some or all of the parameters for the stored procedure were not set
-     * @throws LibEventException An unknown error occured in libevent
-     */
-#ifdef SWIG
-%ignore invoke(voltdb::Procedure &proc, boost::shared_ptr<voltdb::ProcedureCallback> callback);
-#endif
-    void invoke(voltdb::Procedure &proc, boost::shared_ptr<voltdb::ProcedureCallback> callback) throw (voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::Exception);
-
-    /*
-     * Asynchronously invoke a stored procedure. Returns immediately if there is no backpressure, but if there is
-     * backpressure this method will block until there is none. If a status listener is registered it will notified
-     * of the backpressure and will have an opportunity to prevent this method from blocking. Callbacks
-     * for asynchronous requests will not be invoked until run() or runOnce() is invoked.
-     * @throws NoConnectionsException No connections to submit the request on
-     * @throws UninitializedParamsException Some or all of the parameters for the stored procedure were not set
-     * @throws LibEventException An unknown error occured in libevent
-     */
-    void invoke(voltdb::Procedure &proc, voltdb::ProcedureCallback *callback) throw (voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::Exception);
-
-    /*
-     * Run the event loop once and process pending events. This writes requests to any ready connections
-     * and reads all responses and invokes the appropriate callbacks. Returns immediately after performing
-     * all available work, or after the loop is broken by a callback.
-     * @throws NoConnectionsException No connections to the database so there is no work to be done
-     * @throws LibEventException An unknown error occured in libevent
-     */
-    void runOnce() throw (voltdb::NoConnectionsException, voltdb::LibEventException, voltdb::Exception);
-
-    /*
-     * Enter the event loop and process pending events indefinitely. This writes requests to any ready connections
-     * and reads all responses and invokes the appropriate callbacks. Returns immediately after performing
-     * all available work, or after the loop is broken by a callback.
-     * @throws NoConnectionsException No connections to the database so there is no work to be done
-     * @throws LibEventException An unknown error occured in libevent
-     */
-    void run() throw (voltdb::NoConnectionsException, voltdb::LibEventException, voltdb::Exception);
-
-    /*
-     * Enter the event loop and process pending events until all responses have been received and then return.
-     * It is possible for drain to exit without having received all responses if a callback requests that the event
-     * loop break in which case false will be returned.
-     * @throws NoConnectionsException No connections to the database so there is no work to be done
-     * @throws LibEventException An unknown error occured in libevent
-     * @return true if all requests were drained and false otherwise
-     */
-    bool drain() throw (voltdb::NoConnectionsException, voltdb::LibEventException, voltdb::Exception);
-
-    /*
-     * Create a client with the specified configuration
-     */
-    static Client create(voltdb::ClientConfig config = voltdb::ClientConfig()) throw(voltdb::LibEventException, voltdb::Exception);
-
+    explicit Client(const voltdb_connection_callback callback,
+                    const std::string username = "",
+                    const std::string password = "");
+    
     ~Client();
-private:
+
     /*
-     * Disable various constructors and assignment
+     * Create a connection to the VoltDB process running at the specified host 
+     * and port, authenticating using the username and password provided when 
+     * this client was constructed.
+     *
+     * THIS METHOD IS ASYNC: It returns before connection completion.
+     * When the connection has been established, or if there is any error,
+     * the voltdb_connection_callback provided at client construction time
+     * will be called.
+     *
+     * Reentrant / Safe to call from any thread.
+     *
+     * May throw voltdb::LibEventException
      */
-    Client() throw(voltdb::LibEventException);
+    void createConnection(std::string hostname, short port = 21212);
+    
+    /*
+     * Asynchronously invoke a stored procedure. The provided callback will be
+     * called upon success or failure. This method returns right away.
+     *
+     * The VoltDB client claims no memory ownership of the payload address.
+     *
+     * Reentrant / Safe to call from any thread.
+     *
+     * May throw voltdb::LibEventException
+     */
+    void invoke(Procedure &proc, voltdb_proc_callback callback, void *payload);
+    
+    /*
+     * Run the event loop and process zero or one active events.
+     *
+     * May throw voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException
+     */
+    void runOnce();
+    
+    /*
+     * Run the event loop until a procedure or connection callback is called.
+     * This method will return (perhaps immediately) if there are no active
+     * or pending connections.
+     *
+     * May throw voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException
+     */
+    void run();
+    
+    /*
+     * Run the event loop until a procedure or connection callback is called,
+     * or until a timer elapses. This method will only return in one of these
+     * two cases, even if there are no connections.
+     *
+     * May throw voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException
+     */
+    void runWithTimeout(int ms); 
 
-    //Actual constructor
-    Client(ClientImpl *m_impl);
+    /*
+     * If one of the run family of methods is running on another thread, this
+     * method will instruct it to exit as soon as it finishes it's current 
+     * immediate task. If the thread in the run method is blocked/idle, then
+     * it will return immediately.
+     */
+    void interrupt();
+    
+    // public only for libevent callbacks. DO NOT CALL
+    // this will be moved in a future revision
+    void completeAuthenticationRequest(struct CxnContext *context);
+    bool processAuthenticationResponse(struct CxnContext *context, AuthenticationResponse &response);
+    void invocationRequestCallback();
+    void regularReadCallback(struct CxnContext *context);
+    void regularEventCallback(struct CxnContext *context, short events);
+    void regularWriteCallback(struct CxnContext *context);
 
-    boost::shared_ptr<ClientImpl> m_impl;
+private:
+    
+    CxnContext *getNextContext(voltdb_proc_callback callback, void *payload);
+    
+    // shared data between threads that's threadsafe
+    struct event_base *m_base;
+    
+    // shared state between threads with mutex protection
+    pthread_mutex_t m_contexts_mutex;
+    std::vector<boost::shared_ptr<CxnContext> > m_contexts;
+    pthread_mutex_t m_requests_mutex;
+    std::deque<PreparedInvocation> m_requests;
+    
+    // used by the event-processing thread
+    int64_t m_nextRequestId;
+    voltdb_connection_callback m_connCallback;
+    
+    bool m_instanceIdIsSet;
+    int32_t m_outstandingRequests;
+    
+    //Identifier of the database instance this client is connected to
+    int64_t m_clusterStartTime;
+    int32_t m_leaderAddress;
+
+    std::string m_username;
+    unsigned char m_passwordHash[20];
 };
-
 }
-
 #endif /* VOLTDB_CLIENT_H_ */

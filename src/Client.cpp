@@ -21,69 +21,663 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <cassert>
+#include <pthread.h>
+#include <event2/buffer.h>
+#include <event2/thread.h>
+#include "sha1.h"
 #include "Client.h"
-#include "ClientImpl.h"
+#include "AuthenticationResponse.hpp"
+#include "AuthenticationRequest.hpp"
 
 namespace voltdb {
 
-Client Client::create(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException) {
-    Client client(new ClientImpl(config));
-    return client;
-}
+static bool voltdb_Client_debug_init_libevent = false;
+    
+struct CallbackPair {
+    voltdb_proc_callback callback;
+    void *payload;
+};
 
-Client::Client(ClientImpl *impl) : m_impl(impl) {}
+class PreparedInvocation {
+public:
+    PreparedInvocation()
+    : data(NULL), data_size(0), payload(NULL), client_token(0) {}
+    PreparedInvocation(char *buf_data, int buf_size, voltdb_proc_callback callback, void *payload, int64_t token) 
+    : data(buf_data), data_size(buf_size), callback(callback), payload(payload), client_token(token) {}
+    boost::shared_array<char> data;
+    int data_size;
+    voltdb_proc_callback callback;
+    void *payload;
+    int64_t client_token;
+};
+    
+/*
+ * Data associated with a specific connection
+ */
+class CxnContext {
+public:
+    CxnContext(struct bufferevent* bev, const voltdb_connection_callback callback) 
+      : bev(bev), 
+        client(NULL), 
+        port(-1),
+        backpressure(false),
+        loginExchangeCompleted(false),
+        connected(false),
+        authenticated(false),
+        base(NULL),
+        connCallback(callback),
+        nextLength(-1),
+        lengthOrMessage(true),
+        outstanding(0) {}
+    
+    ~CxnContext() { 
+        if (bev) bufferevent_free(bev);
+    }
+    
+    struct bufferevent *bev;
+    Client *client;
+    
+    // connection id
+    std::string hostname;
+    short port;
+    
+    // status
+    bool backpressure;
+    bool loginExchangeCompleted;
+    bool connected;
+    bool authenticated;
+    
+    // copied from client
+    event_base *base;
+    const voltdb_connection_callback connCallback;
+    
+    // send / recv
+    int32_t nextLength;
+    bool lengthOrMessage;
+    
+    // request stuff
+    int32_t outstanding;
+    std::map<int64_t, CallbackPair> callbacks;
+};
 
-Client::~Client() {
-}
-
-void
-Client::createConnection(
-        std::string hostname,
-        short port)
-throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
-    m_impl->createConnection(hostname, port);
+/**
+ type definition for the read or write callback.
+ 
+ The read callback is triggered when new data arrives in the input
+ buffer and the amount of readable data exceed the low watermark
+ which is 0 by default.
+ 
+ The write callback is triggered if the write buffer has been
+ exhausted or fell below its low watermark.
+ 
+ @param bev the bufferevent that triggered the callback
+ @param ctx the user specified context for this bufferevent
+ */
+static void regularReadCallback(struct bufferevent *bev, void *ctx) {
+    CxnContext *context = reinterpret_cast<CxnContext*>(ctx);
+    context->client->regularReadCallback(context);
 }
 
 /*
- * Synchronously invoke a stored procedure and return a the response.
+ * Only has to handle the case where there is an error or EOF
  */
-InvocationResponse
-Client::invoke(Procedure &proc)
-throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
-    return m_impl->invoke(proc);
+static void regularEventCallback(struct bufferevent *bev, short events, void *ctx) {
+    CxnContext *context = reinterpret_cast<CxnContext*>(ctx);
+    context->client->regularEventCallback(context, events);
 }
 
-void
-Client::invoke(
-        Procedure &proc,
-        boost::shared_ptr<ProcedureCallback> callback)
-throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
-    m_impl->invoke(proc, callback);
+/**
+ type definition for the read or write callback.
+ 
+ The read callback is triggered when new data arrives in the input
+ buffer and the amount of readable data exceed the low watermark
+ which is 0 by default.
+ 
+ The write callback is triggered if the write buffer has been
+ exhausted or fell below its low watermark.
+ 
+ @param bev the bufferevent that triggered the callback
+ @param ctx the user specified context for this bufferevent
+ */
+static void regularWriteCallback(struct bufferevent *bev, void *ctx) {
+    CxnContext *context = reinterpret_cast<CxnContext*>(ctx);
+    context->client->regularWriteCallback(context);
+}    
+
+/**
+   type definition for the read or write callback.
+
+   The read callback is triggered when new data arrives in the input
+   buffer and the amount of readable data exceed the low watermark
+   which is 0 by default.
+
+   The write callback is triggered if the write buffer has been
+   exhausted or fell below its low watermark.
+
+   @param bev the bufferevent that triggered the callback
+   @param ctx the user specified context for this bufferevent
+ */
+static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
+    CxnContext *context = reinterpret_cast<CxnContext*>(ctx);
+    struct evbuffer *evbuf = bufferevent_get_input(bev);
+    if (context->nextLength < 0) {
+        char messageLengthBytes[4];
+        int read = evbuffer_remove(evbuf, messageLengthBytes, 4);
+        assert(read == 4);
+        ByteBuffer messageLengthBuffer(messageLengthBytes, 4);
+        int32_t messageLength = messageLengthBuffer.getInt32();
+        assert(messageLength > 0);
+        assert(messageLength < 1024 * 1024);
+        context->nextLength = messageLength;
+        if (evbuffer_get_length(evbuf) < static_cast<size_t>(messageLength)) {
+            bufferevent_setwatermark( bev, EV_READ, static_cast<size_t>(messageLength), 262144);
+            return;
+        }
+    }
+
+    ScopedByteBuffer buffer(context->nextLength);
+    int read = evbuffer_remove(evbuf, buffer.bytes(), static_cast<size_t>(context->nextLength));
+    assert(read == context->nextLength);
+    AuthenticationResponse response(buffer);
+    
+    connection_event event;
+    event.hostname = context->hostname;
+    event.port = context->port;
+    
+    if (context->client->processAuthenticationResponse(context, response)) {
+        context->authenticated = true;
+        event.type = CONNECTED;
+        event.info = "Authenticated and connected to VoltDB Node";
+    }
+    else {
+        event.type = CONNECTION_LOST;
+        event.info = "Failed to authenticate or handshake to VoltDB Node";
+    }
+    
+    context->connCallback(context->client, event);
+    
+    event_base_loopbreak(context->base);
+    
+    context->loginExchangeCompleted = true;
+    bufferevent_setwatermark( bev, EV_READ, 4, 262144);
+    
+    bufferevent_setcb(context->bev,
+                      regularReadCallback,
+                      regularWriteCallback,
+                      regularEventCallback, context);
 }
 
-void
-Client::invoke(
-        Procedure &proc,
-        ProcedureCallback *callback)
-throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
-    m_impl->invoke(proc, callback);
+/**
+   type definition for the error callback of a bufferevent.
+
+   The error callback is triggered if either an EOF condition or another
+   unrecoverable error was encountered.
+
+   @param bev the bufferevent for which the error condition was reached
+   @param what a conjunction of flags: BEV_EVENT_READING or BEV_EVENT_WRITING
+      to indicate if the error was encountered on the read or write path,
+      and one of the following flags: BEV_EVENT_EOF, BEV_EVENT_ERROR,
+      BEV_EVENT_TIMEOUT, BEV_EVENT_CONNECTED.
+
+   @param ctx the user specified context for this bufferevent
+*/
+static void authenticationEventCallback(struct bufferevent *bev, short events, void *ctx) {
+    CxnContext *context = reinterpret_cast<CxnContext*>(ctx);
+    if (events & BEV_EVENT_CONNECTED) {
+        context->connected = true;
+        context->client->completeAuthenticationRequest(context);
+    } 
+    else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
+        context->loginExchangeCompleted = true;
+        
+        connection_event event;
+        event.hostname = context->hostname;
+        event.port = context->port;
+        event.type = CONNECTION_LOST;
+        event.info = "Failed establish TCP/IP connection to VoltDB";
+        context->connCallback(context->client, event);
+        
+        event_base_loopbreak(context->base);
+    }
+}
+    
+static void authenticationRequestExtCallback(evutil_socket_t fd, short what, void *ctx) {
+    CxnContext *context = reinterpret_cast<CxnContext*>(ctx);
+    bufferevent_setcb(context->bev, authenticationReadCallback, NULL, authenticationEventCallback, context);
+    if (bufferevent_socket_connect_hostname(context->bev, NULL, AF_INET, context->hostname.c_str(), context->port) != 0) {
+        throw voltdb::LibEventException();
+    }
+}
+    
+static void invocationRequestExtCallback(evutil_socket_t fd, short what, void *ctx) {
+    Client *impl = reinterpret_cast<Client*>(ctx);
+    impl->invocationRequestCallback();
 }
 
-void
-Client::runOnce()
-throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException) {
-    m_impl->runOnce();
+Client::~Client() {
+    pthread_mutex_lock(&m_contexts_mutex);
+    {
+        m_contexts.clear();
+    }
+    pthread_mutex_unlock(&m_contexts_mutex);
+    
+    pthread_mutex_lock(&m_requests_mutex);
+    {
+        m_requests.clear();
+    } 
+    pthread_mutex_unlock(&m_contexts_mutex);
+        
+    // libevent cleanup
+    event_base_free(m_base);
+}
+    
+Client::Client(voltdb_connection_callback callback,
+               std::string username, 
+               std::string password) 
+ :
+        m_nextRequestId(INT64_MIN),
+        m_connCallback(callback),
+        m_instanceIdIsSet(false), 
+        m_outstandingRequests(0), 
+        m_username(username)
+{
+#ifdef DEBUG
+    if (!voltdb_Client_debug_init_libevent) {
+        event_enable_debug_mode();
+        voltdb_Client_debug_init_libevent = true;
+    }
+#endif
+    // try to run threadsafe libevent
+    if (evthread_use_pthreads()) {
+        throw voltdb::LibEventException();
+    }
+    
+    m_base = event_base_new();
+    assert(m_base);
+    if (!m_base) {
+        throw voltdb::LibEventException();
+    }
+    
+    SHA1_CTX context;
+    SHA1_Init(&context);
+    SHA1_Update( &context, reinterpret_cast<const unsigned char*>(password.data()), password.size());
+    SHA1_Final ( &context, m_passwordHash);
+}
+    
+void Client::createConnection(std::string hostname, short port) {    
+    struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE);
+    if (bev == NULL) {
+        throw ConnectException();
+    }
+    
+    boost::shared_ptr<CxnContext> context(new CxnContext(bev, m_connCallback));
+    context->client = this;
+    context->base = m_base;
+    context->hostname = hostname;
+    context->port = port;
+    
+    pthread_mutex_lock(&m_contexts_mutex);
+    m_contexts.push_back(context);
+    pthread_mutex_unlock(&m_contexts_mutex);
+    
+    if (event_base_once(m_base, -1, EV_TIMEOUT, authenticationRequestExtCallback, context.get(), NULL)) {
+        throw LibEventException();
+    }
 }
 
-void
-Client::run()
-throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException) {
-    m_impl->run();
+void Client::invoke(Procedure &proc, voltdb_proc_callback callback, void *payload) {
+    int32_t messageSize = proc.getSerializedSize();
+    char *bbdata = new char[messageSize];
+    ByteBuffer bb(bbdata, messageSize);
+    int64_t clientData = m_nextRequestId++;
+    proc.serializeTo(&bb, clientData);
+    PreparedInvocation invocation(bbdata, messageSize, callback, payload, clientData);
+    
+    pthread_mutex_lock(&m_requests_mutex);
+    m_requests.push_back(invocation);
+    pthread_mutex_unlock(&m_requests_mutex);
+    
+    if (event_base_once(m_base, -1, EV_TIMEOUT, invocationRequestExtCallback, this, NULL)) {
+        throw LibEventException();
+    }
 }
 
-bool
-Client::drain()
-throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException) {
-    return m_impl->drain();
+void Client::runOnce() {
+    if (event_base_loop(m_base, EVLOOP_NONBLOCK) == -1) {
+        throw voltdb::LibEventException();
+    }
 }
+
+void Client::run() {
+    int result = event_base_dispatch(m_base);
+    if (result == -1) {
+        throw voltdb::LibEventException();
+    }
+}
+
+/**
+ * Callback for runWithTimeout to break out of the loop when the
+ * timeout is over.
+ */
+static void timeout_callback(evutil_socket_t fd, short what, void *arg) {
+    event_base *base = reinterpret_cast<event_base*>(arg);
+    assert(base);
+    event_base_loopbreak(base);
+}
+
+void Client::runWithTimeout(int ms) {
+    // construct a timer event
+    event *timer = event_new(m_base, -1, EV_TIMEOUT, timeout_callback, m_base);
+    if (!timer) {
+        throw voltdb::LibEventException();
+    }
+    
+    // set the timeout amount
+    struct timeval t;
+    t.tv_sec = ms / 1000;
+    t.tv_usec = (ms % 1000) * 1000;
+    
+    // use a try block to ensure
+    try {
+        //
+        event_add(timer, &t);
+        int result = event_base_dispatch(m_base);
+        if (result == -1) {
+            throw voltdb::LibEventException();
+        }
+        event_free(timer);
+    }
+    catch (voltdb::Exception &e) {
+        event_free(timer);
+        throw e;
+    }
+}
+    
+void Client::interrupt() {
+    event_base_loopbreak(m_base);
+}
+    
+void Client::completeAuthenticationRequest(struct CxnContext *context) {
+    
+    assert(context->connected);
+    
+    bufferevent_setwatermark( context->bev, EV_READ, 4, 262144);
+    bufferevent_setwatermark( context->bev, EV_WRITE, 8192, 262144);
+    if (bufferevent_enable(context->bev, EV_READ)) {
+        throw voltdb::LibEventException();
+    }
+    AuthenticationRequest authRequest( m_username, "database", m_passwordHash );
+    ScopedByteBuffer bb(authRequest.getSerializedSize());
+    authRequest.serializeTo(&bb);
+    struct evbuffer *evbuf = bufferevent_get_output(context->bev);
+    if (evbuffer_add( evbuf, bb.bytes(), static_cast<size_t>(bb.remaining()))) {
+        throw voltdb::LibEventException();
+    }
+}
+
+bool Client::processAuthenticationResponse(struct CxnContext *context, AuthenticationResponse &response) {
+    
+    if (!m_instanceIdIsSet) {
+        m_instanceIdIsSet = true;
+        m_clusterStartTime = response.clusterStartTime();
+        m_leaderAddress = response.leaderAddress();
+    } else {
+        if (m_clusterStartTime != response.clusterStartTime() ||
+            m_leaderAddress != response.leaderAddress()) {
+            return false;
+        }
+    }
+    bufferevent_setwatermark( context->bev, EV_READ, 4, 262144);
+    bufferevent_setcb(context->bev,
+                      voltdb::regularReadCallback,
+                      voltdb::regularWriteCallback,
+                      voltdb::regularEventCallback, 
+                      context);
+    return true;
+}
+
+    
+void Client::invocationRequestCallback() {
+    size_t requestsPending = 0;
+    PreparedInvocation invocation;
+    
+    while (true) {
+        // get the invocation and the number queued
+        pthread_mutex_lock(&m_requests_mutex);
+        {
+            requestsPending = m_requests.size();
+            if (requestsPending != 0) {
+                invocation = m_requests.front();
+                m_requests.pop_front();
+            }
+        }
+        pthread_mutex_unlock(&m_requests_mutex);
+        
+        // no work to be done; break out of the loop
+        if (requestsPending == 0)
+            return;
+        
+        CxnContext *context = getNextContext(invocation.callback, invocation.payload);
+        // on failure, the callback should already have been called
+        if (!context)
+            return;
+        
+        CallbackPair callbackPair;
+        callbackPair.callback = invocation.callback;
+        callbackPair.payload = invocation.payload;
+        context->callbacks[invocation.client_token] = callbackPair;
+        context->outstanding++;
+        
+        struct evbuffer *evbuf = bufferevent_get_output(context->bev);
+        m_outstandingRequests++;
+        
+        // try to write to the connection's buffer, call the callback on failure
+        if (evbuffer_add(evbuf, invocation.data.get(), static_cast<size_t>(invocation.data_size))) {
+            if (callbackPair.callback) {
+                callbackPair.callback(context->client, InvocationResponse(), callbackPair.payload);
+            }
+            event_base_loopbreak(context->base);
+        }
+        
+        // if the buffer to go out gets too big
+        if (evbuffer_get_length(evbuf) > 262144) {
+            context->backpressure = true;
+            
+            connection_event event;
+            event.hostname = context->hostname;
+            event.port = context->port;
+            event.type = BACKPRESSURE_ON;
+            event.info = "Queued too much data for connection's TCP/IP buffer";
+            context->connCallback(context->client, event);
+            
+            event_base_loopbreak(context->base);
+        }
+        
+        // did all the work; break out of the loop without aquiring the lock again
+        if (requestsPending == 1)
+            return;
+    }
+}
+    
+CxnContext *Client::getNextContext(voltdb_proc_callback callback, void *payload) {
+    /*
+     * Decide what connection to buffer the event on.
+     * First each connection is checked for backpressure. If there is a connection
+     * with no backpressure break.
+     *
+     *  If none can be found, notify the client application and let it decide whether to queue anyways
+     *  or run the event loop until there is no more backpressure.
+     *
+     *  If queuing anyways just pick the next connection.
+     *
+     *  If waiting for no more backpressure, then set the m_invocationBlockedOnBackpressure flag
+     *  so that the write callback knows to break the event loop once there is a connection with no backpressure and
+     *  then enter the event loop.
+     *  It is possible for the event loop to break early while there is still backpressure because an unrelated callback
+     *  may have been invoked and that unrelated callback may have requested that the event loop be broken. In that
+     *  case just queue the request to the next connection despite backpressure so that loop break occurs as requested.
+     *  Also set the m_invocationBlockedOnBackpressure flag back to false so that the write callback won't spuriously
+     *  break the event loop later.
+     */
+    
+    CxnContext *bestContext = NULL;
+    int32_t maxOutstanding = -1;
+    
+    int backpressureConns = 0;
+    int liveConns = 0;
+        
+    // find (if possible) the 
+    pthread_mutex_lock(&m_contexts_mutex);
+    {
+        std::vector<boost::shared_ptr<CxnContext> >::const_iterator iter;
+        for (iter = m_contexts.begin(); iter != m_contexts.end(); iter++) {
+            CxnContext *context = iter->get();
+            if (context->authenticated == false) {
+                continue;
+            }
+            ++liveConns;
+            if (context->backpressure) {
+                ++backpressureConns;
+                continue;
+            }
+            if (context->outstanding > maxOutstanding) {
+                maxOutstanding = context->outstanding;
+                bestContext = context;
+            }
+        }
+    }
+    pthread_mutex_unlock(&m_contexts_mutex);
+    
+    // inform the user via callback there are no live connections
+    if (liveConns == 0) {
+        if (callback) {
+            callback(this, InvocationResponse(), payload);
+        }
+        event_base_loopbreak(m_base);
+    }
+    
+    // inform the user via callback all connections are in backpressure mode
+    if (!bestContext) {
+        if (callback) {
+            callback(this, InvocationResponse(), payload);
+        }
+        event_base_loopbreak(m_base);
+    }
+    
+    return bestContext;
+}
+
+void Client::regularReadCallback(struct CxnContext *context) {
+    struct evbuffer *evbuf = bufferevent_get_input(context->bev);
+    int32_t remaining = static_cast<int32_t>(evbuffer_get_length(evbuf));
+
+    if (context->lengthOrMessage && remaining < 4) {
+        return;
+    }
+
+    while (true) {
+        if (context->lengthOrMessage && remaining >= 4) {
+            char lengthBytes[4];
+            ByteBuffer lengthBuffer(lengthBytes, 4);
+            evbuffer_remove( evbuf, lengthBytes, 4);
+            context->nextLength = lengthBuffer.getInt32();
+            context->lengthOrMessage = false;
+            remaining -= 4;
+        } 
+        else if (remaining >= context->nextLength) {
+            boost::shared_array<char> messageBytes = boost::shared_array<char>(new char[context->nextLength]);
+            context->lengthOrMessage = true;
+            evbuffer_remove( evbuf, messageBytes.get(), static_cast<size_t>(context->nextLength));
+            remaining -= context->nextLength;
+            InvocationResponse response(messageBytes, context->nextLength);
+            
+            std::map<int64_t, CallbackPair>::iterator i = context->callbacks.find(response.clientData());
+            CallbackPair callbackPair = i->second;
+            if (callbackPair.callback) {
+                callbackPair.callback(this, response, callbackPair.payload);
+            }
+            context->callbacks.erase(i);
+            m_outstandingRequests--;
+            context->outstanding--;
+            event_base_loopbreak(m_base);
+            
+        } else {
+            if (context->lengthOrMessage) {
+                bufferevent_setwatermark( context->bev, EV_READ, 4, 262144);
+            } else {
+                bufferevent_setwatermark( context->bev, EV_READ, static_cast<size_t>(context->nextLength), 262144);
+            }
+            break;
+        }
+    }
+}
+    
+void Client::regularEventCallback(struct CxnContext *context, short events) {
+    if (events & BEV_EVENT_CONNECTED) {
+        assert(false);
+    } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
+        /*
+         * First drain anything in the read buffer
+         */
+        regularReadCallback(context);
+        
+        // update status for sending
+        context->authenticated = false;
+        context->connected = false;
+
+        //Notify client that a connection was lost
+        connection_event event;
+        event.type = CONNECTION_LOST;
+        event.hostname = context->hostname;
+        event.port = context->port;
+        event.info = "Connection was lost.";
+        m_connCallback(this, event);
+        
+        event_base_loopbreak(context->base);
+
+        /*
+         * Iterate the list of callbacks for this connection and invoke them
+         * with the appropriate error response
+         */
+        std::map<int64_t, CallbackPair>::const_iterator iter;
+        for (iter = context->callbacks.begin(); iter != context->callbacks.end(); iter++) {
+            CallbackPair callbackPair = iter->second;
+            callbackPair.callback(this, InvocationResponse(), callbackPair.payload);
+            --m_outstandingRequests;
+        }
+        context->outstanding = 0;
+        context->callbacks.clear();
+        
+        // remove this context from the global set
+        pthread_mutex_lock(&m_contexts_mutex);
+        {
+            for (std::vector<boost::shared_ptr<CxnContext> >::iterator i = m_contexts.begin(); i != m_contexts.end(); i++) {
+                if (i->get() == context) {
+                    m_contexts.erase(i);
+                    break;
+                }
+            }
+        }
+        pthread_mutex_unlock(&m_contexts_mutex);
+        
+        event_base_loopbreak(m_base);
+    }
+}
+
+void Client::regularWriteCallback(struct CxnContext *context) {
+    if (context->backpressure) {
+        context->backpressure = false;
+            
+        connection_event event;
+        event.type = CONNECTION_LOST;
+        event.hostname = context->hostname;
+        event.port = context->port;
+        event.info = "Connection was lost.";
+        m_connCallback(this, event);
+        
+        event_base_loopbreak(context->base);
+    }
+}
+
 }

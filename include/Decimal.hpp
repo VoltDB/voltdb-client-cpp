@@ -23,18 +23,15 @@
 
 #ifndef VOLT_DECIMAL_HPP_
 #define VOLT_DECIMAL_HPP_
+
 #include <string>
-/*
- * ASM doesn't compile on 32-bit Ubuntu 10.04
- */
-#if !defined _M_X64 && !defined __x86_64__
+#include <sstream>
 #define TTMATH_NOASM
-#endif
 #include "ttmath/ttmathint.h"
 #include "Exception.hpp"
-#include <sstream>
 
 namespace voltdb {
+    
 //The int used for storage and return values
 #ifdef TTMATH_PLATFORM64
 typedef ttmath::Int<2> TTInt;

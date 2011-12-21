@@ -23,9 +23,11 @@
 
 #ifndef VOLTDB_COLUMN_HPP_
 #define VOLTDB_COLUMN_HPP_
+
+#include <string>
 #include "Column.hpp"
 #include "WireType.h"
-#include <string>
+
 namespace voltdb {
 class Column {
 public:

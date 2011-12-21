@@ -23,13 +23,16 @@
 
 #ifndef VOLTDB_INVOCATIONRESPONSE_HPP_
 #define VOLTDB_INVOCATIONRESPONSE_HPP_
-#include <boost/shared_array.hpp>
+
+
 #include <vector>
 #include <sstream>
+#include <iostream>
+#include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include "ByteBuffer.hpp"
 #include "Table.h"
-#include <iostream>
+
 namespace voltdb {
 
 enum StatusCode {

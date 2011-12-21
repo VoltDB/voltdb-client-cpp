@@ -23,7 +23,9 @@
 
 #ifndef VOLTDB_PARAMETER_HPP_
 #define VOLTDB_PARAMETER_HPP_
+
 #include "WireType.h"
+
 namespace voltdb {
 /*
  * Class describing a single parameter specifying its type and whether it is an array

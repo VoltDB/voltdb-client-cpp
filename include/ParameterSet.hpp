@@ -23,15 +23,17 @@
 
 #ifndef VOLTDB_PARAMETERSET_HPP_
 #define VOLTDB_PARAMETERSET_HPP_
+
+#include <vector>
+#include <boost/shared_ptr.hpp>
 #include "Parameter.hpp"
 #include "RowBuilder.h"
-#include <vector>
 #include "ByteBuffer.hpp"
-#include "boost/shared_ptr.hpp"
 #include "Exception.hpp"
 #include "Decimal.hpp"
 
 namespace voltdb {
+    
 class Procedure;
 
 /*

@@ -1,6 +1,0 @@
-#Wed Jun 23 10:57:38 EDT 2010
-eclipse.preferences.version=1
-environment/project/cdt.managedbuild.toolchain.gnu.base.586372960=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<environment append\="true" appendContributed\="true">\n<variable delimiter\="\:" name\="PWD" operation\="replace" value\="/home/aweisberg/cpp_api/trunk"/>\n<variable delimiter\="\:" name\="CWD" operation\="replace" value\="/home/aweisberg/cpp_api/trunk/"/>\n</environment>\n
-environment/project/cdt.managedbuild.toolchain.gnu.base.586372960.982682994=
-environment/project/cdt.managedbuild.toolchain.gnu.base.586372960.982682994/append=true
-environment/project/cdt.managedbuild.toolchain.gnu.base.586372960.982682994/appendContributed=true

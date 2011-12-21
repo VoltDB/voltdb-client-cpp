@@ -23,6 +23,7 @@
 
 #include "RowBuilder.h"
 #include "Table.h"
+
 namespace voltdb {
     RowBuilder::RowBuilder(Table *table) :
     m_columns(*table->m_columns.get()), m_buffer(8192), m_currentColumn(0) {}

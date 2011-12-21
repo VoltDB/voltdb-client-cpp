@@ -24,12 +24,13 @@
 #ifndef VOLTDB_TABLE_H_
 #define VOLTDB_TABLE_H_
 
-#include "ByteBuffer.hpp"
-#include <boost/shared_ptr.hpp>
-#include <vector>
-#include "Column.hpp"
 #include <sstream>
 #include <iostream>
+#include <vector>
+#include <boost/shared_ptr.hpp>
+#include "ByteBuffer.hpp"
+#include "Column.hpp"
+
 
 namespace voltdb {
 class TableIterator;

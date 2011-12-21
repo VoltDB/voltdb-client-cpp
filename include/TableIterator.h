@@ -24,9 +24,9 @@
 #ifndef VOLTDB_TABLEITERATOR_H_
 #define VOLTDB_TABLEITERATOR_H_
 
+#include <boost/shared_ptr.hpp>
 #include "ByteBuffer.hpp"
 #include "Column.hpp"
-#include <boost/shared_ptr.hpp>
 #include "Row.hpp"
 #include "Exception.hpp"
 

@@ -20,10 +20,12 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "WireType.h"
+
 #include <cassert>
+#include "WireType.h"
 
 namespace voltdb {
+    
 std::string wireTypeToString(WireType type) {
     switch (type) {
     case WIRE_TYPE_ARRAY:
@@ -50,4 +52,5 @@ std::string wireTypeToString(WireType type) {
         assert(false);
     }
 }
+    
 }

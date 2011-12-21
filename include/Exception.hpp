@@ -23,6 +23,7 @@
 
 #ifndef VOLTDB_EXCEPTION_HPP_
 #define VOLTDB_EXCEPTION_HPP_
+
 #include <exception>
 
 namespace voltdb {

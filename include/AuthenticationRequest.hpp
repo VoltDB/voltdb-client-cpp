@@ -23,6 +23,7 @@
 
 #ifndef VOLTDB_AUTHENTICATIONMESSAGE_HPP_
 #define VOLTDB_AUTHENTICATIONMESSAGE_HPP_
+
 #include "ByteBuffer.hpp"
 
 namespace voltdb {
