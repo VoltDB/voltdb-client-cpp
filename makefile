@@ -1,12 +1,14 @@
 CC=g++
-CFLAGS=-Iinclude
+CFLAGS=-Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS
 
 PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
 	THIRD_PARTY_LIBS := third_party_libs/osx/libevent.a third_party_libs/osx/libevent_pthreads.a
+	SYSTEM_LIBS := -lpthread
 endif
 ifeq ($(PLATFORM),Linux)
 	THIRD_PARTY_LIBS := third_party_libs/linux/libevent.a third_party_libs/linux/libevent_pthreads.a
+	SYSTEM_LIBS := -lpthread -lrt
 endif
 
 .PHONEY: all clean test
@@ -39,7 +41,7 @@ libvoltdbcpp.a: $(OBJS)
 
 test: libvoltdbcpp.a
 	@echo 'Compiling and running simple example'
-	$(CC) $(CFLAGS) main.cpp libvoltdbcpp.a $(THIRD_PARTY_LIBS) -o main
+	$(CC) $(CFLAGS) main.cpp libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o main
 	./main
 	@echo ' '
 
@@ -48,4 +50,5 @@ clean:
 	-$(RM) $(OBJS)
 	-$(RM) libvoltdbcpp.a
 	-$(RM) make
+	-$(RM) main
 	-@echo ' '
