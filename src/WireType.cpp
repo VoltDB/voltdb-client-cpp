@@ -48,6 +48,8 @@ std::string wireTypeToString(WireType type) {
         return std::string("TIMESTAMP");
     case WIRE_TYPE_DECIMAL:
         return std::string("DECIMAL");
+    case WIRE_TYPE_VARBINARY:
+        return std::string("VARBINARY");
     default:
         assert(false);
     }

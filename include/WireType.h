@@ -38,7 +38,8 @@ enum WireType {
     WIRE_TYPE_FLOAT = 8,
     WIRE_TYPE_STRING = 9,
     WIRE_TYPE_TIMESTAMP = 11,
-    WIRE_TYPE_DECIMAL = 22
+    WIRE_TYPE_DECIMAL = 22,
+    WIRE_TYPE_VARBINARY = 25
 };
 
 std::string wireTypeToString(WireType type);

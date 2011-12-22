@@ -105,14 +105,25 @@ public:
             m_buffer.putInt32(-1);
             m_currentColumn++;
             break;
+        case WIRE_TYPE_VARBINARY:
+            m_buffer.ensureRemaining(4);
+            m_buffer.putInt32(-1);
+            m_currentColumn++;
+            break;
         default:
             assert(false);
         }
     }
     void addString(std::string val) {
         validateType(WIRE_TYPE_STRING);
-        m_buffer.ensureRemaining(4 + val.size());
+        m_buffer.ensureRemaining(4 + (int32_t)val.size());
         m_buffer.putString(val);
+        m_currentColumn++;
+    }
+    void addVarbinary(const int32_t bufsize, const uint8_t *in_value) {
+        validateType(WIRE_TYPE_VARBINARY);
+        m_buffer.ensureRemaining(4 + bufsize);
+        m_buffer.putBytes(bufsize, in_value);
         m_currentColumn++;
     }
     void reset() {

@@ -49,9 +49,24 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
+    ParameterSet& addBytes(const int32_t bufsize, const uint8_t *in_value) 
+    throw (voltdb::ParamMismatchException) {
+        validateType(WIRE_TYPE_VARBINARY, false);
+        m_buffer.ensureRemaining(1 + 4 + bufsize);
+        m_buffer.putInt8(WIRE_TYPE_DECIMAL);
+        m_buffer.putBytes(bufsize, in_value);
+        m_currentParam++;
+        return *this;
+    }
+    
+    /**
+     * Add a decimal value for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
     ParameterSet& addDecimal(Decimal val) throw (voltdb::ParamMismatchException) {
-        validateType(WIRE_TYPE_DECIMAL, false);
-        m_buffer.ensureRemaining(sizeof(Decimal) + 1);
+        validateType(WIRE_TYPE_VARBINARY, false);
+        m_buffer.ensureRemaining((int32_t)sizeof(Decimal) + 1);
         m_buffer.putInt8(WIRE_TYPE_DECIMAL);
         val.serializeTo(&m_buffer);
         m_currentParam++;
@@ -65,7 +80,7 @@ public:
      */
     ParameterSet& addDecimal(std::vector<Decimal> vals) throw (voltdb::ParamMismatchException) {
         validateType(WIRE_TYPE_DECIMAL, true);
-        m_buffer.ensureRemaining(4 + (sizeof(Decimal) * vals.size()));
+        m_buffer.ensureRemaining(4 + (int32_t)(sizeof(Decimal) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
         m_buffer.putInt8(WIRE_TYPE_DECIMAL);
         m_buffer.putInt16(static_cast<int16_t>(vals.size()));
@@ -97,7 +112,7 @@ public:
      */
     ParameterSet& addTimestamp(std::vector<int64_t> vals) throw (voltdb::ParamMismatchException) {
         validateType(WIRE_TYPE_TIMESTAMP, true);
-        m_buffer.ensureRemaining(4 + (sizeof(int64_t) * vals.size()));
+        m_buffer.ensureRemaining(4 + (int32_t)(sizeof(int64_t) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
         m_buffer.putInt8(WIRE_TYPE_TIMESTAMP);
         m_buffer.putInt16(static_cast<int16_t>(vals.size()));
@@ -129,7 +144,7 @@ public:
      */
     ParameterSet& addInt64(std::vector<int64_t> vals) throw (voltdb::ParamMismatchException) {
         validateType(WIRE_TYPE_BIGINT, true);
-        m_buffer.ensureRemaining(4 + (sizeof(int64_t) * vals.size()));
+        m_buffer.ensureRemaining(4 + (int32_t)(sizeof(int64_t) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
         m_buffer.putInt8(WIRE_TYPE_BIGINT);
         m_buffer.putInt16(static_cast<int16_t>(vals.size()));
@@ -161,7 +176,7 @@ public:
      */
     ParameterSet& addInt32(std::vector<int32_t> vals) throw (voltdb::ParamMismatchException) {
         validateType(WIRE_TYPE_INTEGER, true);
-        m_buffer.ensureRemaining(4 + (sizeof(int32_t) * vals.size()));
+        m_buffer.ensureRemaining(4 + (int32_t)(sizeof(int32_t) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
         m_buffer.putInt8(WIRE_TYPE_INTEGER);
         m_buffer.putInt16(static_cast<int16_t>(vals.size()));
@@ -193,7 +208,7 @@ public:
      */
     ParameterSet& addInt16(std::vector<int16_t> vals) throw (voltdb::ParamMismatchException) {
         validateType(WIRE_TYPE_SMALLINT, true);
-        m_buffer.ensureRemaining(4 + (sizeof(int16_t) * vals.size()));
+        m_buffer.ensureRemaining(4 + ((int)sizeof(int16_t) * (int)vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
         m_buffer.putInt8(WIRE_TYPE_SMALLINT);
         m_buffer.putInt16(static_cast<int16_t>(vals.size()));
@@ -225,7 +240,7 @@ public:
      */
     ParameterSet& addInt8(std::vector<int8_t> vals) throw (voltdb::ParamMismatchException) {
         validateType(WIRE_TYPE_TINYINT, true);
-        m_buffer.ensureRemaining(6 + (sizeof(int8_t) * vals.size()));
+        m_buffer.ensureRemaining(6 + ((int)sizeof(int8_t) * (int)vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
         m_buffer.putInt8(WIRE_TYPE_TINYINT);
         m_buffer.putInt32(static_cast<int32_t>(vals.size()));
@@ -257,7 +272,7 @@ public:
      */
     ParameterSet& addDouble(std::vector<double> vals) throw (voltdb::ParamMismatchException) {
         validateType(WIRE_TYPE_FLOAT, true);
-        m_buffer.ensureRemaining(2 + (sizeof(double) * vals.size()));
+        m_buffer.ensureRemaining(2 + (int)(sizeof(double) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
         m_buffer.putInt8(WIRE_TYPE_FLOAT);
         m_buffer.putInt16(static_cast<int16_t>(vals.size()));
@@ -293,7 +308,7 @@ public:
      */
     ParameterSet& addString(std::string val) throw (voltdb::ParamMismatchException) {
         validateType(WIRE_TYPE_STRING, false);
-        m_buffer.ensureRemaining(5 + val.size());
+        m_buffer.ensureRemaining(5 + (int32_t)val.size());
         m_buffer.putInt8(WIRE_TYPE_STRING);
         m_buffer.putString(val);
         m_currentParam++;

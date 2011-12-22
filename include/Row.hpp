@@ -55,6 +55,18 @@ public:
     }
 
     /*
+     * Retrieve the value at the specified column index as bytes. The type of the column
+     * must be Varbinary.
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return Whether the buffer provided was large enough.
+     */
+    bool getVarbinary(int32_t column, int32_t bufsize, uint8_t *out_value, int32_t *out_len) throw(voltdb::InvalidColumnException) {
+        validateType(WIRE_TYPE_VARBINARY, column);
+        return m_data.getBytes(getOffset(column), m_wasNull, bufsize, out_value, out_len);
+    }
+    
+    /*
      * Retrieve the value at the specified column index as a Decimal. The type of the column
      * must be Decimal.
      * @throws InvalidColumnException The index of the column was invalid or the type of the column does
@@ -242,12 +254,27 @@ public:
             getDouble(column); break;
         case WIRE_TYPE_STRING:
             getString(column); break;
+        case WIRE_TYPE_VARBINARY:
+            int out_len;
+            getVarbinary(column, 0, NULL, &out_len); break;
         default:
             assert(false);
         }
         return wasNull();
     }
 
+    /*
+     * Retrieve the value from the column with the specified name as bytes. The type of the column
+     * must be Varbinary.
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return Whether the buffer provided was large enough.
+     */
+    bool getVarbinary(std::string cname, int32_t bufsize, uint8_t *out_value, int32_t *out_len) 
+    throw(voltdb::InvalidColumnException) {
+        return getVarbinary(getColumnIndexByName(cname), bufsize, out_value, out_len);
+    }
+    
     /*
      * Retrieve the value from the column with the specified name as a Decimal. The type of the column
      * must be Decimal.
@@ -368,7 +395,7 @@ public:
      */
     void toString(std::ostringstream &ostream, std::string indent) {
         ostream << indent;
-        for (size_t ii = 0; ii < m_columns->size(); ii++) {
+        for (int ii = 0; ii < m_columns->size(); ii++) {
             if (ii != 0) {
                 ostream << ", ";
             }
@@ -393,6 +420,8 @@ public:
                 ostream << getTimestamp(ii); break;
             case WIRE_TYPE_DECIMAL:
                 ostream << getDecimal(ii).toString(); break;
+            case WIRE_TYPE_VARBINARY:  
+                ostream << "VARBINARY VALUE"; break;
             default:
                 assert(false);
             }
@@ -400,7 +429,7 @@ public:
     }
 
     int32_t columnCount() {
-        return m_columns->size();
+        return (int32_t)m_columns->size();
     }
 
     std::vector<voltdb::Column> columns() {
@@ -443,6 +472,9 @@ private:
         case WIRE_TYPE_STRING:
             if (type != WIRE_TYPE_STRING) throw InvalidColumnException();
             break;
+        case WIRE_TYPE_VARBINARY:
+            if (type != WIRE_TYPE_VARBINARY) throw InvalidColumnException();
+            break;
         default:
             assert(false);
             break;
@@ -464,7 +496,7 @@ private:
         m_offsets[0] = m_data.position();
         for (int32_t i = 1; i < static_cast<ssize_t>(m_columns->size()); i++) {
             WireType type = m_columns->at(static_cast<size_t>(i - 1)).m_type;
-            if (type == WIRE_TYPE_STRING) {
+            if ((type == WIRE_TYPE_STRING) || (type == WIRE_TYPE_VARBINARY)) {
                 int32_t length = m_data.getInt32(m_offsets[static_cast<size_t>(i - 1)]);
                 if (length == -1) {
                     m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + 4;
