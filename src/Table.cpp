@@ -63,7 +63,7 @@ namespace voltdb {
     }
 
     int32_t Table::columnCount() {
-        return m_columns->size();
+        return static_cast<int32_t>(m_columns->size());
     }
 
     std::vector<voltdb::Column> Table::columns() {
