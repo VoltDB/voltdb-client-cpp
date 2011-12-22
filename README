@@ -1,9 +1,12 @@
 To build, run "make".
-To run the included, totally inadequate test, run "make test".
+To run the CPPUnit tests, run "make test".
+To run the simple async hello world client, run "make example"
 To remove artifacts, run "make clean".
 
 This should work ok on 64-bit linux (>= 2.6.18) and 64-bit macs (tested on 10.7)
 It includes binaries for libevent
+If libevent is installed on your machine as a dynamic library, you can link to it
+using the -levent and -levent_pthreads compiler flags instead of the static libs.
 
-To use this, link in the static lib and the two relevant libevent static libs into your binary.
-See the makefile.
+To use this, link in the voltdb static lib and the two relevant libevent static libs
+into your binary. See the makefile.
