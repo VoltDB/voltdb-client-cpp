@@ -64,9 +64,13 @@ namespace voltdb {
 
 #ifdef __DARWIN_OSSwapInt64 // for darwin/macosx
 
+#ifndef htonll
 #define htonll(x) __DARWIN_OSSwapInt64(x)
+#endif
+#ifndef ntonll
 #define ntohll(x) __DARWIN_OSSwapInt64(x)
-
+#endif
+    
 #else // unix in general
 
 //#undef htons
@@ -76,14 +80,22 @@ namespace voltdb {
 
 #ifdef __bswap_64 // recent linux
 
+#ifndef htonll
 #define htonll(x) static_cast<uint64_t>(__bswap_constant_64(x))
+#endif
+#ifndef ntonll
 #define ntohll(x) static_cast<uint64_t>(__bswap_constant_64(x))
+#endif
 
 #else // unix in general again
 
+#ifndef htonll
 #define htonll(x) (((int64_t)(ntohl((int32_t)((x << 32) >> 32))) << 32) | (uint32_t)ntohl(((int32_t)(x >> 32))))
+#endif
+#ifndef ntonll
 #define ntohll(x) (((int64_t)(ntohl((int32_t)((x << 32) >> 32))) << 32) | (uint32_t)ntohl(((int32_t)(x >> 32))))
-
+#endif
+    
 #endif // __bswap_64
 
 #endif // unix or mac
