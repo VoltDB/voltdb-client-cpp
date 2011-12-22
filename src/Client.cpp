@@ -195,10 +195,10 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
         event.info = "Failed to authenticate or handshake to VoltDB Node";
     }
     
-    context->connCallback(context->client, event);
-    
-    event_base_loopbreak(context->base);
-    
+    if (!context->connCallback(context->client, event)) {
+        context->client->callbackReturnedFalse();
+    }
+        
     context->loginExchangeCompleted = true;
     bufferevent_setwatermark( bev, EV_READ, 4, 262144);
     
@@ -236,9 +236,9 @@ static void authenticationEventCallback(struct bufferevent *bev, short events, v
         event.port = context->port;
         event.type = CONNECTION_LOST;
         event.info = "Failed establish TCP/IP connection to VoltDB";
-        context->connCallback(context->client, event);
-        
-        event_base_loopbreak(context->base);
+        if (!context->connCallback(context->client, event)) {
+            context->client->callbackReturnedFalse();
+        }
     }
 }
     
@@ -305,10 +305,10 @@ Client::Client(voltdb_connection_callback callback,
     SHA1_Final ( &context, m_passwordHash);
 }
     
-void Client::createConnection(std::string hostname, short port) {    
+int Client::createConnection(std::string hostname, short port) {    
     struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE);
     if (bev == NULL) {
-        throw ConnectException();
+        return -1;
     }
     
     boost::shared_ptr<CxnContext> context(new CxnContext(bev, m_connCallback));
@@ -321,12 +321,10 @@ void Client::createConnection(std::string hostname, short port) {
     m_contexts.push_back(context);
     pthread_mutex_unlock(&m_contexts_mutex);
     
-    if (event_base_once(m_base, -1, EV_TIMEOUT, authenticationRequestExtCallback, context.get(), NULL)) {
-        throw LibEventException();
-    }
+    return event_base_once(m_base, -1, EV_TIMEOUT, authenticationRequestExtCallback, context.get(), NULL);
 }
 
-void Client::invoke(Procedure &proc, voltdb_proc_callback callback, void *payload) {
+int Client::invoke(Procedure &proc, voltdb_proc_callback callback, void *payload) {
     int32_t messageSize = proc.getSerializedSize();
     char *bbdata = new char[messageSize];
     ByteBuffer bb(bbdata, messageSize);
@@ -338,22 +336,25 @@ void Client::invoke(Procedure &proc, voltdb_proc_callback callback, void *payloa
     m_requests.push_back(invocation);
     pthread_mutex_unlock(&m_requests_mutex);
     
-    if (event_base_once(m_base, -1, EV_TIMEOUT, invocationRequestExtCallback, this, NULL)) {
-        throw LibEventException();
-    }
+    return event_base_once(m_base, -1, EV_TIMEOUT, invocationRequestExtCallback, this, NULL);
 }
 
-void Client::runOnce() {
-    if (event_base_loop(m_base, EVLOOP_NONBLOCK) == -1) {
-        throw voltdb::LibEventException();
+int Client::runOnce() {
+    int result = 0;
+    
+    // use a try block to ensure
+    try {
+        result = event_base_dispatch(m_base);
     }
+    catch (voltdb::Exception &e) {
+        result = -1;
+    }
+    if (result == -1) return -1;
+    else return 0;
 }
 
-void Client::run() {
-    int result = event_base_dispatch(m_base);
-    if (result == -1) {
-        throw voltdb::LibEventException();
-    }
+int Client::run() {
+    return runWithTimeout(1000 * 60 * 60 * 24 * 365 * 30); // 30 YRs
 }
 
 /**
@@ -361,37 +362,51 @@ void Client::run() {
  * timeout is over.
  */
 static void timeout_callback(evutil_socket_t fd, short what, void *arg) {
-    event_base *base = reinterpret_cast<event_base*>(arg);
-    assert(base);
-    event_base_loopbreak(base);
+    Client *client = reinterpret_cast<Client*>(arg);
+    assert(client);
+    client->timerFired();
 }
 
-void Client::runWithTimeout(int ms) {
+void Client::timerFired() {
+    m_timerFired = true;
+    event_base_loopbreak(m_base);
+}
+
+int Client::runWithTimeout(int64_t ms) {
     // construct a timer event
-    event *timer = event_new(m_base, -1, EV_TIMEOUT, timeout_callback, m_base);
+    event *timer = event_new(m_base, -1, EV_TIMEOUT, timeout_callback, this);
     if (!timer) {
-        throw voltdb::LibEventException();
+        return EVENT_LOOP_ERROR;
     }
     
     // set the timeout amount
     struct timeval t;
     t.tv_sec = ms / 1000;
-    t.tv_usec = (ms % 1000) * 1000;
+    t.tv_usec = static_cast<int>((ms % 1000) * 1000);
+    
+    int result = 0;
+    m_callbackReturnedFalse = false;
+    m_timerFired = false;
     
     // use a try block to ensure
     try {
-        //
-        event_add(timer, &t);
-        int result = event_base_dispatch(m_base);
-        if (result == -1) {
-            throw voltdb::LibEventException();
-        }
-        event_free(timer);
+        result = event_add(timer, &t);
+        if (result != -1)
+            result = event_base_dispatch(m_base);
     }
     catch (voltdb::Exception &e) {
-        event_free(timer);
-        throw e;
+        result = EVENT_LOOP_ERROR;
     }
+    event_free(timer);
+    
+    // figure out why the loop exited
+    if (result != EVENT_LOOP_ERROR) {
+        if (m_timerFired) return TIMEOUT_ELAPSED;
+        else if (m_callbackReturnedFalse) return CALLBACK_RETURNED_FALSE;
+        else return INTERRUPTED_OR_EARLY_EXIT;
+    }
+    
+    return result;
 }
     
 void Client::interrupt() {
@@ -489,9 +504,9 @@ void Client::invocationRequestCallback() {
             event.port = context->port;
             event.type = BACKPRESSURE_ON;
             event.info = "Queued too much data for connection's TCP/IP buffer";
-            context->connCallback(context->client, event);
-            
-            event_base_loopbreak(context->base);
+            if (!context->connCallback(context->client, event)) {
+                context->client->callbackReturnedFalse();
+            }
         }
         
         // did all the work; break out of the loop without aquiring the lock again
@@ -595,12 +610,13 @@ void Client::regularReadCallback(struct CxnContext *context) {
             std::map<int64_t, CallbackPair>::iterator i = context->callbacks.find(response.clientData());
             CallbackPair callbackPair = i->second;
             if (callbackPair.callback) {
-                callbackPair.callback(this, response, callbackPair.payload);
+                if (!callbackPair.callback(this, response, callbackPair.payload)) {
+                    callbackReturnedFalse();
+                }
             }
             context->callbacks.erase(i);
             m_outstandingRequests--;
             context->outstanding--;
-            event_base_loopbreak(m_base);
             
         } else {
             if (context->lengthOrMessage) {
@@ -640,14 +656,18 @@ void Client::regularEventCallback(struct CxnContext *context, short events) {
          * Iterate the list of callbacks for this connection and invoke them
          * with the appropriate error response
          */
+        bool cbReturnedFalse = false;
         std::map<int64_t, CallbackPair>::const_iterator iter;
         for (iter = context->callbacks.begin(); iter != context->callbacks.end(); iter++) {
             CallbackPair callbackPair = iter->second;
-            callbackPair.callback(this, InvocationResponse(), callbackPair.payload);
+            if (!callbackPair.callback(this, InvocationResponse(), callbackPair.payload))
+                cbReturnedFalse = true;
             --m_outstandingRequests;
         }
         context->outstanding = 0;
         context->callbacks.clear();
+        if (cbReturnedFalse)
+            callbackReturnedFalse();
         
         // remove this context from the global set
         pthread_mutex_lock(&m_contexts_mutex);
@@ -674,10 +694,15 @@ void Client::regularWriteCallback(struct CxnContext *context) {
         event.hostname = context->hostname;
         event.port = context->port;
         event.info = "Connection was lost.";
-        m_connCallback(this, event);
-        
-        event_base_loopbreak(context->base);
+        if (!m_connCallback(this, event)) {
+            callbackReturnedFalse();
+        }        
     }
+}
+    
+void Client::callbackReturnedFalse() {
+    m_callbackReturnedFalse = true;
+    event_base_loopbreak(m_base);
 }
 
 }

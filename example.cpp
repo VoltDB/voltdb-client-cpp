@@ -34,21 +34,31 @@
 bool connected = false;
 int connections = 0;
 
-void conn_callback(voltdb::Client* client, voltdb::connection_event event);
-void proc_callback(voltdb::Client *client, voltdb::InvocationResponse response, void* payload);
+bool conn_callback(voltdb::Client* client, voltdb::connection_event event);
+bool proc_callback_timeout(voltdb::Client *client, voltdb::InvocationResponse response, void* payload);
+bool proc_callback_countdown(voltdb::Client *client, voltdb::InvocationResponse response, void* payload);
 
-void conn_callback(voltdb::Client* client, voltdb::connection_event event) {
+bool conn_callback(voltdb::Client* client, voltdb::connection_event event) {
     ++connections;
     if (event.type == voltdb::CONNECTED) {
         connected = true;
     }
     printf("conn_callback with enum value %d and info \"%s\"\n", event.type, event.info.c_str());
+    return false; // return from callback
 }
 
-void proc_callback(voltdb::Client *client, voltdb::InvocationResponse response, void* payload) {
+bool proc_callback_timeout(voltdb::Client *client, voltdb::InvocationResponse response, void* payload) {
     int *outstanding = reinterpret_cast<int*>(payload);
     (*outstanding)--;
     std::cout << response.toString() << std::endl;
+    return true;
+}
+
+bool proc_callback_countdown(voltdb::Client *client, voltdb::InvocationResponse response, void* payload) {
+    int *outstanding = reinterpret_cast<int*>(payload);
+    std::cout << response.toString() << std::endl;
+    (*outstanding)--;
+    return *outstanding > 0; // return when no more work to do    
 }
 
 int main(int argc, char **argv) {
@@ -61,9 +71,8 @@ int main(int argc, char **argv) {
     client.createConnection("localhost");
     
     // spin until connected
-    while (!connections) {
-        client.run();
-    }
+    int retcode = client.run(); // run one second at a time
+    assert(retcode == voltdb::Client::CALLBACK_RETURNED_FALSE);
     
     if (!connected) {
         exit(-1);
@@ -85,33 +94,33 @@ int main(int argc, char **argv) {
     voltdb::ParameterSet* params = procedure.params();
     params->addString("Hello").addString("World").addString("English");
     outstanding++;
-    client.invoke(procedure, proc_callback, &outstanding);
+    client.invoke(procedure, proc_callback_timeout, &outstanding);
     
     // call the run loop until this returns
     while (outstanding) {
-        client.run();
+        retcode = client.runWithTimeout(1000);
+        assert(retcode == voltdb::Client::TIMEOUT_ELAPSED);
     }
     
     params->addString("Bonjour").addString("Monde").addString("French");
     outstanding++;
-    client.invoke(procedure, proc_callback, &outstanding);
+    client.invoke(procedure, proc_callback_countdown, &outstanding);
     
     params->addString("Hola").addString("Mundo").addString("Spanish");
     outstanding++;
-    client.invoke(procedure, proc_callback, &outstanding);
+    client.invoke(procedure, proc_callback_countdown, &outstanding);
     
     params->addString("Hej").addString("Verden").addString("Danish");
     outstanding++;
-    client.invoke(procedure, proc_callback, &outstanding);
+    client.invoke(procedure, proc_callback_countdown, &outstanding);
     
     params->addString("Ciao").addString("Mondo").addString("Italian");
     outstanding++;
-    client.invoke(procedure, proc_callback, &outstanding);
+    client.invoke(procedure, proc_callback_countdown, &outstanding);
     
     // call the run loop until this returns
-    while (outstanding) {
-        client.run();
-    }
+    retcode = client.run();
+    assert(retcode == voltdb::Client::CALLBACK_RETURNED_FALSE);
     
     /*
      * Describe procedure to retrieve message
@@ -123,11 +132,11 @@ int main(int argc, char **argv) {
      * Retrieve the message
      */
     selectProc.params()->addString("Spanish");
-    client.invoke(selectProc, proc_callback, &outstanding);
+    client.invoke(selectProc, proc_callback_timeout, &outstanding);
     
-    // call the run loop until this returns
+    // spin until it returns
     while (outstanding) {
-        client.run();
+        client.runOnce();
     }
 }
 

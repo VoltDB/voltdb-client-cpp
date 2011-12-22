@@ -68,11 +68,11 @@ struct connection_event {
 // function pointers for callbacks
     
 // callback for connection changes
-typedef void (*voltdb_connection_callback)(Client*, struct connection_event);
+typedef bool (*voltdb_connection_callback)(Client*, struct connection_event);
     
 // callback for procedures
 // void* is user_data, passed from Client::invoke(..) as payload
-typedef void (*voltdb_proc_callback)(Client*, InvocationResponse, void *);
+typedef bool (*voltdb_proc_callback)(Client*, InvocationResponse, void *);
 
 //////////////////////////////////////////////////////////////
 //
@@ -112,7 +112,7 @@ public:
      *
      * May throw voltdb::LibEventException
      */
-    void createConnection(std::string hostname, short port = 21212);
+    int createConnection(std::string hostname, short port = 21212);
     
     /*
      * Asynchronously invoke a stored procedure. The provided callback will be
@@ -124,32 +124,39 @@ public:
      *
      * May throw voltdb::LibEventException
      */
-    void invoke(Procedure &proc, voltdb_proc_callback callback, void *payload);
+    int invoke(Procedure &proc, voltdb_proc_callback callback, void *payload);
+    
+    static const int EVENT_LOOP_ERROR = -1;
+    static const int TIMEOUT_ELAPSED = 0;
+    static const int CALLBACK_RETURNED_FALSE = 1;
+    static const int INTERRUPTED_OR_EARLY_EXIT = 2;
     
     /*
      * Run the event loop and process zero or one active events.
      *
-     * May throw voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException
+     * Returns 0 on success and -1 on error.
      */
-    void runOnce();
+    int runOnce();
     
     /*
-     * Run the event loop until a procedure or connection callback is called.
-     * This method will return (perhaps immediately) if there are no active
-     * or pending connections.
+     * Run the event loop until a procedure or connection callback returns false,
+     * or until interrupt() is called.
      *
-     * May throw voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException
+     * Returns EVENT_LOOP_ERROR, CALLBACK_RETURNED_FALSE, INTERRUPTED_OR_EARLY_EXIT
+     *
+     * Functionally equivalent to runWithTimeout(..) with a 30yr timeout, so
+     * technically it can also return TIMEOUT_ELAPSED.
      */
-    void run();
+    int run();
     
     /*
      * Run the event loop until a procedure or connection callback is called,
-     * or until a timer elapses. This method will only return in one of these
-     * two cases, even if there are no connections.
+     * until a timer elapses or until interrupt() is called.
      *
-     * May throw voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException
+     * Returns EVENT_LOOP_ERROR, CALLBACK_RETURNED_FALSE, INTERRUPTED_OR_EARLY_EXIT
+     * or TIMEOUT_ELAPSED
      */
-    void runWithTimeout(int ms); 
+    int runWithTimeout(int64_t ms);
 
     /*
      * If one of the run family of methods is running on another thread, this
@@ -167,6 +174,8 @@ public:
     void regularReadCallback(struct CxnContext *context);
     void regularEventCallback(struct CxnContext *context, short events);
     void regularWriteCallback(struct CxnContext *context);
+    void timerFired();
+    void callbackReturnedFalse();
 
 private:
     
@@ -184,6 +193,8 @@ private:
     // used by the event-processing thread
     int64_t m_nextRequestId;
     voltdb_connection_callback m_connCallback;
+    bool m_callbackReturnedFalse;
+    bool m_timerFired;
     
     bool m_instanceIdIsSet;
     int32_t m_outstandingRequests;
