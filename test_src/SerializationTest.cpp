@@ -70,7 +70,7 @@ SharedByteBuffer fileAsByteBuffer(std::string filename) {
     assert(ftell(fp) == 0);
 
     char *buffer = new char[size];
-    SharedByteBuffer b(buffer, size);
+    SharedByteBuffer b(buffer, (int)size);
 
     size_t bytes_read = fread(buffer, 1, size, fp);
     if (bytes_read != size) {

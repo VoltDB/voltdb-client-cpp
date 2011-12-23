@@ -65,7 +65,7 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addDecimal(Decimal val) throw (voltdb::ParamMismatchException) {
-        validateType(WIRE_TYPE_VARBINARY, false);
+        validateType(WIRE_TYPE_DECIMAL, false);
         m_buffer.ensureRemaining((int32_t)sizeof(Decimal) + 1);
         m_buffer.putInt8(WIRE_TYPE_DECIMAL);
         val.serializeTo(&m_buffer);
