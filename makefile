@@ -76,5 +76,5 @@ clean:
 	-$(RM) $(TEST_OBJS)
 	-$(RM) testbin*
 	-$(RM) libvoltdbcpp.a
-	-$(RM) example*
+	-$(RM) example example.d*
 	-@echo ' '

@@ -1,1 +1,5 @@
 /voltdb-client-cpp.xcodeproj/
+/example.dSYM/
+/example
+/libvoltdbcpp.a
+/testbin
