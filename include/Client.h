@@ -68,11 +68,11 @@ struct connection_event {
 // function pointers for callbacks
     
 // callback for connection changes
-typedef bool (*voltdb_connection_callback)(Client*, struct connection_event);
+typedef void (*voltdb_connection_callback)(Client*, struct connection_event);
     
 // callback for procedures
 // void* is user_data, passed from Client::invoke(..) as payload
-typedef bool (*voltdb_proc_callback)(Client*, InvocationResponse, void *);
+typedef void (*voltdb_proc_callback)(Client*, InvocationResponse, void *);
 
 //////////////////////////////////////////////////////////////
 //
@@ -128,8 +128,7 @@ public:
     
     static const int EVENT_LOOP_ERROR = -1;
     static const int TIMEOUT_ELAPSED = 0;
-    static const int CALLBACK_RETURNED_FALSE = 1;
-    static const int INTERRUPTED_OR_EARLY_EXIT = 2;
+    static const int INTERRUPTED_OR_EARLY_EXIT = 1;
     
     /*
      * Run the event loop and process zero or one active events.
@@ -175,7 +174,6 @@ public:
     void regularEventCallback(struct CxnContext *context, short events);
     void regularWriteCallback(struct CxnContext *context);
     void timerFired();
-    void callbackReturnedFalse();
 
 private:
     
@@ -193,7 +191,6 @@ private:
     // used by the event-processing thread
     int64_t m_nextRequestId;
     voltdb_connection_callback m_connCallback;
-    bool m_callbackReturnedFalse;
     bool m_timerFired;
     
     bool m_instanceIdIsSet;

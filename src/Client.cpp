@@ -194,10 +194,8 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
         event.info = "Failed to authenticate or handshake to VoltDB Node";
     }
     
-    if (!context->connCallback(context->client, event)) {
-        context->client->callbackReturnedFalse();
-    }
-        
+    context->connCallback(context->client, event);
+    
     context->loginExchangeCompleted = true;
     bufferevent_setwatermark( bev, EV_READ, 4, 262144);
     
@@ -235,9 +233,7 @@ static void authenticationEventCallback(struct bufferevent *bev, short events, v
         event.port = context->port;
         event.type = CONNECTION_LOST;
         event.info = "Failed establish TCP/IP connection to VoltDB";
-        if (!context->connCallback(context->client, event)) {
-            context->client->callbackReturnedFalse();
-        }
+        context->connCallback(context->client, event);
     }
 }
     
@@ -383,7 +379,6 @@ int Client::runWithTimeout(int64_t ms) {
     t.tv_usec = static_cast<int>((ms % 1000) * 1000);
     
     int result = 0;
-    m_callbackReturnedFalse = false;
     m_timerFired = false;
     
     // use a try block to ensure
@@ -400,7 +395,6 @@ int Client::runWithTimeout(int64_t ms) {
     // figure out why the loop exited
     if (result != EVENT_LOOP_ERROR) {
         if (m_timerFired) return TIMEOUT_ELAPSED;
-        else if (m_callbackReturnedFalse) return CALLBACK_RETURNED_FALSE;
         else return INTERRUPTED_OR_EARLY_EXIT;
     }
     
@@ -496,7 +490,6 @@ void Client::invocationRequestCallback() {
             if (callbackPair.callback) {
                 callbackPair.callback(context->client, InvocationResponse(), callbackPair.payload);
             }
-            event_base_loopbreak(context->base);
         }
         
         // if the buffer to go out gets too big
@@ -508,9 +501,7 @@ void Client::invocationRequestCallback() {
             event.port = context->port;
             event.type = BACKPRESSURE_ON;
             event.info = "Queued too much data for connection's TCP/IP buffer";
-            if (!context->connCallback(context->client, event)) {
-                context->client->callbackReturnedFalse();
-            }
+            context->connCallback(context->client, event);
         }
         
         // did all the work; break out of the loop without aquiring the lock again
@@ -573,7 +564,6 @@ CxnContext *Client::getNextContext(voltdb_proc_callback callback, void *payload)
         if (callback) {
             callback(this, InvocationResponse(), payload);
         }
-        event_base_loopbreak(m_base);
     }
     
     // inform the user via callback all connections are in backpressure mode
@@ -581,7 +571,6 @@ CxnContext *Client::getNextContext(voltdb_proc_callback callback, void *payload)
         if (callback) {
             callback(this, InvocationResponse(), payload);
         }
-        event_base_loopbreak(m_base);
     }
     
     return bestContext;
@@ -614,9 +603,7 @@ void Client::regularReadCallback(struct CxnContext *context) {
             std::map<int64_t, CallbackPair>::iterator i = context->callbacks.find(response.clientData());
             CallbackPair callbackPair = i->second;
             if (callbackPair.callback) {
-                if (!callbackPair.callback(this, response, callbackPair.payload)) {
-                    callbackReturnedFalse();
-                }
+                callbackPair.callback(this, response, callbackPair.payload);
             }
             context->callbacks.erase(i);
             m_outstandingRequests--;
@@ -654,24 +641,18 @@ void Client::regularEventCallback(struct CxnContext *context, short events) {
         event.info = "Connection was lost.";
         m_connCallback(this, event);
         
-        event_base_loopbreak(context->base);
-
         /*
          * Iterate the list of callbacks for this connection and invoke them
          * with the appropriate error response
          */
-        bool cbReturnedFalse = false;
         std::map<int64_t, CallbackPair>::const_iterator iter;
         for (iter = context->callbacks.begin(); iter != context->callbacks.end(); iter++) {
             CallbackPair callbackPair = iter->second;
-            if (!callbackPair.callback(this, InvocationResponse(), callbackPair.payload))
-                cbReturnedFalse = true;
+            callbackPair.callback(this, InvocationResponse(), callbackPair.payload);
             --m_outstandingRequests;
         }
         context->outstanding = 0;
         context->callbacks.clear();
-        if (cbReturnedFalse)
-            callbackReturnedFalse();
         
         // remove this context from the global set
         pthread_mutex_lock(&m_contexts_mutex);
@@ -684,8 +665,6 @@ void Client::regularEventCallback(struct CxnContext *context, short events) {
             }
         }
         pthread_mutex_unlock(&m_contexts_mutex);
-        
-        event_base_loopbreak(m_base);
     }
 }
 
@@ -698,15 +677,8 @@ void Client::regularWriteCallback(struct CxnContext *context) {
         event.hostname = context->hostname;
         event.port = context->port;
         event.info = "Connection was lost.";
-        if (!m_connCallback(this, event)) {
-            callbackReturnedFalse();
-        }        
+        m_connCallback(this, event);
     }
-}
-    
-void Client::callbackReturnedFalse() {
-    m_callbackReturnedFalse = true;
-    event_base_loopbreak(m_base);
 }
 
 }
