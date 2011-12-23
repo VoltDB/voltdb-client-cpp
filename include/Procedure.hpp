@@ -71,6 +71,14 @@ public:
         buffer->flip();
         buffer->putInt32( 0, buffer->limit() - 4);
     }
+
+    // given a serialized procedure, update the value of the client token field
+    static void updateClientData(ByteBuffer *buffer, int64_t clientData) {
+    	// need to know how long the string is to find the position of client token
+        int32_t strlength = buffer->getInt32(5);
+        buffer->putInt64(5 + 4 + strlength, clientData);
+    }
+    
 private:
     std::string m_name;
     ParameterSet m_params;

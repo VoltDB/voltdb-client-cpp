@@ -42,14 +42,13 @@ struct CallbackPair {
 class PreparedInvocation {
 public:
     PreparedInvocation()
-    : data(NULL), data_size(0), payload(NULL), client_token(0) {}
-    PreparedInvocation(char *buf_data, int buf_size, voltdb_proc_callback callback, void *payload, int64_t token) 
-    : data(buf_data), data_size(buf_size), callback(callback), payload(payload), client_token(token) {}
+    : data(NULL), data_size(0), payload(NULL) {}
+    PreparedInvocation(char *buf_data, int buf_size, voltdb_proc_callback callback, void *payload) 
+    : data(buf_data), data_size(buf_size), callback(callback), payload(payload) {}
     boost::shared_array<char> data;
     int data_size;
     voltdb_proc_callback callback;
     void *payload;
-    int64_t client_token;
 };
     
 /*
@@ -328,9 +327,8 @@ int Client::invoke(Procedure &proc, voltdb_proc_callback callback, void *payload
     int32_t messageSize = proc.getSerializedSize();
     char *bbdata = new char[messageSize];
     ByteBuffer bb(bbdata, messageSize);
-    int64_t clientData = m_nextRequestId++;
-    proc.serializeTo(&bb, clientData);
-    PreparedInvocation invocation(bbdata, messageSize, callback, payload, clientData);
+    proc.serializeTo(&bb, 0);
+    PreparedInvocation invocation(bbdata, messageSize, callback, payload);
     
     pthread_mutex_lock(&m_requests_mutex);
     m_requests.push_back(invocation);
@@ -478,10 +476,16 @@ void Client::invocationRequestCallback() {
         if (!context)
             return;
         
+        // pick a new unique identifier and put it in the invocation
+        int64_t client_token = m_nextRequestId++;
+        ByteBuffer ibuf(invocation.data.get(), invocation.data_size);
+        Procedure::updateClientData(&ibuf, client_token);
+        
+        // set up the callback
         CallbackPair callbackPair;
         callbackPair.callback = invocation.callback;
         callbackPair.payload = invocation.payload;
-        context->callbacks[invocation.client_token] = callbackPair;
+        context->callbacks[client_token] = callbackPair;
         context->outstanding++;
         
         struct evbuffer *evbuf = bufferevent_get_output(context->bev);
