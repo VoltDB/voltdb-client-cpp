@@ -9,6 +9,7 @@ endif
 ifeq ($(PLATFORM),Linux)
 	THIRD_PARTY_LIBS := third_party_libs/linux/libevent.a third_party_libs/linux/libevent_pthreads.a
 	SYSTEM_LIBS := -lpthread -lrt
+	CFLAGS += -fPIC
 endif
 
 .PHONEY: all clean test
