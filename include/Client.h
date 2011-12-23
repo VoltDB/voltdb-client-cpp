@@ -39,7 +39,7 @@ namespace voltdb {
 class CxnContext;
 class PreparedInvocation;
 class MockVoltDB;
-class Client;
+class CoreClient;
 
 //////////////////////////////////////////////////////////////
 //
@@ -68,11 +68,11 @@ struct connection_event {
 // function pointers for callbacks
     
 // callback for connection changes
-typedef void (*voltdb_connection_callback)(Client*, struct connection_event);
+typedef void (*voltdb_connection_callback)(CoreClient*, struct connection_event);
     
 // callback for procedures
 // void* is user_data, passed from Client::invoke(..) as payload
-typedef void (*voltdb_proc_callback)(Client*, InvocationResponse, void *);
+typedef void (*voltdb_proc_callback)(CoreClient*, InvocationResponse, void *);
 
 //////////////////////////////////////////////////////////////
 //
@@ -80,7 +80,7 @@ typedef void (*voltdb_proc_callback)(Client*, InvocationResponse, void *);
 //
 //////////////////////////////////////////////////////////////
     
-class Client {
+class CoreClient {
     friend class MockVoltDB;
 public:
     /*
@@ -92,11 +92,11 @@ public:
      * 
      * May throw voltdb::LibEventException
      */
-    explicit Client(const voltdb_connection_callback callback,
+    explicit CoreClient(const voltdb_connection_callback callback,
                     const std::string username = "",
                     const std::string password = "");
     
-    ~Client();
+    ~CoreClient();
 
     /*
      * Create a connection to the VoltDB process running at the specified host 

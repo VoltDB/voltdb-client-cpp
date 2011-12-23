@@ -75,7 +75,7 @@ public:
     }
     
     struct bufferevent *bev;
-    Client *client;
+    CoreClient *client;
     
     // connection id
     std::string hostname;
@@ -246,11 +246,11 @@ static void authenticationRequestExtCallback(evutil_socket_t fd, short what, voi
 }
     
 static void invocationRequestExtCallback(evutil_socket_t fd, short what, void *ctx) {
-    Client *impl = reinterpret_cast<Client*>(ctx);
+    CoreClient *impl = reinterpret_cast<CoreClient*>(ctx);
     impl->invocationRequestCallback();
 }
 
-Client::~Client() {
+CoreClient::~CoreClient() {
     pthread_mutex_lock(&m_contexts_mutex);
     {
         m_contexts.clear();
@@ -267,7 +267,7 @@ Client::~Client() {
     event_base_free(m_base);
 }
     
-Client::Client(voltdb_connection_callback callback,
+CoreClient::CoreClient(voltdb_connection_callback callback,
                std::string username, 
                std::string password) 
  :
@@ -300,7 +300,7 @@ Client::Client(voltdb_connection_callback callback,
     SHA1_Final ( &context, m_passwordHash);
 }
     
-int Client::createConnection(std::string hostname, short port) {    
+int CoreClient::createConnection(std::string hostname, short port) {    
     struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE);
     if (bev == NULL) {
         return -1;
@@ -319,7 +319,7 @@ int Client::createConnection(std::string hostname, short port) {
     return event_base_once(m_base, -1, EV_TIMEOUT, authenticationRequestExtCallback, context.get(), NULL);
 }
 
-int Client::invoke(Procedure &proc, voltdb_proc_callback callback, void *payload) {
+int CoreClient::invoke(Procedure &proc, voltdb_proc_callback callback, void *payload) {
     int32_t messageSize = proc.getSerializedSize();
     char *bbdata = new char[messageSize];
     ByteBuffer bb(bbdata, messageSize);
@@ -333,7 +333,7 @@ int Client::invoke(Procedure &proc, voltdb_proc_callback callback, void *payload
     return event_base_once(m_base, -1, EV_TIMEOUT, invocationRequestExtCallback, this, NULL);
 }
 
-int Client::runOnce() {
+int CoreClient::runOnce() {
     int result = 0;
     
     // use a try block to ensure
@@ -347,7 +347,7 @@ int Client::runOnce() {
     else return 0;
 }
 
-int Client::run() {
+int CoreClient::run() {
     return runWithTimeout(1000 * 60 * 60 * 24 * 365 * 30); // 30 YRs
 }
 
@@ -356,17 +356,17 @@ int Client::run() {
  * timeout is over.
  */
 static void timeout_callback(evutil_socket_t fd, short what, void *arg) {
-    Client *client = reinterpret_cast<Client*>(arg);
+    CoreClient *client = reinterpret_cast<CoreClient*>(arg);
     assert(client);
     client->timerFired();
 }
 
-void Client::timerFired() {
+void CoreClient::timerFired() {
     m_timerFired = true;
     event_base_loopbreak(m_base);
 }
 
-int Client::runWithTimeout(int64_t ms) {
+int CoreClient::runWithTimeout(int64_t ms) {
     // construct a timer event
     event *timer = event_new(m_base, -1, EV_TIMEOUT, timeout_callback, this);
     if (!timer) {
@@ -401,11 +401,11 @@ int Client::runWithTimeout(int64_t ms) {
     return result;
 }
     
-void Client::interrupt() {
+void CoreClient::interrupt() {
     event_base_loopbreak(m_base);
 }
     
-void Client::completeAuthenticationRequest(struct CxnContext *context) {
+void CoreClient::completeAuthenticationRequest(struct CxnContext *context) {
     
     assert(context->connected);
     
@@ -423,7 +423,7 @@ void Client::completeAuthenticationRequest(struct CxnContext *context) {
     }
 }
 
-bool Client::processAuthenticationResponse(struct CxnContext *context, AuthenticationResponse &response) {
+bool CoreClient::processAuthenticationResponse(struct CxnContext *context, AuthenticationResponse &response) {
     
     if (!m_instanceIdIsSet) {
         m_instanceIdIsSet = true;
@@ -445,7 +445,7 @@ bool Client::processAuthenticationResponse(struct CxnContext *context, Authentic
 }
 
     
-void Client::invocationRequestCallback() {
+void CoreClient::invocationRequestCallback() {
     size_t requestsPending = 0;
     PreparedInvocation invocation;
     
@@ -510,7 +510,7 @@ void Client::invocationRequestCallback() {
     }
 }
     
-CxnContext *Client::getNextContext(voltdb_proc_callback callback, void *payload) {
+CxnContext *CoreClient::getNextContext(voltdb_proc_callback callback, void *payload) {
     /*
      * Decide what connection to buffer the event on.
      * First each connection is checked for backpressure. If there is a connection
@@ -576,7 +576,7 @@ CxnContext *Client::getNextContext(voltdb_proc_callback callback, void *payload)
     return bestContext;
 }
 
-void Client::regularReadCallback(struct CxnContext *context) {
+void CoreClient::regularReadCallback(struct CxnContext *context) {
     struct evbuffer *evbuf = bufferevent_get_input(context->bev);
     int32_t remaining = static_cast<int32_t>(evbuffer_get_length(evbuf));
 
@@ -620,7 +620,7 @@ void Client::regularReadCallback(struct CxnContext *context) {
     }
 }
     
-void Client::regularEventCallback(struct CxnContext *context, short events) {
+void CoreClient::regularEventCallback(struct CxnContext *context, short events) {
     if (events & BEV_EVENT_CONNECTED) {
         assert(false);
     } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
@@ -668,7 +668,7 @@ void Client::regularEventCallback(struct CxnContext *context, short events) {
     }
 }
 
-void Client::regularWriteCallback(struct CxnContext *context) {
+void CoreClient::regularWriteCallback(struct CxnContext *context) {
     if (context->backpressure) {
         context->backpressure = false;
             

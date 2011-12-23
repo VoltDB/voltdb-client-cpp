@@ -34,11 +34,11 @@
 bool connected = false;
 int connections = 0;
 
-void conn_callback(voltdb::Client* client, voltdb::connection_event event);
-void proc_callback_timeout(voltdb::Client *client, voltdb::InvocationResponse response, void* payload);
-void proc_callback_countdown(voltdb::Client *client, voltdb::InvocationResponse response, void* payload);
+void conn_callback(voltdb::CoreClient* client, voltdb::connection_event event);
+void proc_callback_timeout(voltdb::CoreClient *client, voltdb::InvocationResponse response, void* payload);
+void proc_callback_countdown(voltdb::CoreClient *client, voltdb::InvocationResponse response, void* payload);
 
-void conn_callback(voltdb::Client* client, voltdb::connection_event event) {
+void conn_callback(voltdb::CoreClient* client, voltdb::connection_event event) {
     ++connections;
     if (event.type == voltdb::CONNECTED) {
         connected = true;
@@ -47,13 +47,13 @@ void conn_callback(voltdb::Client* client, voltdb::connection_event event) {
     client->interrupt();
 }
 
-void proc_callback_timeout(voltdb::Client *client, voltdb::InvocationResponse response, void* payload) {
+void proc_callback_timeout(voltdb::CoreClient *client, voltdb::InvocationResponse response, void* payload) {
     int *outstanding = reinterpret_cast<int*>(payload);
     (*outstanding)--;
     std::cout << response.toString() << std::endl;
 }
 
-void proc_callback_countdown(voltdb::Client *client, voltdb::InvocationResponse response, void* payload) {
+void proc_callback_countdown(voltdb::CoreClient *client, voltdb::InvocationResponse response, void* payload) {
     int *outstanding = reinterpret_cast<int*>(payload);
     std::cout << response.toString() << std::endl;
     (*outstanding)--;
@@ -67,12 +67,12 @@ int main(int argc, char **argv) {
     /*
      * Instantiate a client and connect to the database.
      */
-    voltdb::Client client(conn_callback);
+    voltdb::CoreClient client(conn_callback);
     client.createConnection("localhost");
     
     // spin until connected
     int retcode = client.run(); // run one second at a time
-    assert(retcode == voltdb::Client::INTERRUPTED_OR_EARLY_EXIT);
+    assert(retcode == voltdb::CoreClient::INTERRUPTED_OR_EARLY_EXIT);
     
     if (!connected) {
         exit(-1);
@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
     // call the run loop until this returns
     while (outstanding) {
         retcode = client.runWithTimeout(1000);
-        assert(retcode == voltdb::Client::TIMEOUT_ELAPSED);
+        assert(retcode == voltdb::CoreClient::TIMEOUT_ELAPSED);
     }
     
     params->addString("Bonjour").addString("Monde").addString("French");
@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
     
     // call the run loop until this returns
     retcode = client.run();
-    assert(retcode == voltdb::Client::INTERRUPTED_OR_EARLY_EXIT);
+    assert(retcode == voltdb::CoreClient::INTERRUPTED_OR_EARLY_EXIT);
     
     /*
      * Describe procedure to retrieve message
