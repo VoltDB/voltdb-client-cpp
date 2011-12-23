@@ -14,7 +14,7 @@ endif
 
 .PHONEY: all clean test
 
-OBJS := obj/Client.o \
+OBJS := obj/CoreClient.o \
         obj/RowBuilder.o \
         obj/sha1.o \
         obj/Table.o \

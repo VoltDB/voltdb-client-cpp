@@ -26,7 +26,7 @@
 #include <event2/buffer.h>
 #include <event2/thread.h>
 #include "sha1.h"
-#include "Client.h"
+#include "CoreClient.h"
 #include "AuthenticationResponse.hpp"
 #include "AuthenticationRequest.hpp"
 

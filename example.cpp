@@ -23,7 +23,7 @@
 
 #include <cstdio>
 #include <vector>
-#include "Client.h"
+#include "CoreClient.h"
 #include "Table.h"
 #include "TableIterator.h"
 #include "Row.hpp"
