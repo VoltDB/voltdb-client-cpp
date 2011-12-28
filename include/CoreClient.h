@@ -141,7 +141,7 @@ public:
      * Run the event loop until a procedure or connection callback returns false,
      * or until interrupt() is called.
      *
-     * Returns EVENT_LOOP_ERROR, CALLBACK_RETURNED_FALSE, INTERRUPTED_OR_EARLY_EXIT
+     * Returns EVENT_LOOP_ERROR or INTERRUPTED_OR_EARLY_EXIT
      *
      * Functionally equivalent to runWithTimeout(..) with a 3yr timeout, so
      * technically it can also return TIMEOUT_ELAPSED.
@@ -152,8 +152,7 @@ public:
      * Run the event loop until a procedure or connection callback is called,
      * until a timer elapses or until interrupt() is called.
      *
-     * Returns EVENT_LOOP_ERROR, CALLBACK_RETURNED_FALSE, INTERRUPTED_OR_EARLY_EXIT
-     * or TIMEOUT_ELAPSED
+     * Returns EVENT_LOOP_ERROR, INTERRUPTED_OR_EARLY_EXIT or TIMEOUT_ELAPSED
      */
     int runWithTimeout(int64_t ms);
 
