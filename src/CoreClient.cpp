@@ -79,7 +79,7 @@ public:
     
     // connection id
     std::string hostname;
-    short port;
+    int port;
     
     // status
     bool backpressure;
@@ -256,12 +256,14 @@ CoreClient::~CoreClient() {
         m_contexts.clear();
     }
     pthread_mutex_unlock(&m_contexts_mutex);
+    pthread_mutex_destroy (&m_contexts_mutex);
     
     pthread_mutex_lock(&m_requests_mutex);
     {
         m_requests.clear();
     } 
-    pthread_mutex_unlock(&m_contexts_mutex);
+    pthread_mutex_unlock(&m_requests_mutex);
+    pthread_mutex_destroy (&m_requests_mutex);
         
     // libevent cleanup
     event_base_free(m_base);
@@ -298,9 +300,12 @@ CoreClient::CoreClient(voltdb_connection_callback callback,
     SHA1_Init(&context);
     SHA1_Update( &context, reinterpret_cast<const unsigned char*>(password.data()), password.size());
     SHA1_Final ( &context, m_passwordHash);
+    
+    pthread_mutex_init (&m_contexts_mutex, NULL);
+    pthread_mutex_init (&m_requests_mutex, NULL);
 }
     
-int CoreClient::createConnection(std::string hostname, short port) {    
+int CoreClient::createConnection(std::string hostname, int port) {    
     struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE);
     if (bev == NULL) {
         return -1;
@@ -348,7 +353,7 @@ int CoreClient::runOnce() {
 }
 
 int CoreClient::run() {
-    return runWithTimeout(1000 * 60 * 60 * 24 * 365 * 30); // 30 YRs
+    return runWithTimeout(1000LL * 60 * 60 * 24 * 365 * 3); // 3 YRs
 }
 
 /**

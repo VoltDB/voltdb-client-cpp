@@ -61,7 +61,7 @@ enum connection_event_type {
 struct connection_event {
     connection_event_type type;
     std::string hostname;
-    short port;
+    int port;
     std::string info; // additional event description
 };
     
@@ -112,7 +112,7 @@ public:
      *
      * May throw voltdb::LibEventException
      */
-    int createConnection(std::string hostname, short port = 21212);
+    int createConnection(std::string hostname, int port = 21212);
     
     /*
      * Asynchronously invoke a stored procedure. The provided callback will be
@@ -143,7 +143,7 @@ public:
      *
      * Returns EVENT_LOOP_ERROR, CALLBACK_RETURNED_FALSE, INTERRUPTED_OR_EARLY_EXIT
      *
-     * Functionally equivalent to runWithTimeout(..) with a 30yr timeout, so
+     * Functionally equivalent to runWithTimeout(..) with a 3yr timeout, so
      * technically it can also return TIMEOUT_ELAPSED.
      */
     int run();
