@@ -21,8 +21,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef VOLTDB_CLIENT_H_
-#define VOLTDB_CLIENT_H_
+#ifndef VOLTDB_CORECLIENT_H_
+#define VOLTDB_CORECLIENT_H_
 
 #include <map>
 #include <deque>
@@ -46,6 +46,10 @@ class CoreClient;
 // CALLBACKS FOR ASYNCRONOUS CLIENT USAGE
 //
 //////////////////////////////////////////////////////////////
+    
+const int EVENT_LOOP_ERROR = -1;
+const int TIMEOUT_ELAPSED = 0;
+const int INTERRUPTED_OR_EARLY_EXIT = 1;
     
 enum connection_event_type {
     // the connection is ready to accept work
@@ -76,7 +80,7 @@ typedef void (*voltdb_proc_callback)(CoreClient*, InvocationResponse, void *);
 
 //////////////////////////////////////////////////////////////
 //
-// CLIENT CLASS FOR ACCESSING VOLTDB
+// CORE CLIENT CLASS PURE ASYNC ACCESS TO VOLTDB
 //
 //////////////////////////////////////////////////////////////
     
@@ -93,10 +97,10 @@ public:
      * May throw voltdb::LibEventException
      */
     explicit CoreClient(const voltdb_connection_callback callback,
-                    const std::string username = "",
-                    const std::string password = "");
+                        const std::string username = "",
+                        const std::string password = "");
     
-    ~CoreClient();
+    virtual ~CoreClient();
 
     /*
      * Create a connection to the VoltDB process running at the specified host 
@@ -125,10 +129,6 @@ public:
      * May throw voltdb::LibEventException
      */
     int invoke(Procedure &proc, voltdb_proc_callback callback, void *payload);
-    
-    static const int EVENT_LOOP_ERROR = -1;
-    static const int TIMEOUT_ELAPSED = 0;
-    static const int INTERRUPTED_OR_EARLY_EXIT = 1;
     
     /*
      * Run the event loop and process zero or one active events.
@@ -203,4 +203,4 @@ private:
     unsigned char m_passwordHash[20];
 };
 }
-#endif /* VOLTDB_CLIENT_H_ */
+#endif // VOLTDB_CORECLIENT_H_

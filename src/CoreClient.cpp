@@ -267,6 +267,7 @@ CoreClient::~CoreClient() {
         
     // libevent cleanup
     event_base_free(m_base);
+    m_base = NULL;
 }
     
 CoreClient::CoreClient(voltdb_connection_callback callback,
@@ -495,6 +496,9 @@ void CoreClient::invocationRequestCallback() {
             if (callbackPair.callback) {
                 callbackPair.callback(context->client, InvocationResponse(), callbackPair.payload);
             }
+            context->callbacks.erase(client_token);
+            context->outstanding--;
+            m_outstandingRequests--;
         }
         
         // if the buffer to go out gets too big
@@ -569,6 +573,7 @@ CxnContext *CoreClient::getNextContext(voltdb_proc_callback callback, void *payl
         if (callback) {
             callback(this, InvocationResponse(), payload);
         }
+        return NULL;
     }
     
     // inform the user via callback all connections are in backpressure mode
@@ -576,6 +581,7 @@ CxnContext *CoreClient::getNextContext(voltdb_proc_callback callback, void *payl
         if (callback) {
             callback(this, InvocationResponse(), payload);
         }
+        return NULL;
     }
     
     return bestContext;

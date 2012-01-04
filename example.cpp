@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     
     // spin until connected
     int retcode = client.run(); // run one second at a time
-    assert(retcode == voltdb::CoreClient::INTERRUPTED_OR_EARLY_EXIT);
+    assert(retcode == voltdb::INTERRUPTED_OR_EARLY_EXIT);
     
     if (!connected) {
         exit(-1);
@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
     // call the run loop until this returns
     while (outstanding) {
         retcode = client.runWithTimeout(1000);
-        assert(retcode == voltdb::CoreClient::TIMEOUT_ELAPSED);
+        assert(retcode == voltdb::TIMEOUT_ELAPSED);
     }
     
     params->addString("Bonjour").addString("Monde").addString("French");
@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
     
     // call the run loop until this returns
     retcode = client.run();
-    assert(retcode == voltdb::CoreClient::INTERRUPTED_OR_EARLY_EXIT);
+    assert(retcode == voltdb::INTERRUPTED_OR_EARLY_EXIT);
     
     /*
      * Describe procedure to retrieve message
