@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 -O2
+CFLAGS=-Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 -O2 -Wall
 
 PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)

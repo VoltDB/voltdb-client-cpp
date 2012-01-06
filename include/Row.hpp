@@ -395,7 +395,7 @@ public:
      */
     void toString(std::ostringstream &ostream, std::string indent) {
         ostream << indent;
-        for (int ii = 0; ii < m_columns->size(); ii++) {
+        for (uint32_t ii = 0; ii < m_columns->size(); ii++) {
             if (ii != 0) {
                 ostream << ", ";
             }
