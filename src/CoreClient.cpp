@@ -31,8 +31,6 @@
 #include "AuthenticationRequest.hpp"
 
 namespace voltdb {
-
-static bool voltdb_Client_debug_init_libevent = false;
     
 struct CallbackPair {
     voltdb_proc_callback callback;
@@ -278,14 +276,9 @@ CoreClient::CoreClient(voltdb_connection_callback callback,
         m_connCallback(callback),
         m_instanceIdIsSet(false), 
         m_outstandingRequests(0), 
-        m_username(username)
+        m_username(username),
+        m_data(NULL)
 {
-#ifdef DEBUG
-    if (!voltdb_Client_debug_init_libevent) {
-        event_enable_debug_mode();
-        voltdb_Client_debug_init_libevent = true;
-    }
-#endif
     // try to run threadsafe libevent
     if (evthread_use_pthreads()) {
         throw voltdb::LibEventException();
@@ -409,6 +402,14 @@ int CoreClient::runWithTimeout(int64_t ms) {
     
 void CoreClient::interrupt() {
     event_base_loopbreak(m_base);
+}
+    
+void CoreClient::setData(void *data) {
+    m_data = data;
+}
+    
+void *CoreClient::getData() {
+    return m_data;
 }
     
 void CoreClient::completeAuthenticationRequest(struct CxnContext *context) {

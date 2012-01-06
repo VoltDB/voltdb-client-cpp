@@ -164,6 +164,18 @@ public:
      */
     void interrupt();
     
+    /**
+     * Set a user-supplied data pointer that can be retrieved at any time.
+     * No explicit thread-safety. No memory ownership is assumed.
+     */
+    void setData(void *data);
+    
+    /**
+     * Return user-supplied data pointer. Return NULL if unset (or set to NULL).
+     * No explicit thread-safety.
+     */
+    void *getData();
+    
     // public only for libevent callbacks. DO NOT CALL
     // this will be moved in a future revision
     void completeAuthenticationRequest(struct CxnContext *context);
@@ -201,6 +213,9 @@ private:
 
     std::string m_username;
     unsigned char m_passwordHash[20];
+    
+    // user data pointer
+    void *m_data;
 };
 }
 #endif // VOLTDB_CORECLIENT_H_
