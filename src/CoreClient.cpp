@@ -644,27 +644,22 @@ void CoreClient::regularEventCallback(struct CxnContext *context, short events) 
         // update status for sending
         context->authenticated = false;
         context->connected = false;
-
-        //Notify client that a connection was lost
+        
+        // Iterate the list of callbacks for this connection and collect them
+        std::map<int64_t, CallbackPair>::const_iterator iter;
+        std::vector<CallbackPair> callbacks;
+        for (iter = context->callbacks.begin(); iter != context->callbacks.end(); iter++) {
+            callbacks.push_back(iter->second);
+        }
+        context->outstanding = 0;
+        context->callbacks.clear();
+        
+        //setup the notification that a connection was lost
         connection_event event;
         event.type = CONNECTION_LOST;
         event.hostname = context->hostname;
         event.port = context->port;
         event.info = "Connection was lost.";
-        m_connCallback(this, event);
-        
-        /*
-         * Iterate the list of callbacks for this connection and invoke them
-         * with the appropriate error response
-         */
-        std::map<int64_t, CallbackPair>::const_iterator iter;
-        for (iter = context->callbacks.begin(); iter != context->callbacks.end(); iter++) {
-            CallbackPair callbackPair = iter->second;
-            callbackPair.callback(this, InvocationResponse(), callbackPair.payload);
-            --m_outstandingRequests;
-        }
-        context->outstanding = 0;
-        context->callbacks.clear();
         
         // remove this context from the global set
         pthread_mutex_lock(&m_contexts_mutex);
@@ -677,6 +672,16 @@ void CoreClient::regularEventCallback(struct CxnContext *context, short events) 
             }
         }
         pthread_mutex_unlock(&m_contexts_mutex);
+        
+        // notify the client the connection is dropped
+        m_connCallback(this, event);
+        
+        // call callbacks for outstanding txns
+        std::vector<CallbackPair>::const_iterator callbackIter;
+        for (callbackIter = callbacks.begin(); callbackIter != callbacks.end(); callbackIter++) {
+            --m_outstandingRequests;
+            callbackIter->callback(this, InvocationResponse(), callbackIter->payload);
+        }
     }
 }
 
