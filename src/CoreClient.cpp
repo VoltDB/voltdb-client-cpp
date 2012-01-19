@@ -70,6 +70,7 @@ public:
     
     ~CxnContext() { 
         if (bev) bufferevent_free(bev);
+        bev = NULL;
     }
     
     struct bufferevent *bev;
@@ -97,6 +98,9 @@ public:
     int32_t outstanding;
     std::map<int64_t, CallbackPair> callbacks;
 };
+
+// forward declaration for libevent init function
+void initLibevent();
 
 /**
  type definition for the read or write callback.
@@ -248,24 +252,13 @@ static void invocationRequestExtCallback(evutil_socket_t fd, short what, void *c
     impl->invocationRequestCallback();
 }
 
-CoreClient::~CoreClient() {
-    pthread_mutex_lock(&m_contexts_mutex);
-    {
-        m_contexts.clear();
+// Initialization for the library that only gets called once
+pthread_once_t once_initLibevent = PTHREAD_ONCE_INIT;
+void initLibevent() {
+    // try to run threadsafe libevent
+    if (evthread_use_pthreads()) {
+        throw voltdb::LibEventException();
     }
-    pthread_mutex_unlock(&m_contexts_mutex);
-    pthread_mutex_destroy (&m_contexts_mutex);
-    
-    pthread_mutex_lock(&m_requests_mutex);
-    {
-        m_requests.clear();
-    } 
-    pthread_mutex_unlock(&m_requests_mutex);
-    pthread_mutex_destroy (&m_requests_mutex);
-        
-    // libevent cleanup
-    event_base_free(m_base);
-    m_base = NULL;
 }
     
 CoreClient::CoreClient(voltdb_connection_callback callback,
@@ -279,10 +272,9 @@ CoreClient::CoreClient(voltdb_connection_callback callback,
         m_username(username),
         m_data(NULL)
 {
-    // try to run threadsafe libevent
-    if (evthread_use_pthreads()) {
-        throw voltdb::LibEventException();
-    }
+    // put libevent init calls here, so they only get called once
+    //pthread_once(&once_initLibevent, initLibevent);
+    initLibevent();
     
     m_base = event_base_new();
     assert(m_base);
@@ -297,6 +289,26 @@ CoreClient::CoreClient(voltdb_connection_callback callback,
     
     pthread_mutex_init (&m_contexts_mutex, NULL);
     pthread_mutex_init (&m_requests_mutex, NULL);
+}
+    
+CoreClient::~CoreClient() {
+    pthread_mutex_lock(&m_contexts_mutex);
+    {
+        m_contexts.clear();
+    }
+    pthread_mutex_unlock(&m_contexts_mutex);
+    pthread_mutex_destroy (&m_contexts_mutex);
+    
+    pthread_mutex_lock(&m_requests_mutex);
+    {
+        m_requests.clear();
+    } 
+    pthread_mutex_unlock(&m_requests_mutex);
+    pthread_mutex_destroy (&m_requests_mutex);
+    
+    // libevent cleanup
+    event_base_free(m_base);
+    m_base = NULL;
 }
     
 int CoreClient::createConnection(std::string hostname, int port) {    
@@ -337,7 +349,7 @@ int CoreClient::runOnce() {
     
     // use a try block to ensure
     try {
-        result = event_base_dispatch(m_base);
+        result = event_base_loop(m_base, EVLOOP_NONBLOCK);
     }
     catch (voltdb::Exception &e) {
         result = -1;

@@ -67,11 +67,11 @@ int main(int argc, char **argv) {
     /*
      * Instantiate a client and connect to the database.
      */
-    voltdb::CoreClient client(conn_callback);
-    client.createConnection("localhost");
+    voltdb::CoreClient *client = new voltdb::CoreClient(conn_callback);
+    client->createConnection("localhost");
     
     // spin until connected
-    int retcode = client.run(); // run one second at a time
+    int retcode = client->run(); // run one second at a time
     assert(retcode == voltdb::INTERRUPTED_OR_EARLY_EXIT);
     
     if (!connected) {
@@ -94,32 +94,32 @@ int main(int argc, char **argv) {
     voltdb::ParameterSet* params = procedure.params();
     params->addString("Hello").addString("World").addString("English");
     outstanding++;
-    client.invoke(procedure, proc_callback_timeout, &outstanding);
+    client->invoke(procedure, proc_callback_timeout, &outstanding);
     
     // call the run loop until this returns
     while (outstanding) {
-        retcode = client.runWithTimeout(1000);
+        retcode = client->runWithTimeout(1000);
         assert(retcode == voltdb::TIMEOUT_ELAPSED);
     }
     
     params->addString("Bonjour").addString("Monde").addString("French");
     outstanding++;
-    client.invoke(procedure, proc_callback_countdown, &outstanding);
+    client->invoke(procedure, proc_callback_countdown, &outstanding);
     
     params->addString("Hola").addString("Mundo").addString("Spanish");
     outstanding++;
-    client.invoke(procedure, proc_callback_countdown, &outstanding);
+    client->invoke(procedure, proc_callback_countdown, &outstanding);
     
     params->addString("Hej").addString("Verden").addString("Danish");
     outstanding++;
-    client.invoke(procedure, proc_callback_countdown, &outstanding);
+    client->invoke(procedure, proc_callback_countdown, &outstanding);
     
     params->addString("Ciao").addString("Mondo").addString("Italian");
     outstanding++;
-    client.invoke(procedure, proc_callback_countdown, &outstanding);
-    
+    client->invoke(procedure, proc_callback_countdown, &outstanding);
+
     // call the run loop until this returns
-    retcode = client.run();
+    retcode = client->run();
     assert(retcode == voltdb::INTERRUPTED_OR_EARLY_EXIT);
     
     /*
@@ -132,11 +132,39 @@ int main(int argc, char **argv) {
      * Retrieve the message
      */
     selectProc.params()->addString("Spanish");
-    client.invoke(selectProc, proc_callback_timeout, &outstanding);
+    outstanding++;
+    client->invoke(selectProc, proc_callback_timeout, &outstanding);
     
     // spin until it returns
     while (outstanding) {
-        client.runOnce();
+        client->runOnce();
     }
+    
+    // disconnect
+    delete client;
+    client = NULL;
+    
+    // reconnect
+    client = new voltdb::CoreClient(conn_callback);
+    client->createConnection("localhost");
+    
+    // spin until connected
+    retcode = client->run(); // run one second at a time
+    assert(retcode == voltdb::INTERRUPTED_OR_EARLY_EXIT);
+    
+    if (!connected) {
+        exit(-1);
+    }
+    
+    params->addString("Nin Hao").addString("Jie").addString("Chinese");
+    outstanding++;
+    client->invoke(procedure, proc_callback_countdown, &outstanding);
+    
+    // call the run loop until this returns
+    retcode = client->run();
+    assert(retcode == voltdb::INTERRUPTED_OR_EARLY_EXIT);
+    
+    delete client;
+    client = NULL;
 }
 
