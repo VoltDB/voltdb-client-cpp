@@ -2,7 +2,7 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
-USER_OBJS := ${HOME}/lib/libevent.a
+USER_OBJS := ../libeventinstall/lib/libevent.a
 
 LIBS := -lrt -lpthread
 

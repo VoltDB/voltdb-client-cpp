@@ -1,3 +1,11 @@
+2/28/12 **UPDATE**
+This file has a fallen out of date in some places, here is a quick update
+libevent and the boost shared ptr are now included so they aren't external dependencies. 
+build_static.sh will build libevent and the client library (shared and static) and package it
+into volt_cpp.tgz. This should make it a lot easier to compile. Also shared pointers are now
+thread safe everywhere although the client library still isn't making threadsafe use of libevent
+so you should use one per thread.
+
 Contents
 
 -- Build directories
