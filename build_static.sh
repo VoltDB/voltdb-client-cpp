@@ -22,6 +22,7 @@ ar x ../../library_release_static/libvoltcpp.a
 cd .. && mkdir event && cd event
 echo `pwd`
 ar x ../../libeventinstall/lib/libevent.a
+ar x ../../libeventinstall/lib/libevent_pthreads.a
 cd ../..
 echo `pwd`
 ar rcs libvoltcpp.a tmp/volt/* tmp/event/*

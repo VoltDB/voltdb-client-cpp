@@ -25,6 +25,7 @@
 #include "AuthenticationResponse.hpp"
 #include "AuthenticationRequest.hpp"
 #include <event2/buffer.h>
+#include <event2/thread.h>
 #include "sha1.h"
 
 namespace voltdb {
@@ -177,11 +178,21 @@ ClientImpl::~ClientImpl() {
     event_base_free(m_base);
 }
 
+// Initialization for the library that only gets called once
+pthread_once_t once_initLibevent = PTHREAD_ONCE_INIT;
+void initLibevent() {
+    // try to run threadsafe libevent
+    if (evthread_use_pthreads()) {
+        throw voltdb::LibEventException();
+    }
+}
+
 ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException) :
         m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0), m_listener(config.m_listener),
         m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false), m_isDraining(false),
         m_instanceIdIsSet(false), m_outstandingRequests(0), m_username(config.m_username),
         m_maxOutstandingRequests(config.m_maxOutstandingRequests), m_ignoreBackpressure(false) {
+    pthread_once(&once_initLibevent, initLibevent);
 #ifdef DEBUG
     if (!voltdb_clientimpl_debug_init_libevent) {
         event_enable_debug_mode();
@@ -589,6 +600,19 @@ void ClientImpl::regularWriteCallback(struct bufferevent *bev) {
         m_invocationBlockedOnBackpressure = false;
         event_base_loopbreak(m_base);
     }
+}
+
+static void interrupt_callback(evutil_socket_t fd, short events, void *clientData) {
+    ClientImpl *self = reinterpret_cast<ClientImpl*>(clientData);
+    self->eventBaseLoopBreak();
+} 
+
+void ClientImpl::eventBaseLoopBreak() {
+    event_base_loopbreak(m_base);
+}
+
+void ClientImpl::interrupt() {
+    event_base_once(m_base, -1, EV_TIMEOUT, interrupt_callback, this, NULL);
 }
 
 /*

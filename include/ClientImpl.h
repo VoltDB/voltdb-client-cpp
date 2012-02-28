@@ -88,7 +88,15 @@ public:
     void regularReadCallback(struct bufferevent *bev);
     void regularEventCallback(struct bufferevent *bev, short events);
     void regularWriteCallback(struct bufferevent *bev);
+    void eventBaseLoopBreak();
 
+    /*
+     * If one of the run family of methods is running on another thread, this
+     * method will instruct it to exit as soon as it finishes it's current 
+     * immediate task. If the thread in the run method is blocked/idle, then
+     * it will return immediately.
+     */
+    void interrupt();
 private:
     ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException);
 

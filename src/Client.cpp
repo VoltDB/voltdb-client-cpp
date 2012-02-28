@@ -86,4 +86,8 @@ Client::drain()
 throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException) {
     return m_impl->drain();
 }
+
+void Client::interrupt() {
+    return m_impl->interrupt();
+}
 }

@@ -6,6 +6,12 @@ into volt_cpp.tgz. This should make it a lot easier to compile. Also shared poin
 thread safe everywhere although the client library still isn't making threadsafe use of libevent
 so you should use one per thread.
 
+I added an interrupt method and enabled thread safety in libevent so you should be able
+to call interrupt on an event base. You can use the client from multiple threads
+by dedicating a thread to the event loop and having it pull new invocations off 
+of a thread safe queue. Threads that insert invocations into the queue can call interrupt afterwards 
+so the event thread picks them up promptly. This method needs testing.
+
 Contents
 
 -- Build directories

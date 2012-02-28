@@ -119,6 +119,14 @@ public:
     bool drain() throw (voltdb::NoConnectionsException, voltdb::LibEventException, voltdb::Exception);
 
     /*
+     * If one of the run family of methods is running on another thread, this
+     * method will instruct it to exit as soon as it finishes it's current 
+     * immediate task. If the thread in the run method is blocked/idle, then
+     * it will return immediately.
+     */
+    void interrupt();
+
+    /*
      * Create a client with the specified configuration
      */
     static Client create(voltdb::ClientConfig config = voltdb::ClientConfig()) throw(voltdb::LibEventException, voltdb::Exception);
