@@ -1,5 +1,5 @@
 #!/bin/sh
-rm -fr package tmp *.a *.tgz
+rm -fr package tmp libeventinstall *.a *.tgz
 cd AsyncHelloWorld && make clean
 cd ../HelloWorld && make clean
 cd ../library_release && make clean
