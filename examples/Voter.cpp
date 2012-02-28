@@ -138,8 +138,7 @@ int main(int argc, char* argv[])
 	int64_t thisOutstanding = 0;
 	int64_t lastOutstanding = 0;
 
-	string contestantNames[12] = {"Edwina Burnam", "Tabatha Gehling", "Kelly Clauss", "Jessie Alloway", "Alana Bregman", "Jessie Eichman", "Allie Rogalski", "Nita Coster", "Kurt Walser", "Ericka Dieter", "Loraine Nygren", "Tania Mattioli"};
-	vector<string> cNames(&contestantNames[0], &contestantNames[12]);
+	string cNames = "Edwina Burnam,Tabatha Gehling,Kelly Clauss,Jessie Alloway,Alana Bregman,Jessie Eichman,Allie Rogalski,Nita Coster,Kurt Walser,Ericka Dieter,Loraine Nygren,Tania Mattioli";
 
 	cout << "Allowing " << maxVotesPerPhoneNumber << " votes per phone number" << endl;
 	cout << "Allowing between " << minAllowedOutstanding << " and " << maxAllowedOutstanding << " oustanding SP calls at a time" << endl;
@@ -166,7 +165,7 @@ int main(int argc, char* argv[])
 
 	vector<voltdb::Parameter> parameterTypes(2);
 	parameterTypes[0] = voltdb::Parameter(voltdb::WIRE_TYPE_INTEGER);
-	parameterTypes[1] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING, true);
+	parameterTypes[1] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
 	voltdb::Procedure initProc("Initialize", parameterTypes);
 	voltdb::ParameterSet* params = initProc.params();
 	params->addInt32(maxContestant).addString(cNames);
