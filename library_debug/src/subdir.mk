@@ -42,14 +42,14 @@ CPP_DEPS += \
 src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -DDEBUG -D__STDC_LIMIT_MACROS -I"${HOME}/include" -I../include -O0 -g3 -Wall -Werror -c -fmessage-length=0 -fno-strict-aliasing -fPIC -Wextra -Wno-unused-parameter -Wno-type-limits -fno-strict-aliasing -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
+	g++ -DDEBUG -D__STDC_LIMIT_MACROS -I"${HOME}/include" -I../include -I../libeventinstall/include -O0 -g3 -Wall -Werror -c -fmessage-length=0 -fno-strict-aliasing -fPIC -Wextra -Wno-unused-parameter -Wno-type-limits -fno-strict-aliasing -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
 src/%.o: ../src/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -D__STDC_LIMIT_MACROS -DDEBUG -I"${HOME}/include" -I../include -O2 -g -Wall -c -fmessage-length=0 -fPIC -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
+	gcc -D__STDC_LIMIT_MACROS -DDEBUG -I"${HOME}/include" -I../include -I../libeventinstall/include -O0 -g3 -Wall -c -fmessage-length=0 -fPIC -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

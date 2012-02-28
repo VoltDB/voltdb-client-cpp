@@ -1,4 +1,8 @@
 #!/bin/sh
+cd libevent
+./configure --disable-shared --disable-openssl --with-pic --prefix=`pwd`/libeventinstall
+make clean
+make
 rm -fr *.a *.gz tmp package
 cd library_release
 make clean
@@ -13,7 +17,7 @@ cd tmp
 mkdir volt && cd volt
 ar x ../../library_release_static/libvoltcpp.a
 cd .. && mkdir event && cd event
-ar x $HOME/lib/libevent.a
+ar x libeventinstall/lib/libevent.a
 cd ../..
 ar rcs libvoltcpp.a tmp/volt/* tmp/event/*
 
