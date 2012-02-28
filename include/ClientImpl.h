@@ -25,8 +25,8 @@
 #define VOLTDB_CLIENTIMPL_H_
 #include <event2/event.h>
 #include <event2/bufferevent.h>
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
+#include <map>
+#include <set>
 #include "ProcedureCallback.hpp"
 #include "StatusListener.h"
 #include "Procedure.hpp"
@@ -46,12 +46,12 @@ public:
     /*
      * Map from client data to the appropriate callback for a specific connection
      */
-    typedef boost::unordered_map< int64_t, boost::shared_ptr<ProcedureCallback> > CallbackMap;
+    typedef std::map< int64_t, boost::shared_ptr<ProcedureCallback> > CallbackMap;
 
     /*
      * Map from buffer event (connection) to the connection's callback map
      */
-    typedef boost::unordered_map< struct bufferevent*, boost::shared_ptr<CallbackMap> > BEVToCallbackMap;
+    typedef std::map< struct bufferevent*, boost::shared_ptr<CallbackMap> > BEVToCallbackMap;
 
     class Client;
 
@@ -104,8 +104,8 @@ private:
     int64_t m_nextRequestId;
     size_t m_nextConnectionIndex;
     std::vector<struct bufferevent*> m_bevs;
-    boost::unordered_map<struct bufferevent *, boost::shared_ptr<CxnContext> > m_contexts;
-    boost::unordered_set<struct bufferevent *> m_backpressuredBevs;
+    std::map<struct bufferevent *, boost::shared_ptr<CxnContext> > m_contexts;
+    std::set<struct bufferevent *> m_backpressuredBevs;
     BEVToCallbackMap m_callbacks;
     boost::shared_ptr<voltdb::StatusListener> m_listener;
     bool m_invocationBlockedOnBackpressure;

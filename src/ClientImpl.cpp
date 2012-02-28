@@ -591,7 +591,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
 }
 
 void ClientImpl::regularWriteCallback(struct bufferevent *bev) {
-    boost::unordered_set<struct bufferevent*>::iterator iter =
+    std::set<struct bufferevent*>::iterator iter =
             m_backpressuredBevs.find(bev);
     if (iter != m_backpressuredBevs.end()) {
         m_backpressuredBevs.erase(iter);

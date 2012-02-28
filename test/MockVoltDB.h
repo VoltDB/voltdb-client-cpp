@@ -27,9 +27,9 @@
 #include <event2/bufferevent.h>
 #include <event2/listener.h>
 #include <boost/shared_ptr.hpp>
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
 #include <vector>
+#include <map>
+#include <set>
 #include "Client.h"
 
 namespace voltdb {
@@ -61,8 +61,8 @@ public:
 private:
     struct event_base *m_base;
     struct evconnlistener *m_listener;
-    boost::unordered_set<struct bufferevent*> m_connections;
-    boost::unordered_map<struct bufferevent*, boost::shared_ptr<CxnContext> > m_contexts;
+    std::set<struct bufferevent*> m_connections;
+    std::map<struct bufferevent*, boost::shared_ptr<CxnContext> > m_contexts;
     std::string m_filenameForNextResponse;
     int32_t m_hangupOnRequestCounter;
     bool m_dontRead;

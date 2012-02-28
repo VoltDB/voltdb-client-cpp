@@ -25,9 +25,8 @@
 #define VOLT_CONNECTION_POOL_
 #include "Client.h"
 #include "StatusListener.h"
-#include <boost/unordered_map.hpp>
 #include <pthread.h>
-#include <boost/shared_ptr.hpp>
+#include <map>
 #include <string>
 
 namespace voltdb {
@@ -35,7 +34,7 @@ namespace voltdb {
 class ConnectionPool;
 class ClientStuff;
 typedef std::vector<boost::shared_ptr<ClientStuff> > ClientSet;
-typedef boost::unordered_map<std::string, std::vector<boost::shared_ptr<ClientStuff> > > ClientMap;
+typedef std::map<std::string, std::vector<boost::shared_ptr<ClientStuff> > > ClientMap;
 
 void cleanupOnScriptEnd(ClientSet *clients);
 

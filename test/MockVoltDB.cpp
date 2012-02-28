@@ -144,7 +144,7 @@ MockVoltDB::MockVoltDB(Client client) : m_base(client.m_impl->m_base), m_listene
 }
 
 MockVoltDB::~MockVoltDB() {
-    for (boost::unordered_set<struct bufferevent*>::iterator i = m_connections.begin(); i != m_connections.end(); i++) {
+    for (std::set<struct bufferevent*>::iterator i = m_connections.begin(); i != m_connections.end(); i++) {
         bufferevent_free(*i);
     }
     m_connections.clear();
