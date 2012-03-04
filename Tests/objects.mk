@@ -4,5 +4,5 @@
 
 USER_OBJS := ../libeventinstall/lib/libevent.a
 
-LIBS := -lcppunit -lboost_system-mt -lboost_filesystem-mt -lvoltcpp
+LIBS := -lcppunit -lvoltcpp
 

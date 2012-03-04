@@ -33,8 +33,8 @@ public:
     int32_t getSerializedSize() {
         return 8 + //String length prefixes
         20 + //SHA-1 hash of PW
-        m_username.size() +
-        m_service.size()
+        static_cast<int32_t>(m_username.size()) +
+        static_cast<int32_t>(m_service.size())
         + 4 //length prefix
         + 1; //version number
     }

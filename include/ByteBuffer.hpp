@@ -272,6 +272,53 @@ public:
         put(value.data(), size);
         return *this;
     }
+    
+    bool getBytes(bool &wasNull, int32_t bufsize, uint8_t *out_value, int32_t *out_len) 
+    throw (OverflowUnderflowException) {
+        int32_t length = getInt32();
+        *out_len = length;
+        if (!out_value)
+            return false;
+        if (length == -1) {
+            wasNull = true;
+            return true;
+        }
+        if (length > bufsize)
+            return false;
+        char *data = getByReference(length);
+        memcpy(out_value, data, length);
+        return true;
+    }
+    bool getBytes(int32_t index, bool &wasNull, const int32_t bufsize, uint8_t *out_value, int32_t *out_len) 
+    throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+        int32_t length = getInt32(index);
+        *out_len = length;
+        if (!out_value)
+            return false;
+        if (length == -1) {
+            wasNull = true;
+            return true;
+        }
+        if (length > bufsize)
+            return false;
+        char *data = getByReference(index + 4, length);
+        memcpy(out_value, data, length);
+        return true;
+    }
+    ByteBuffer& putBytes(const int32_t bufsize, const uint8_t *in_value) 
+    throw (OverflowUnderflowException) {
+        assert(in_value);
+        putInt32(bufsize);
+        put((const char*)in_value, bufsize);
+        return *this;
+    }
+    ByteBuffer& putBytes(int32_t index, const int32_t bufsize, const uint8_t *in_value) 
+    throw (OverflowUnderflowException, IndexOutOfBoundsException) {        
+        assert(in_value);
+        putInt32(index, bufsize);
+        put(index + 4, (const char*)in_value, bufsize);
+        return *this;
+    }
     ByteBuffer& putString(int32_t index, std::string value) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
         int32_t size = static_cast<int32_t>(value.size());
         putInt32(index, size);

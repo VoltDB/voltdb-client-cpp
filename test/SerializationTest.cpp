@@ -20,16 +20,16 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+
 #include <cppunit/TestCase.h>
 #include <cppunit/extensions/HelperMacros.h>
 #include <cppunit/TestFixture.h>
-#include "Exception.hpp"
-#include "ByteBuffer.hpp"
 #include <boost/scoped_ptr.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
 #include <iostream>
 #include <exception>
+#include <cstdio>
+#include "Exception.hpp"
+#include "ByteBuffer.hpp"
 #include "AuthenticationRequest.hpp"
 #include "AuthenticationResponse.hpp"
 #include "Parameter.hpp"
@@ -56,19 +56,31 @@ CPPUNIT_TEST(testSerializedTable);
 CPPUNIT_TEST_SUITE_END();
 public:
 SharedByteBuffer fileAsByteBuffer(std::string filename) {
-    boost::filesystem::path p( "../test/" + filename);
-    if (!boost::filesystem::exists(p)) {
-        p = boost::filesystem::path( "test/" + filename);
-        if (!boost::filesystem::exists(p)) {
-            throw std::exception();
-        }
-    }
 
-    size_t size = boost::filesystem::file_size(p);
+    int ret = 0;
+
+    std::string path = "../test/" + filename;
+    FILE *fp = fopen(path.c_str(), "r");
+    assert(fp);
+    ret = fseek(fp, 0L, SEEK_END);
+    assert(!ret);
+    size_t size = ftell(fp);
+    ret = fseek(fp, 0L, SEEK_SET);
+    assert(!ret);
+    assert(ftell(fp) == 0);
+
     char *buffer = new char[size];
-    SharedByteBuffer b(buffer, size);
-    boost::filesystem::ifstream ifs(p);
-    ifs.read(buffer, size);
+    SharedByteBuffer b(buffer, (int)size);
+
+    size_t bytes_read = fread(buffer, 1, size, fp);
+    if (bytes_read != size) {
+        printf("Failed to read file at %s with size %d (read: %d)\n",
+            path.c_str(), (int)size, (int)bytes_read);
+    }
+    assert(bytes_read == size);
+
+    fclose(fp);
+
     return b;
 }
 
