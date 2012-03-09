@@ -28,6 +28,7 @@
 #include <event2/thread.h>
 #include "sha1.h"
 
+#define HIGH_WATERMARK 1024 * 1024 * 55
 namespace voltdb {
 
 static bool voltdb_clientimpl_debug_init_libevent = false;
@@ -84,7 +85,7 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
         assert(messageLength < 1024 * 1024);
         pc->m_authenticationResponseLength = messageLength;
         if (evbuffer_get_length(evbuf) < static_cast<size_t>(messageLength)) {
-            bufferevent_setwatermark( bev, EV_READ, static_cast<size_t>(messageLength), 262144);
+            bufferevent_setwatermark( bev, EV_READ, static_cast<size_t>(messageLength), HIGH_WATERMARK);
             return;
         }
     }
@@ -97,7 +98,7 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
     pc->m_post_connect_wait.tv_usec = 10000;
     pc->m_loginExchangeCompleted = true;
     event_base_loopexit( pc->m_base, &pc->m_post_connect_wait);
-    bufferevent_setwatermark( bev, EV_READ, 4, 262144);
+    bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
 }
 
 /**
@@ -243,7 +244,7 @@ void ClientImpl::createConnection(std::string hostname, short port) throw (voltd
         throw voltdb::LibEventException();
     }
     if (pc.m_status) {
-        bufferevent_setwatermark( bev, EV_READ, 4, 262144);
+        bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
         bufferevent_setwatermark( bev, EV_WRITE, 8192, 262144);
         if (bufferevent_enable(bev, EV_READ)) {
             throw voltdb::LibEventException();
@@ -269,7 +270,7 @@ void ClientImpl::createConnection(std::string hostname, short port) throw (voltd
                     throw ClusterInstanceMismatchException();
                 }
             }
-            bufferevent_setwatermark( bev, EV_READ, 4, 262144);
+            bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
             m_bevs.push_back(bev);
             m_contexts[bev] =
                     boost::shared_ptr<CxnContext>(
@@ -511,9 +512,9 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
             }
         } else {
             if (context->m_lengthOrMessage) {
-                bufferevent_setwatermark( bev, EV_READ, 4, 262144);
+                bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
             } else {
-                bufferevent_setwatermark( bev, EV_READ, static_cast<size_t>(context->m_nextLength), 262144);
+                bufferevent_setwatermark( bev, EV_READ, static_cast<size_t>(context->m_nextLength), HIGH_WATERMARK);
             }
             break;
         }
