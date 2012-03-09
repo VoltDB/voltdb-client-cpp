@@ -30,6 +30,8 @@
 #include "AuthenticationResponse.hpp"
 #include "AuthenticationRequest.hpp"
 
+#define HIGH_WATERMARK 1024 * 1024 * 55
+
 namespace voltdb {
     
 struct CallbackPair {
@@ -172,7 +174,7 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
         assert(messageLength < 1024 * 1024);
         context->nextLength = messageLength;
         if (evbuffer_get_length(evbuf) < static_cast<size_t>(messageLength)) {
-            bufferevent_setwatermark( bev, EV_READ, static_cast<size_t>(messageLength), 262144);
+            bufferevent_setwatermark( bev, EV_READ, static_cast<size_t>(messageLength), HIGH_WATERMARK);
             return;
         }
     }
@@ -199,7 +201,7 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
     context->connCallback(context->client, event);
     
     context->loginExchangeCompleted = true;
-    bufferevent_setwatermark( bev, EV_READ, 4, 262144);
+    bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
     
     bufferevent_setcb(context->bev,
                       regularReadCallback,
@@ -428,7 +430,7 @@ void CoreClient::completeAuthenticationRequest(struct CxnContext *context) {
     
     assert(context->connected);
     
-    bufferevent_setwatermark( context->bev, EV_READ, 4, 262144);
+    bufferevent_setwatermark( context->bev, EV_READ, 4, HIGH_WATERMARK);
     bufferevent_setwatermark( context->bev, EV_WRITE, 8192, 262144);
     if (bufferevent_enable(context->bev, EV_READ)) {
         throw voltdb::LibEventException();
@@ -454,7 +456,7 @@ bool CoreClient::processAuthenticationResponse(struct CxnContext *context, Authe
             return false;
         }
     }
-    bufferevent_setwatermark( context->bev, EV_READ, 4, 262144);
+    bufferevent_setwatermark( context->bev, EV_READ, 4, HIGH_WATERMARK);
     bufferevent_setcb(context->bev,
                       voltdb::regularReadCallback,
                       voltdb::regularWriteCallback,
@@ -635,9 +637,9 @@ void CoreClient::regularReadCallback(struct CxnContext *context) {
             
         } else {
             if (context->lengthOrMessage) {
-                bufferevent_setwatermark( context->bev, EV_READ, 4, 262144);
+                bufferevent_setwatermark( context->bev, EV_READ, 4, HIGH_WATERMARK);
             } else {
-                bufferevent_setwatermark( context->bev, EV_READ, static_cast<size_t>(context->nextLength), 262144);
+                bufferevent_setwatermark( context->bev, EV_READ, static_cast<size_t>(context->nextLength), HIGH_WATERMARK);
             }
             break;
         }
