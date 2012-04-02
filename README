@@ -17,6 +17,8 @@ make
 
 This will build the HelloWorld and AsyncHelloWorld applications
 that you can then run against a locally running HelloWorld database.
+The voter example will not build without boost date/time, but the two
+HelloWorld examples will still build although make will fail at the end.
 
 You can additionally view the source code of the examples online at:
 
