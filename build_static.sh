@@ -36,6 +36,7 @@ cp -r ByteBuffer.hpp Client.h ClientConfig.h Column.hpp ConnectionPool.h Decimal
 cp -r ttmath/*.h ../package/include/ttmath
 cp -r boost ../package/include
 cd ..
+cp -r examples package
 cp libvoltcpp.a package
 cd package
 tar cvfz ../volt_cpp.tgz *
