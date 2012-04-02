@@ -5,7 +5,7 @@ protocol. You can use the library to connect to a VoltDB cluster,
 invoke stored procedures and read responses.
 
 The Using VoltDB Guide explains how to use the CPP library in the
-chapter 12.1.2: Writing VoltDB Client Applications in C++.
+chapter 14.1.1: Writing VoltDB Client Applications in C++.
 
 Binaries for 64-bit Linux and 64-bit OSX 10.5+ are provided. The
 linking instructions below apply to the Linux binaries.
@@ -13,32 +13,36 @@ linking instructions below apply to the Linux binaries.
 == Building the kit samples
 In terminal go to the examples directory then run:
 
-./build.sh
+make
 
 This will build the HelloWorld and AsyncHelloWorld applications
 that you can then run against a locally running HelloWorld database.
 
 You can additionally view the source code of the examples online at:
 
-     https://source.voltdb.com/browse/ClientAPI/cpp/trunk/examples
+      https://github.com/VoltDB/voltdb-client-cpp
 
 == Linking against libvoltdb.a
 
 The following command will compile and link an example client
 (clientvoter.cpp) libvoltdb.a.
 
+Note that -lrt and -pthread must appear after the object files being compiled/linked
+in more recent Linux distributions.
+
 Directory structure for this example:
 
-./clientvoter.cpp     # Example client
-./voltdb/include/     # Directory containing client library headers
-./voltdb/lib          # Directory containing client library archive
+./clientvoter.cpp        # Example client
+./include                # Directory containing client library headers
+./                       # Directory containing client library archive
 
-g++ -lrt -I./voltdb/usr/include/ \
+g++ -I./include/                 \
 -D__STDC_LIMIT_MACROS            \
--DBOOST_SP_DISABLE_THREADS       \
 clientvoter.cpp                  \
-./voltdb/lib/libvoltcpp.a        \
--o clientvoter
+./libvoltcpp.a                   \
+-o voter                         \
+-lrt                             \
+-pthread
 
 ==== Example clientvoter.cpp
 
@@ -90,5 +94,3 @@ int main(int argc, char** argv) {
     cout << "Successfully connected and initialized the database." << endl;
     return 0;
 }
-
-

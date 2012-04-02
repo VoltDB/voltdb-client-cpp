@@ -37,6 +37,7 @@ cp -r ttmath/*.h ../package/include/ttmath
 cp -r boost ../package/include
 cd ..
 cp -r examples package
+cp README package
 cp libvoltcpp.a package
 cd package
 tar cvfz ../volt_cpp.tgz *
