@@ -1,6 +1,13 @@
+4/3/12 **UPDATE**
+New makefile in progress. Old build system thrown out for now.
+TODO before merge to master:
+1) Dynamic libs
+2) Script to build libevent from tgz
+3) Updating readme (here)
+
 2/28/12 **UPDATE**
 This file has a fallen out of date in some places, here is a quick update
-libevent and the boost shared ptr are now included so they aren't external dependencies. 
+libevent and the boost shared ptr are now included so they aren't external dependencies.
 build_static.sh will build libevent and the client library (shared and static) and package it
 into volt_cpp.tgz. This should make it a lot easier to compile. Also shared pointers are now
 thread safe everywhere although the client library still isn't making threadsafe use of libevent
@@ -8,8 +15,8 @@ so you should use one per thread.
 
 I added an interrupt method and enabled thread safety in libevent so you should be able
 to call interrupt on an event base. You can use the client from multiple threads
-by dedicating a thread to the event loop and having it pull new invocations off 
-of a thread safe queue. Threads that insert invocations into the queue can call interrupt afterwards 
+by dedicating a thread to the event loop and having it pull new invocations off
+of a thread safe queue. Threads that insert invocations into the queue can call interrupt afterwards
 so the event thread picks them up promptly. This method needs testing.
 
 Contents
