@@ -35,7 +35,7 @@ OBJS += \
 ./src/WireType.o \
 ./src/sha1.o
 
-USER_OBJS := /usr/local/lib/libevent.a /usr/local/lib/libboost_thread.a
+USER_OBJS := /usr/local/lib/libevent.a
 
 RM := rm
 
