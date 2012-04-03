@@ -236,7 +236,7 @@ static void authenticationEventCallback(struct bufferevent *bev, short events, v
         event.hostname = context->hostname;
         event.port = context->port;
         event.type = CONNECTION_LOST;
-        event.info = "Failed establish TCP/IP connection to VoltDB";
+        event.info = "Failed to establish TCP/IP connection to VoltDB";
         context->connCallback(context->client, event);
     }
 }
@@ -350,7 +350,7 @@ int CoreClient::runOnce() {
 
     // use a try block to ensure
     try {
-        result = event_base_loop(m_base, EVLOOP_NONBLOCK);
+        result = event_base_loop(m_base,  );
     }
     catch (voltdb::Exception &e) {
         result = -1;

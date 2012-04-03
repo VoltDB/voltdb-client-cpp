@@ -138,8 +138,7 @@ public:
     int runOnce();
     
     /*
-     * Run the event loop until a procedure or connection callback returns false,
-     * or until interrupt() is called.
+     * Run the event loop until interrupt() is called or an error occurs.
      *
      * Returns EVENT_LOOP_ERROR or INTERRUPTED_OR_EARLY_EXIT
      *
@@ -149,8 +148,8 @@ public:
     int run();
     
     /*
-     * Run the event loop until a procedure or connection callback is called,
-     * until a timer elapses or until interrupt() is called.
+     * Run the event loop until a timer elapses, until interrupt() is called
+     * or an error occurs.
      *
      * Returns EVENT_LOOP_ERROR, INTERRUPTED_OR_EARLY_EXIT or TIMEOUT_ELAPSED
      */
