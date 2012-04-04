@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000-2007 Niels Provos <provos@citi.umich.edu>
- * Copyright (c) 2007-2011 Niels Provos and Nick Mathewson
+ * Copyright (c) 2007-2012 Niels Provos and Nick Mathewson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -427,6 +427,12 @@ struct evdns_base;
 struct evhttp_connection *evhttp_connection_base_new(
 	struct event_base *base, struct evdns_base *dnsbase,
 	const char *address, unsigned short port);
+
+/**
+ * Return the bufferevent that an evhttp_connection is using.
+ */
+struct bufferevent *evhttp_connection_get_bufferevent(
+	struct evhttp_connection *evcon);
 
 /** Takes ownership of the request object
  *

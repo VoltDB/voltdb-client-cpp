@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007-2011 Niels Provos and Nick Mathewson
+ * Copyright (c) 2007-2012 Niels Provos and Nick Mathewson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -626,8 +626,10 @@ struct evbuffer_ptr evbuffer_search_eol(struct evbuffer *buffer,
     the buffer does not have as much data as you asked to see).
 
     @param buffer the evbuffer to peek into,
-    @param len the number of bytes to try to peek.  If negative, we
-       will try to fill as much of vec_out as we can.
+    @param len the number of bytes to try to peek.  If len is negative, we
+       will try to fill as much of vec_out as we can.  If len is negative
+       and vec_out is not provided, we return the number of evbuffer_iovecs
+       that would be needed to get all the data in the buffer.
     @param start_at an evbuffer_ptr indicating the point at which we
        should start looking for data.  NULL means, "At the start of the
        buffer."

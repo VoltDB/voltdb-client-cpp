@@ -25,7 +25,7 @@
 #define _EVENT_HAVE_ARC4RANDOM 1
 
 /* Define to 1 if you have the `arc4random_buf' function. */
-#define _EVENT_HAVE_ARC4RANDOM_BUF 1
+/* #undef _EVENT_HAVE_ARC4RANDOM_BUF */
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #define _EVENT_HAVE_ARPA_INET_H 1
@@ -146,7 +146,7 @@
 #define _EVENT_HAVE_NETINET_IN_H 1
 
 /* Define if the system has openssl */
-#define _EVENT_HAVE_OPENSSL 1
+/* #undef _EVENT_HAVE_OPENSSL */
 
 /* Define to 1 if you have the <openssl/bio.h> header file. */
 #define _EVENT_HAVE_OPENSSL_BIO_H 1
@@ -259,6 +259,9 @@
 /* Define to 1 if `__ss_family' is a member of `struct sockaddr_storage'. */
 /* #undef _EVENT_HAVE_STRUCT_SOCKADDR_STORAGE___SS_FAMILY */
 
+/* Define to 1 if you have the `sysctl' function. */
+#define _EVENT_HAVE_SYSCTL 1
+
 /* Define to 1 if you have the <sys/devpoll.h> header file. */
 /* #undef _EVENT_HAVE_SYS_DEVPOLL_H */
 
@@ -363,7 +366,7 @@
 /* #undef _EVENT_NO_MINUS_C_MINUS_O */
 
 /* Numeric representation of the version */
-#define _EVENT_NUMERIC_VERSION 0x02001000
+#define _EVENT_NUMERIC_VERSION 0x02001200
 
 /* Name of package */
 #define _EVENT_PACKAGE "libevent"
@@ -418,7 +421,7 @@
 #define _EVENT_TIME_WITH_SYS_TIME 1
 
 /* Version number of package */
-#define _EVENT_VERSION "2.0.16-stable"
+#define _EVENT_VERSION "2.0.18-stable"
 
 /* Define to appropriate substitue if compiler doesnt have __func__ */
 /* #undef _EVENT___func__ */
