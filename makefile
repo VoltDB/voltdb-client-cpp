@@ -1,7 +1,7 @@
 CC=g++
-CFLAGS=-Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 -O2 -Wall
+CFLAGS=-Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 -O3 -Wall
 LIB_NAME=libvoltdbcpp
-KIT_NAME=$(LIB_NAME)
+KIT_NAME=voltdb-cpp-client
 
 PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
@@ -14,7 +14,7 @@ ifeq ($(PLATFORM),Linux)
 	CFLAGS += -fPIC
 endif
 
-.PHONEY: all clean test
+.PHONEY: all clean test kit
 
 OBJS := obj/Client.o \
 		obj/ClientConfig.o \
@@ -34,7 +34,7 @@ TEST_OBJS := test_obj/ByteBufferTest.o \
 RM := rm -rf
 
 # All Target
-all: libvoltdbcpp.a
+all: $(KIT_NAME).tar.gz
 
 obj/%.o: src/%.cpp
 	@echo 'Building file: $<'
@@ -67,7 +67,7 @@ $(LIB_NAME).so: $(OBJS)
 	$(CC) -shared -Wl -o $@ $? $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS)
 	@echo
 
-libvoltdbcpp.tgz: $(LIB_NAME).a $(LIB_NAME).so
+$(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 	@echo 'Building distribution kit'
 	rm -rf $(KIT_NAME)
 	mkdir -p $(KIT_NAME)/include/ttmath
@@ -83,8 +83,10 @@ libvoltdbcpp.tgz: $(LIB_NAME).a $(LIB_NAME).so
 
 	cp -R examples $(KIT_NAME)/
 	cp README $(KIT_NAME)/
+	cp README.thirdparty $(KIT_NAME)/
 	cp $(LIB_NAME).so $(KIT_NAME)/
 	cp $(LIB_NAME).a $(KIT_NAME)/
+	cp -R $(THIRD_PARTY_LIBS) $(KIT_NAME)/
 
 	tar -czf $(KIT_NAME).tgz $(KIT_NAME)
 
@@ -92,7 +94,7 @@ libvoltdbcpp.tgz: $(LIB_NAME).a $(LIB_NAME).so
 
 testbin: $(LIB_NAME).a $(TEST_OBJS)
 	@echo 'Compiling CPPUnit tests'
-	$(CC) $(CFLAGS) $(TEST_OBJS) libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -lcppunit -o testbin
+	$(CC) $(CFLAGS) $(TEST_OBJS) $(LIB_NAME).a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -lcppunit -o testbin
 	@echo ' '
 
 test: testbin

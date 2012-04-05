@@ -3,3 +3,5 @@
 /libvoltdbcpp.so
 /libvoltdbcpp.tgz
 /libeventinstall/
+/voltdb-cpp-client/
+/*.tgz
