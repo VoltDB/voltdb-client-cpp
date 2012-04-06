@@ -51,7 +51,7 @@ int64_t maxExecutionMilliseconds = -1;
 int64_t totExecutionMilliseconds = 0;
 int64_t totExecutions = 0;
 int64_t totExecutionsLatency = 0;
-int64_t latencyCounter[] = {0, 0, 0, 0, 0, 0, 0, 0};
+int64_t latencyCounter[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 int64_t voteResultCounter[] = {0, 0, 0};
 
@@ -249,7 +249,7 @@ int main(int argc, char* argv[])
 			thisOutstanding = numSPCalls - totExecutions;
 			float avgLatency = (float) totExecutionMilliseconds / (float) totExecutionsLatency;
 
-			cout << percentComplete << "% Complete | SP Calls: " << numSPCalls << " at " << (numSPCalls / elapsedTimeMillis2) << " SP/sec | outstanding = " << thisOutstanding << " (" << (thisOutstanding - lastOutstanding) << ") | min = " << minExecutionMilliseconds << " | max = " << maxExecutionMilliseconds << " | avg = " << avgLatency << endl;
+			cout << percentComplete << "% Complete | SP Calls: " << numSPCalls << " at " << ((numSPCalls * 1000) / elapsedTimeMillis2) << " SP/sec | outstanding = " << thisOutstanding << " (" << (thisOutstanding - lastOutstanding) << ") | min = " << minExecutionMilliseconds << " | max = " << maxExecutionMilliseconds << " | avg = " << avgLatency << endl;
 
 			lastOutstanding = thisOutstanding;
 		}
@@ -285,7 +285,7 @@ int main(int argc, char* argv[])
 		{
 			voltdb::Row row = tableIter.next();
 			string resultName = row.getString(0);
-			int64_t resultVotes = row.getInt64(1);
+			int64_t resultVotes = row.getInt64(2);
 			cout << " - Contestant " << resultName << " received " << resultVotes << " vote(s)" << endl;
 
 			if (resultVotes > winnerVotes)
@@ -303,10 +303,11 @@ int main(int argc, char* argv[])
 	cout << "*******************************************************************" << endl;
 	cout << " - Ran for " << elapsedTimeMillis / 1000 << " seconds" << endl;
 	cout << " - Performed " << numSPCalls << " Stored Procedure calls" << endl;
-	cout << " - At " << (numSPCalls / elapsedTimeMillis) << " calls per second" << endl;
+	cout << " - At " << ((numSPCalls * 1000) / elapsedTimeMillis) << " calls per second" << endl;
 	cout << " - Average Latency = " << (float)(totExecutionMilliseconds / totExecutionsLatency) << " ms" << endl;
 
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < 8; i++) {
 		cout << " -  Latency " << (i * 25) << "ms\t- " << (i * 25 + 25) << "ms\t= " << latencyCounter[i] << endl;
+	}
 	cout << " -  Latency 200ms+\t\t= " << latencyCounter[8] << endl;
 }
