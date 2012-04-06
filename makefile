@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 -O3 -Wall
 LIB_NAME=libvoltdbcpp
-KIT_NAME=voltdb-cpp-client
+KIT_NAME=voltdb-client-cpp-x86_64-2.5
 
 PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
@@ -88,7 +88,7 @@ $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 	cp $(LIB_NAME).a $(KIT_NAME)/
 	cp -R $(THIRD_PARTY_LIBS) $(KIT_NAME)/
 
-	tar -czf $(KIT_NAME).tgz $(KIT_NAME)
+	tar -czf $(KIT_NAME).tar.gz $(KIT_NAME)
 
 	@echo
 

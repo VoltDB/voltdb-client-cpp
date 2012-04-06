@@ -21,6 +21,9 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#define __STDC_CONSTANT_MACROS
+#define __STDC_LIMIT_MACROS
+
 #include <vector>
 #include <string>
 #include <iostream>
