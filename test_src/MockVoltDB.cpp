@@ -52,7 +52,7 @@ SharedByteBuffer fileAsByteBuffer(std::string filename) {
 
     int ret = 0;
 
-    std::string path = "../test/" + filename;
+    std::string path = "test_src/" + filename;
     FILE *fp = fopen(path.c_str(), "r");
     assert(fp);
     ret = fseek(fp, 0L, SEEK_END);
