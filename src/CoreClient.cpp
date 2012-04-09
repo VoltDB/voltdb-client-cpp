@@ -350,7 +350,7 @@ int CoreClient::runOnce() {
 
     // use a try block to ensure
     try {
-        result = event_base_loop(m_base,  );
+        result = event_base_loop(m_base,EVLOOP_NONBLOCK);
     }
     catch (voltdb::Exception &e) {
         result = -1;
