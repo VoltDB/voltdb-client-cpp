@@ -23,6 +23,7 @@
 #include <cppunit/TestCase.h>
 #include <cppunit/extensions/HelperMacros.h>
 #include <cppunit/TestFixture.h>
+#include <vector>
 #include "Client.h"
 #include "MockVoltDB.h"
 #include "StatusListener.h"
@@ -31,7 +32,6 @@
 #include "Procedure.hpp"
 #include "WireType.h"
 #include "ProcedureCallback.hpp"
-#include <vector>
 #include "InvocationResponse.hpp"
 #include "ClientConfig.h"
 
@@ -69,6 +69,7 @@ class ClientTest : public CppUnit::TestFixture {
 CPPUNIT_TEST_SUITE( ClientTest );
 CPPUNIT_TEST( testConnect );
 CPPUNIT_TEST( testSyncInvoke );
+CPPUNIT_TEST( testLargeReply );
 CPPUNIT_TEST_EXCEPTION( testInvokeSyncNoConnections, voltdb::NoConnectionsException );
 CPPUNIT_TEST_EXCEPTION( testInvokeAsyncNoConnections, voltdb::NoConnectionsException );
 CPPUNIT_TEST_EXCEPTION( testRunNoConnections, voltdb::NoConnectionsException );
@@ -152,6 +153,21 @@ public:
         CPPUNIT_ASSERT(response.appStatusCode() == -128);
         CPPUNIT_ASSERT(response.appStatusString() == "");
         CPPUNIT_ASSERT(response.results().size() == 0);
+    }
+
+    // ENG-2553. Connection shouldn't timeout.
+    void testLargeReply() {
+        (m_client)->createConnection("localhost");
+        std::vector<Parameter> signature;
+        signature.push_back(Parameter(WIRE_TYPE_STRING));
+        signature.push_back(Parameter(WIRE_TYPE_STRING));
+        signature.push_back(Parameter(WIRE_TYPE_STRING));
+        Procedure proc("Insert", signature);
+        ParameterSet *params = proc.params();
+        params->addString("Hello").addString("World").addString("English");
+        m_voltdb->filenameForNextResponse("mimicLargeReply");
+        InvocationResponse response = (m_client)->invoke(proc);
+        CPPUNIT_ASSERT(response.success());
     }
 
     void testInvokeSyncNoConnections() {

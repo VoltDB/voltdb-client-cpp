@@ -43,6 +43,7 @@ public:
     void writeCallback(struct bufferevent *bev);
     void acceptCallback(struct evconnlistener *listener,
             evutil_socket_t sock, struct sockaddr *addr, int len);
+    void mimicLargeReply(int64_t, struct bufferevent *bev);
     ~MockVoltDB();
 
     void filenameForNextResponse(std::string filename) {
