@@ -15,16 +15,15 @@ In terminal go to the examples directory then run:
 
 make
 
-This will build the HelloWorld and AsyncHelloWorld applications
-that you can then run against a locally running HelloWorld database.
-The voter example will not build without boost date/time, but the two
-HelloWorld examples will still build although make will fail at the end.
+This will build the HelloWorld, AsyncHelloWorld and Voter applications
+that you can then run against a locally running HelloWorld or Voter database.
 
-You can additionally view the source code of the examples online at:
+You can additionally view the source code of the c++ client library and the
+examples online at:
 
       https://github.com/VoltDB/voltdb-client-cpp
 
-== Linking against libvoltdb.a
+== Linking against libvoltdbcpp.a
 
 The following command will compile and link an example client
 (clientvoter.cpp) libvoltdb.a.
@@ -39,12 +38,16 @@ Directory structure for this example:
 ./                       # Directory containing client library archive
 
 g++ -I./include/                 \
--D__STDC_LIMIT_MACROS            \
 clientvoter.cpp                  \
-./libvoltcpp.a                   \
--o voter                         \
+./libvoltdbcpp.a                 \
+./libevent.a                     \
+./libevent_pthread.a             \
 -lrt                             \
--pthread
+-pthread                         \
+-o voter
+
+Note that -lrt should not be included for the mac edition. See the example makefile
+for more detail.
 
 ==== Example clientvoter.cpp
 
@@ -55,6 +58,9 @@ clientvoter.cpp                  \
 
  The "Using VoltDB Guide" includes more complete information.
 */
+
+#define __STDC_CONSTANT_MACROS
+#define __STDC_LIMIT_MACROS
 
 #include "Client.h"
 #include "Parameter.hpp"

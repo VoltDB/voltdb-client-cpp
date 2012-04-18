@@ -1,17 +1,24 @@
+CC=g++
+CFLAGS=-I../include -g3 -O3
+
+PLATFORM = $(shell uname)
+ifeq ($(PLATFORM),Darwin)
+	SYSTEM_LIBS := -lpthread
+endif
+ifeq ($(PLATFORM),Linux)
+	SYSTEM_LIBS := -lpthread -lrt
+endif
+
 all: helloworld asynchelloworld voter
 
-asynchelloworld: AsyncHelloWorld.cpp ../libvoltcpp.a
-	g++ -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -O0 -g3 -I../include -lrt -pthread HelloWorld.cpp ../libvoltcpp.a -lrt -o asynchelloworld
-	
-helloworld: HelloWorld.cpp ../libvoltcpp.a
-	g++ -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -O0 -g3 -I../include -lrt -pthread HelloWorld.cpp ../libvoltcpp.a -lrt -o helloworld
+asynchelloworld: AsyncHelloWorld.cpp ../libvoltdbcpp.a
+	$(CC) $(CFLAGS) HelloWorld.cpp ../libvoltdbcpp.a ../libevent.a ../libevent_pthreads.a $(SYSTEM_LIBS) -o asynchelloworld
 
-voter: Voter.cpp ../libvoltcpp.a
-	g++ -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -O3 -g3 -I../include -lrt -pthread Voter.cpp ../libvoltcpp.a -lrt -o voter
+helloworld: HelloWorld.cpp ../libvoltdbcpp.a
+	$(CC) $(CFLAGS) HelloWorld.cpp ../libvoltdbcpp.a ../libevent.a ../libevent_pthreads.a $(SYSTEM_LIBS) -o helloworld
 
-../libvoltcpp.a:
-	cd .. ; \
-	./build_static.sh
+voter: Voter.cpp ../libvoltdbcpp.a
+	$(CC) $(CFLAGS) Voter.cpp ../libvoltdbcpp.a ../libevent.a ../libevent_pthreads.a $(SYSTEM_LIBS) -o voter
 
 clean:
-	rm asynchelloworld helloworld
+	rm asynchelloworld helloworld voter

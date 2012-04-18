@@ -20,6 +20,11 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+
+#define __STDC_CONSTANT_MACROS
+#define __STDC_LIMIT_MACROS
+
+#include <vector>
 #include <boost/shared_ptr.hpp>
 #include "Client.h"
 #include "Table.h"
@@ -29,7 +34,6 @@
 #include "Parameter.hpp"
 #include "ParameterSet.hpp"
 #include "ClientConfig.h"
-#include <vector>
 
 int main(int argc, char **argv) {
     /*
