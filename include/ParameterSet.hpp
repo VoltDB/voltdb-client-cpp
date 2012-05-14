@@ -53,7 +53,7 @@ public:
     throw (voltdb::ParamMismatchException) {
         validateType(WIRE_TYPE_VARBINARY, false);
         m_buffer.ensureRemaining(1 + 4 + bufsize);
-        m_buffer.putInt8(WIRE_TYPE_DECIMAL);
+        m_buffer.putInt8(WIRE_TYPE_VARBINARY);
         m_buffer.putBytes(bufsize, in_value);
         m_currentParam++;
         return *this;
