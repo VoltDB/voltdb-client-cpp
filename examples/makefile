@@ -12,13 +12,13 @@ endif
 all: helloworld asynchelloworld voter
 
 asynchelloworld: AsyncHelloWorld.cpp ../libvoltdbcpp.a
-	$(CC) $(CFLAGS) HelloWorld.cpp ../libvoltdbcpp.a ../libevent.a ../libevent_pthreads.a $(SYSTEM_LIBS) -o asynchelloworld
+	$(CC) $(CFLAGS) HelloWorld.cpp ../libvoltdbcpp.a ../third_party_libs/linux/libevent.a ../third_party_libs/linux/libevent_pthreads.a $(SYSTEM_LIBS) -o asynchelloworld
 
 helloworld: HelloWorld.cpp ../libvoltdbcpp.a
-	$(CC) $(CFLAGS) HelloWorld.cpp ../libvoltdbcpp.a ../libevent.a ../libevent_pthreads.a $(SYSTEM_LIBS) -o helloworld
+	$(CC) $(CFLAGS) HelloWorld.cpp ../libvoltdbcpp.a ../third_party_libs/linux/libevent.a ../third_party_libs/linux/libevent_pthreads.a $(SYSTEM_LIBS) -o helloworld
 
 voter: Voter.cpp ../libvoltdbcpp.a
-	$(CC) $(CFLAGS) Voter.cpp ../libvoltdbcpp.a ../libevent.a ../libevent_pthreads.a $(SYSTEM_LIBS) -o voter
+	$(CC) $(CFLAGS) Voter.cpp ../libvoltdbcpp.a ../third_party_libs/linux/libevent.a ../third_party_libs/linux/libevent_pthreads.a $(SYSTEM_LIBS) -o voter
 
 clean:
 	rm asynchelloworld helloworld voter
