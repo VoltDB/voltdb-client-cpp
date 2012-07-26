@@ -112,14 +112,16 @@ private:
  * to the pool.
  */
 void cleanupOnScriptEnd(void *ptr) {
-    ClientSet *clients = reinterpret_cast<ClientSet*>(ptr);
-    if (clients != NULL) {
-        boost::scoped_ptr<ClientSet> guard(clients);
-        for(ClientSet::iterator i = clients->begin(); i != clients->end(); i++) {
-            (*i)->m_listener->m_listener = NULL;
-            if (gPool != NULL) {
+    if (gPool != NULL) {
+        LockGuard guard(gPool->m_lock);
+        ClientSet *clients = reinterpret_cast<ClientSet*>(ptr);
+        if (clients != NULL) {
+            boost::scoped_ptr<ClientSet> guard(clients);
+            for(ClientSet::iterator i = clients->begin(); i != clients->end(); i++) {
+                (*i)->m_listener->m_listener = NULL;
                 gPool->m_clients[(*i)->m_identifier].push_back(*i);
             }
+            pthread_setspecific(gPool->m_borrowedClients, NULL);
         }
     }
 }
@@ -204,10 +206,7 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
  * Release any unreleased clients associated with this thread/script
  */
 void ConnectionPool::onScriptEnd() {
-    LockGuard guard(m_lock);
-    ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
-    delete clients;
-    pthread_setspecific( m_borrowedClients, NULL);
+    cleanupOnScriptEnd(pthread_getspecific(m_borrowedClients));
 }
 
 /*
