@@ -63,7 +63,7 @@ public:
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(std::string hostname, short port);
+    void createConnection(errType& err, std::string hostname, short port);
 
     /*
      * Synchronously invoke a stored procedure and return a the response.

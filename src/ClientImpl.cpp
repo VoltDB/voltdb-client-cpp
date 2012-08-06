@@ -230,7 +230,8 @@ private:
     bool m_success;
 };
 
-void ClientImpl::createConnection(std::string hostname, short port) {
+// TODO_ERROR
+void ClientImpl::createConnection(errType& err, std::string hostname, short port) {
     struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE);
     FreeBEVOnFailure protector(bev);
     if (bev == NULL) {
@@ -252,7 +253,7 @@ void ClientImpl::createConnection(std::string hostname, short port) {
         }
         AuthenticationRequest authRequest( m_username, "database", m_passwordHash );
         ScopedByteBuffer bb(authRequest.getSerializedSize());
-        authRequest.serializeTo(&bb);
+        authRequest.serializeTo(err, &bb);
         struct evbuffer *evbuf = bufferevent_get_output(bev);
         if (evbuffer_add( evbuf, bb.bytes(), static_cast<size_t>(bb.remaining()))) {
             throw voltdb::LibEventException();
@@ -318,11 +319,16 @@ InvocationResponse ClientImpl::invoke(errType& err, Procedure &proc) {
     }
     int32_t messageSize = proc.getSerializedSize(err);
     if (!isOk(err)) {
-        return null;
+        // TODO_ERRROR
+        throw voltdb::Exception();
     }
     ScopedByteBuffer sbb(messageSize);
     int64_t clientData = m_nextRequestId++;
-    proc.serializeTo(&sbb, clientData);
+    proc.serializeTo(err, &sbb, clientData);
+    if (!isOk(err)) {
+        // TODO_ERRROR
+        throw voltdb::Exception();
+    }
     struct bufferevent *bev = m_bevs[m_nextConnectionIndex++ % m_bevs.size()];
     InvocationResponse response;
     boost::shared_ptr<ProcedureCallback> callback(new SyncCallback(&response));
@@ -367,7 +373,10 @@ void ClientImpl::invoke(errType& err, Procedure &proc, boost::shared_ptr<Procedu
     }
     ScopedByteBuffer sbb(messageSize);
     int64_t clientData = m_nextRequestId++;
-    proc.serializeTo(&sbb, clientData);
+    proc.serializeTo(err, &sbb, clientData);
+    if (!isOk(err)) {
+        return;
+    }
 
     /*
      * Decide what connection to buffer the event on.

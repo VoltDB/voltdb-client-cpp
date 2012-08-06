@@ -38,10 +38,11 @@ Client::~Client() {
 
 void
 Client::createConnection(
+        errType& err,
         std::string hostname,
         short port)
 {
-    m_impl->createConnection(hostname, port);
+    m_impl->createConnection(err, hostname, port);
 }
 
 /*
