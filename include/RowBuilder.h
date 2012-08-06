@@ -52,31 +52,46 @@ public:
     void addInt64(errType& err, int64_t val) {
         validateType(WIRE_TYPE_BIGINT);
         m_buffer.ensureRemaining(8);
-        m_buffer.putInt64(val);
+        m_buffer.putInt64(err, val);
+        if (!isOk(err)) {
+            return;
+        }
         m_currentColumn++;
     }
     void addInt32(errType& err, int32_t val) {
         validateType(WIRE_TYPE_INTEGER);
         m_buffer.ensureRemaining(4);
-        m_buffer.putInt32(val);
+        m_buffer.putInt32(err, val);
+        if (!isOk(err)) {
+            return;
+        }
         m_currentColumn++;
     }
     void addInt16(errType& err, int16_t val) {
         validateType(WIRE_TYPE_SMALLINT);
         m_buffer.ensureRemaining(2);
-        m_buffer.putInt16(val);
+        m_buffer.putInt16(err, val);
+        if (!isOk(err)) {
+            return;
+        }
         m_currentColumn++;
     }
     void addInt8(errType& err, int8_t val) {
         validateType(WIRE_TYPE_TINYINT);
         m_buffer.ensureRemaining(1);
-        m_buffer.putInt8(val);
+        m_buffer.putInt8(err, val);
+        if (!isOk(err)) {
+            return;
+        }
         m_currentColumn++;
     }
     void addDouble(errType& err, double val) {
         validateType(WIRE_TYPE_FLOAT);
         m_buffer.ensureRemaining(8);
-        m_buffer.putDouble(val);
+        m_buffer.putDouble(err, val);
+        if (!isOk(err)) {
+            return;
+        }
         m_currentColumn++;
     }
     void addNull(errType& err) {
@@ -116,14 +131,20 @@ public:
     void addString(errType& err, std::string val) {
         validateType(WIRE_TYPE_STRING);
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(val.size()));
-        m_buffer.putString(val);
+        m_buffer.putString(err, val);
+        if (!isOk(err)) {
+            return;
+        }
         m_currentColumn++;
     }
 
     void addVarbinary(errType& err, const int32_t bufsize, const uint8_t *in_value) {
         validateType(WIRE_TYPE_VARBINARY);
         m_buffer.ensureRemaining(4 + bufsize);
-        m_buffer.putBytes(bufsize, in_value);
+        m_buffer.putBytes(err, bufsize, in_value);
+        if (!isOk(err)) {
+            return;
+        }
         m_currentColumn++;
     }
 
