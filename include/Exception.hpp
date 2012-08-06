@@ -59,7 +59,7 @@ void setErr(errType& outParam, const int errorCode) {
 
 // clear an outParameter.
 void setOk(errType& outParam) {
-    setErr(outParam, errOk)
+    setErr(outParam, errOk);
 }
 
 /*
