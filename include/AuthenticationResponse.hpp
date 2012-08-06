@@ -62,7 +62,7 @@ public:
         }
         m_leaderAddress = buf.getInt32(m_err);
         bool wasNull = false;
-        m_buildString = buf.getString(wasNull);
+        m_buildString = buf.getString(m_err, wasNull);
         if (!isOk(m_err)) {
             return;
         }
