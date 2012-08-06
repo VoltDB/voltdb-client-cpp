@@ -512,21 +512,21 @@ public:
         return false;
     }
 
-    virtual void ensureRemaining(errType& err, int32_t remaining) {
+    virtual void ensureRemaining(int32_t remaining) {
         remaining = 0;
-        setErr(err, errNonExpandableBufferException);
+        // TODO_ERROR: crash?
     }
-    virtual void ensureRemainingExact(errType& err, int32_t remaining) {
+    virtual void ensureRemainingExact(int32_t remaining) {
         remaining = 0;
-        setErr(err, errNonExpandableBufferException);
+        // TODO_ERROR: crash?
     }
-    virtual void ensureCapacity(errType& err, int32_t capacity) {
+    virtual void ensureCapacity(int32_t capacity) {
         capacity = 0;
-        setErr(err, errNonExpandableBufferException);
+        // TODO_ERROR: crash?
     }
-    virtual void ensureCapacityExact(errType& err, int32_t capacity) {
+    virtual void ensureCapacityExact(int32_t capacity) {
         capacity = 0;
-        setErr(err, errNonExpandableBufferException);
+        // TODO_ERROR: crash?
     }
 
     /**

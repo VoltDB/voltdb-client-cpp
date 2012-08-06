@@ -47,12 +47,18 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addBytes(const int32_t bufsize, const uint8_t *in_value)
+    ParameterSet& addBytes(errType& err, const int32_t bufsize, const uint8_t *in_value)
     {
         validateType(WIRE_TYPE_VARBINARY, false);
         m_buffer.ensureRemaining(1 + 4 + bufsize);
-        m_buffer.putInt8(WIRE_TYPE_VARBINARY);
-        m_buffer.putBytes(bufsize, in_value);
+        m_buffer.putInt8(err, WIRE_TYPE_VARBINARY);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putBytes(err, bufsize, in_value);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_currentParam++;
         return *this;
     }
@@ -62,11 +68,17 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addDecimal(Decimal val) {
+    ParameterSet& addDecimal(errType& err, Decimal val) {
         validateType(WIRE_TYPE_DECIMAL, false);
         m_buffer.ensureRemaining(static_cast<int32_t>(sizeof(Decimal)) + 1);
-        m_buffer.putInt8(WIRE_TYPE_DECIMAL);
-        val.serializeTo(&m_buffer);
+        m_buffer.putInt8(err, WIRE_TYPE_DECIMAL);
+        if (!isOk(err)) {
+            return *this;
+        }
+        val.serializeTo(err, &m_buffer);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_currentParam++;
         return *this;
     }
@@ -76,14 +88,29 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addDecimal(std::vector<Decimal> vals) {
+    ParameterSet& addDecimal(errType& err, std::vector<Decimal> vals) {
         validateType(WIRE_TYPE_DECIMAL, true);
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(sizeof(Decimal) * vals.size()));
-        m_buffer.putInt8(WIRE_TYPE_ARRAY);
-        m_buffer.putInt8(WIRE_TYPE_DECIMAL);
-        m_buffer.putInt16(static_cast<int16_t>(vals.size()));
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt8(err, WIRE_TYPE_ARRAY);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt8(err, WIRE_TYPE_DECIMAL);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt16(err, static_cast<int16_t>(vals.size()));
+        if (!isOk(err)) {
+            return *this;
+        }
         for (std::vector<Decimal>::iterator i = vals.begin(); i != vals.end(); i++) {
-            i->serializeTo(&m_buffer);
+            i->serializeTo(err, &m_buffer);
+            if (!isOk(err)) {
+                return *this;
+            }
         }
         m_currentParam++;
         return *this;
@@ -94,11 +121,17 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addTimestamp(int64_t val) {
+    ParameterSet& addTimestamp(errType& err, int64_t val) {
         validateType(WIRE_TYPE_TIMESTAMP, false);
         m_buffer.ensureRemaining(9);
-        m_buffer.putInt8(WIRE_TYPE_TIMESTAMP);
-        m_buffer.putInt64(val);
+        m_buffer.putInt8(err, WIRE_TYPE_TIMESTAMP);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt64(err, val);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_currentParam++;
         return *this;
     }
@@ -108,14 +141,26 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addTimestamp(std::vector<int64_t> vals) {
+    ParameterSet& addTimestamp(errType& err, std::vector<int64_t> vals) {
         validateType(WIRE_TYPE_TIMESTAMP, true);
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(sizeof(int64_t) * vals.size()));
-        m_buffer.putInt8(WIRE_TYPE_ARRAY);
-        m_buffer.putInt8(WIRE_TYPE_TIMESTAMP);
-        m_buffer.putInt16(static_cast<int16_t>(vals.size()));
+        m_buffer.putInt8(err, WIRE_TYPE_ARRAY);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt8(err, WIRE_TYPE_TIMESTAMP);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt16(err, static_cast<int16_t>(vals.size()));
+        if (!isOk(err)) {
+            return *this;
+        }
         for (std::vector<int64_t>::iterator i = vals.begin(); i != vals.end(); i++) {
-            m_buffer.putInt64(*i);
+            m_buffer.putInt64(err, *i);
+            if (!isOk(err)) {
+                return *this;
+            }
         }
         m_currentParam++;
         return *this;
@@ -126,11 +171,17 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addInt64(int64_t val) {
+    ParameterSet& addInt64(errType& err, int64_t val) {
         validateType(WIRE_TYPE_BIGINT, false);
         m_buffer.ensureRemaining(9);
-        m_buffer.putInt8(WIRE_TYPE_BIGINT);
-        m_buffer.putInt64(val);
+        m_buffer.putInt8(err, WIRE_TYPE_BIGINT);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt64(err, val);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_currentParam++;
         return *this;
     }
@@ -140,14 +191,26 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addInt64(std::vector<int64_t> vals) {
+    ParameterSet& addInt64(errType& err, std::vector<int64_t> vals) {
         validateType(WIRE_TYPE_BIGINT, true);
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(sizeof(int64_t) * vals.size()));
-        m_buffer.putInt8(WIRE_TYPE_ARRAY);
-        m_buffer.putInt8(WIRE_TYPE_BIGINT);
-        m_buffer.putInt16(static_cast<int16_t>(vals.size()));
+        m_buffer.putInt8(err,WIRE_TYPE_ARRAY);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt8(err, WIRE_TYPE_BIGINT);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt16(err, static_cast<int16_t>(vals.size()));
+        if (!isOk(err)) {
+            return *this;
+        }
         for (std::vector<int64_t>::iterator i = vals.begin(); i != vals.end(); i++) {
-            m_buffer.putInt64(*i);
+            m_buffer.putInt64(err, *i);
+            if (!isOk(err)) {
+                return *this;
+            }
         }
         m_currentParam++;
         return *this;
@@ -158,11 +221,17 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addInt32(int32_t val) {
+    ParameterSet& addInt32(errType& err, int32_t val) {
         validateType(WIRE_TYPE_INTEGER, false);
         m_buffer.ensureRemaining(5);
-        m_buffer.putInt8(WIRE_TYPE_INTEGER);
-        m_buffer.putInt32(val);
+        m_buffer.putInt8(err, WIRE_TYPE_INTEGER);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt32(err, val);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_currentParam++;
         return *this;
     }
@@ -172,14 +241,26 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addInt32(std::vector<int32_t> vals) {
+    ParameterSet& addInt32(errType &err, std::vector<int32_t> vals) {
         validateType(WIRE_TYPE_INTEGER, true);
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(sizeof(int32_t) * vals.size()));
-        m_buffer.putInt8(WIRE_TYPE_ARRAY);
-        m_buffer.putInt8(WIRE_TYPE_INTEGER);
-        m_buffer.putInt16(static_cast<int16_t>(vals.size()));
+        m_buffer.putInt8(err, WIRE_TYPE_ARRAY);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt8(err, WIRE_TYPE_INTEGER);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt16(err, static_cast<int16_t>(vals.size()));
+        if (!isOk(err)) {
+            return *this;
+        }
         for (std::vector<int32_t>::iterator i = vals.begin(); i != vals.end(); i++) {
-            m_buffer.putInt32(*i);
+            m_buffer.putInt32(err, *i);
+            if (!isOk(err)) {
+                return *this;
+            }
         }
         m_currentParam++;
         return *this;
@@ -190,11 +271,17 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addInt16(int16_t val) {
+    ParameterSet& addInt16(errType& err, int16_t val) {
         validateType(WIRE_TYPE_SMALLINT, false);
         m_buffer.ensureRemaining(3);
-        m_buffer.putInt8(WIRE_TYPE_SMALLINT);
-        m_buffer.putInt16(val);
+        m_buffer.putInt8(err, WIRE_TYPE_SMALLINT);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt16(err, val);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_currentParam++;
         return *this;
     }
@@ -204,14 +291,26 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addInt16(std::vector<int16_t> vals) {
+    ParameterSet& addInt16(errType& err, std::vector<int16_t> vals) {
         validateType(WIRE_TYPE_SMALLINT, true);
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(sizeof(int16_t) * vals.size()));
-        m_buffer.putInt8(WIRE_TYPE_ARRAY);
-        m_buffer.putInt8(WIRE_TYPE_SMALLINT);
+        m_buffer.putInt8(err, WIRE_TYPE_ARRAY);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt8(err, WIRE_TYPE_SMALLINT);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.putInt16(static_cast<int16_t>(vals.size()));
+        if (!isOk(err)) {
+            return *this;
+        }
         for (std::vector<int16_t>::iterator i = vals.begin(); i != vals.end(); i++) {
-            m_buffer.putInt16(*i);
+            m_buffer.putInt16(err,*i);
+            if (!isOk(err)) {
+                return *this;
+            }
         }
         m_currentParam++;
         return *this;
@@ -222,11 +321,17 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addInt8(int8_t val) {
+    ParameterSet& addInt8(errType& err, int8_t val) {
         validateType(WIRE_TYPE_TINYINT, false);
         m_buffer.ensureRemaining(2);
-        m_buffer.putInt8(WIRE_TYPE_TINYINT);
-        m_buffer.putInt8(val);
+        m_buffer.putInt8(err, WIRE_TYPE_TINYINT);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt8(err, val);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_currentParam++;
         return *this;
     }
@@ -236,14 +341,26 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addInt8(std::vector<int8_t> vals) {
+    ParameterSet& addInt8(errType &err, std::vector<int8_t> vals) {
         validateType(WIRE_TYPE_TINYINT, true);
         m_buffer.ensureRemaining(6 + static_cast<int32_t>(sizeof(int8_t) * vals.size()));
-        m_buffer.putInt8(WIRE_TYPE_ARRAY);
-        m_buffer.putInt8(WIRE_TYPE_TINYINT);
-        m_buffer.putInt32(static_cast<int32_t>(vals.size()));
+        m_buffer.putInt8(err, WIRE_TYPE_ARRAY);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt8(err, WIRE_TYPE_TINYINT);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt32(err, static_cast<int32_t>(vals.size()));
+        if (!isOk(err)) {
+            return *this;
+        }
         for (std::vector<int8_t>::iterator i = vals.begin(); i != vals.end(); i++) {
-            m_buffer.putInt8(*i);
+            m_buffer.putInt8(err, *i);
+            if (!isOk(err)) {
+                return *this;
+            }
         }
         m_currentParam++;
         return *this;
@@ -254,11 +371,17 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addDouble(double val) {
+    ParameterSet& addDouble(errType& err, double val) {
         validateType(WIRE_TYPE_FLOAT, false);
         m_buffer.ensureRemaining(9);
-        m_buffer.putInt8(WIRE_TYPE_FLOAT);
-        m_buffer.putDouble(val);
+        m_buffer.putInt8(err, WIRE_TYPE_FLOAT);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putDouble(err, val);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_currentParam++;
         return *this;
     }
@@ -268,14 +391,26 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addDouble(std::vector<double> vals) {
+    ParameterSet& addDouble(errType& err, std::vector<double> vals) {
         validateType(WIRE_TYPE_FLOAT, true);
         m_buffer.ensureRemaining(2 + static_cast<int32_t>(sizeof(double) * vals.size()));
-        m_buffer.putInt8(WIRE_TYPE_ARRAY);
-        m_buffer.putInt8(WIRE_TYPE_FLOAT);
-        m_buffer.putInt16(static_cast<int16_t>(vals.size()));
+        m_buffer.putInt8(err, WIRE_TYPE_ARRAY);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt8(err, WIRE_TYPE_FLOAT);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt16(err, static_cast<int16_t>(vals.size()));
+        if (!isOk(err)) {
+            return *this;
+        }
         for (std::vector<double>::iterator i = vals.begin(); i != vals.end(); i++) {
-            m_buffer.putDouble(*i);
+            m_buffer.putDouble(err, *i);
+            if (!isOk(err)) {
+                return *this;
+            }
         }
         m_currentParam++;
         return *this;
@@ -289,12 +424,15 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addNull() {
+    ParameterSet& addNull(errType& err) {
         if (m_currentParam > m_parameters.size()) {
             throw new ParamMismatchException();
         }
         m_buffer.ensureRemaining(1);
-        m_buffer.putInt8(WIRE_TYPE_NULL);
+        m_buffer.putInt8(err, WIRE_TYPE_NULL);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_currentParam++;
         return *this;
     }
@@ -304,11 +442,17 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addString(std::string val) {
+    ParameterSet& addString(errType& err, std::string val) {
         validateType(WIRE_TYPE_STRING, false);
         m_buffer.ensureRemaining(5 + static_cast<int32_t>(val.size()));
-        m_buffer.putInt8(WIRE_TYPE_STRING);
-        m_buffer.putString(val);
+        m_buffer.putInt8(err, WIRE_TYPE_STRING);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putString(err, val);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_currentParam++;
         return *this;
     }
@@ -318,7 +462,7 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addString(std::vector<std::string> vals) {
+    ParameterSet& addString(errType& err, std::vector<std::string> vals) {
         validateType(WIRE_TYPE_STRING, true);
         int32_t totalStringLength = 0;
         for (std::vector<std::string>::iterator i = vals.begin(); i != vals.end(); i++) {
@@ -327,11 +471,23 @@ public:
         m_buffer.ensureRemaining(4 +
                 totalStringLength +
                 (4 * static_cast<int32_t>(vals.size())));
-        m_buffer.putInt8(WIRE_TYPE_ARRAY);
-        m_buffer.putInt8(WIRE_TYPE_STRING);
-        m_buffer.putInt16(static_cast<int16_t>(vals.size()));
+        m_buffer.putInt8(err, WIRE_TYPE_ARRAY);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt8(err, WIRE_TYPE_STRING);
+        if (!isOk(err)) {
+            return *this;
+        }
+        m_buffer.putInt16(err, static_cast<int16_t>(vals.size()));
+        if (!isOk(err)) {
+            return *this;
+        }
         for (std::vector<std::string>::iterator i = vals.begin(); i != vals.end(); i++) {
-            m_buffer.putString(*i);
+            m_buffer.putString(err, *i);
+            if (!isOk(err)) {
+                return *this;
+            }
         }
         m_currentParam++;
         return *this;
@@ -342,15 +498,15 @@ public:
      * to call this between invocations because the API will call it after the procedure this parameter
      * set is associated with is invoked.
      */
-    void reset() {
+    void reset(errType& err) {
         m_buffer.clear();
         m_currentParam = 0;
-        m_buffer.putInt16(static_cast<int16_t>(m_parameters.size()));
+        m_buffer.putInt16(err, static_cast<int16_t>(m_parameters.size()));
     }
 
-    int32_t getSerializedSize() {
+    int32_t getSerializedSize(errType& err) {
         if (m_currentParam != m_parameters.size()) {
-            throw UninitializedParamsException();
+            setErr(err, errUninitializedParamsException);
         }
         return m_buffer.position();
     }
@@ -358,19 +514,23 @@ public:
 #ifdef SWIG
 %ignore serializeTo;
 #endif
-    void serializeTo(ByteBuffer *buffer) {
+    void serializeTo(errType& err, ByteBuffer *buffer) {
         if (m_currentParam != m_parameters.size()) {
-            throw UninitializedParamsException();
+            setErr(err, errUninitializedParamsException);
         }
         m_buffer.flip();
-        buffer->put(&m_buffer);
-        reset();
+        buffer->put(err, &m_buffer);
+        if (!isOk(err)) {
+            return;
+        }
+        reset(err);
     }
 
 private:
 
     ParameterSet(std::vector<Parameter> parameters) : m_parameters(parameters), m_buffer(8192), m_currentParam(0) {
-        m_buffer.putInt16(static_cast<int16_t>(m_parameters.size()));
+        errType TODO_ERROR;
+        m_buffer.putInt16(TODO_ERROR, static_cast<int16_t>(m_parameters.size()));
     }
 
     void validateType(WireType type, bool isArray) {

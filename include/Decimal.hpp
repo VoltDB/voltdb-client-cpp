@@ -154,7 +154,7 @@ public:
 #ifdef SWIG
 %ignore serializeTo;
 #endif
-    void serializeTo(errType err, ByteBuffer *buffer) {
+    void serializeTo(errType& err, ByteBuffer *buffer) {
         TTInt val = getDecimal();
         buffer->putInt64(err, *reinterpret_cast<int64_t*>(&val.table[1]));
         if (!isOk(err)) {

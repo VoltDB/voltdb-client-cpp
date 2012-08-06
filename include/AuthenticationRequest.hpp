@@ -38,7 +38,7 @@ public:
         + 4 //length prefix
         + 1; //version number
     }
-    void serializeTo(errType err, ByteBuffer *buffer) {
+    void serializeTo(errType& err, ByteBuffer *buffer) {
         buffer->position(err, 4);
         if (!isOk(err)) {
             return;
