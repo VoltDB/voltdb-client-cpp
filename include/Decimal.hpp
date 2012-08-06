@@ -127,8 +127,9 @@ public:
         ByteBuffer buf(data, 16);
         int64_t *longStorage = reinterpret_cast<int64_t*>(m_data);
         //Reverse order for Java BigDecimal BigEndian
-        longStorage[1] = buf.getInt64();
-        longStorage[0] = buf.getInt64();
+        errType TODO_ERROR;
+        longStorage[1] = buf.getInt64(TODO_ERROR);
+        longStorage[0] = buf.getInt64(TODO_ERROR);
     }
 
     /*
@@ -153,10 +154,16 @@ public:
 #ifdef SWIG
 %ignore serializeTo;
 #endif
-    void serializeTo(ByteBuffer *buffer) {
+    void serializeTo(errType err, ByteBuffer *buffer) {
         TTInt val = getDecimal();
-        buffer->putInt64(*reinterpret_cast<int64_t*>(&val.table[1]));
-        buffer->putInt64(*reinterpret_cast<int64_t*>(&val.table[0]));
+        buffer->putInt64(err, *reinterpret_cast<int64_t*>(&val.table[1]));
+        if (!isOk(err)) {
+            return;
+        }
+        buffer->putInt64(err, *reinterpret_cast<int64_t*>(&val.table[0]));
+        if (!isOk(err)) {
+            return;
+        }
     }
 
     /*
