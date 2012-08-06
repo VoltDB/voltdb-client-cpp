@@ -70,15 +70,22 @@ public:
      * more rows. OverflowUnderflowException and IndexOutOfBoundsException only result if there are bugs
      * and are not expected normally.
      */
-    voltdb::Row next() {
+    voltdb::Row next(errType& err) {
         if (m_rowCount <= m_currentRow) {
-            throw NoMoreRowsException();
+            setErr(errNoMoreRowsException);
+            return;
         }
         int32_t rowLength = m_buffer.getInt32();
         int32_t oldLimit = m_buffer.limit();
-        m_buffer.limit(m_buffer.position() + rowLength);
+        m_buffer.limit(err, m_buffer.position() + rowLength);
+        if (!isOk(err)) {
+            return;
+        }
         SharedByteBuffer buffer = m_buffer.slice();
-        m_buffer.limit(oldLimit);
+        m_buffer.limit(err, oldLimit);
+        if (!isOk(err)) {
+            return;
+        }
         m_currentRow++;
         return voltdb::Row(buffer, m_columns);
     }
