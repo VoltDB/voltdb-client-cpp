@@ -38,14 +38,32 @@ public:
         + 4 //length prefix
         + 1; //version number
     }
-    void serializeTo(ByteBuffer *buffer) {
-        buffer->position(4);
-        buffer->putInt8(0);
-        buffer->putString(m_service);
-        buffer->putString(m_username);
-        buffer->put(reinterpret_cast<char*>(m_passwordHash), 20);
+    void serializeTo(errType err, ByteBuffer *buffer) {
+        buffer->position(err, 4);
+        if (!isOk(err)) {
+            return;
+        }
+        buffer->putInt8(err, 0);
+        if (!isOk(err)) {
+            return;
+        }
+        buffer->putString(err, m_service);
+        if (!isOk(err)) {
+            return;
+        }
+        buffer->putString(err, m_username);
+        if (!isOk(err)) {
+            return;
+        }
+        buffer->put(err, reinterpret_cast<char*>(m_passwordHash), 20);
+        if (!isOk(err)) {
+            return;
+        }
         buffer->flip();
-        buffer->putInt32(0, buffer->limit() - 4);
+        buffer->putInt32(err, 0, buffer->limit() - 4);
+        if (!isOk(err)) {
+            return;
+        }
     }
 private:
     std::string m_username;

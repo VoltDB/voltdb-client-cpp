@@ -27,27 +27,53 @@
 namespace voltdb {
 class AuthenticationResponse {
 public:
-    AuthenticationResponse() {}
+    AuthenticationResponse() {
+        m_err = errOk;
+    }
+
     AuthenticationResponse(ByteBuffer &buf) {
-        char version = buf.getInt8();
+        char version = buf.getInt8(m_err);
+        if (!isOk(m_err)) {
+            return;
+        }
+
         assert(version == 0);
-        m_resultCode = buf.getInt8();
+        m_resultCode = buf.getInt8(m_err);
+        if (!isOk(m_err)) {
+            return;
+        }
         if (m_resultCode != 0) {
             return;
         }
-        m_hostId = buf.getInt32();
-        m_connectionId = buf.getInt64();
-        m_clusterStartTime = buf.getInt64();
-        m_leaderAddress = buf.getInt32();
+        m_hostId = buf.getInt32(m_err);
+        if (!isOk(m_err)) {
+            return;
+        }
+        m_connectionId = buf.getInt64(m_err);
+        if (!isOk(m_err)) {
+            return;
+        }
+        m_clusterStartTime = buf.getInt64(m_err);
+        if (!isOk(m_err)) {
+            return;
+        }
+        if (!isOk(m_err)) {
+            return;
+        }
+        m_leaderAddress = buf.getInt32(m_err);
         bool wasNull = false;
         m_buildString = buf.getString(wasNull);
+        if (!isOk(m_err)) {
+            return;
+        }
         assert(!wasNull);
     }
 
     bool success() {
-        return m_resultCode == 0;
+        return isOk(getErr()) && (m_resultCode == 0);
     }
 
+    errType getErr() { return m_err; }
     int32_t hostId() { return m_hostId; }
     int32_t connectionId() { return m_connectionId; }
     int64_t clusterStartTime() { return m_clusterStartTime; }
@@ -55,6 +81,7 @@ public:
     std::string buildString() { return m_buildString; }
 
 private:
+    errType m_err;
     int8_t m_resultCode;
     int32_t m_hostId;
     int64_t m_connectionId;
