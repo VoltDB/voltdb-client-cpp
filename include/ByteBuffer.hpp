@@ -96,7 +96,7 @@ private:
         setOk(err);
         if (m_limit - m_position < length || length < 0) {
             setErr(err, errOverflowUnderflowException);
-            return;
+            return -1;
         }
         int32_t position = m_position;
         m_position += length;
@@ -107,7 +107,7 @@ private:
         setOk(err);
         if ((index < 0) || (length > m_limit - index) || length < 0) {
             setErr(err, errIndexOutOfBoundsException);
-            return;
+            return -1;
         }
         return index;
     }
@@ -140,7 +140,7 @@ public:
     ByteBuffer& put(errType& err, const char *storage, int32_t length) {
         int32_t idx = checkGetPutIndex(err, length);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         ::memcpy(&m_buffer[idx], storage, static_cast<uint32_t>(length));
         return *this;
@@ -148,7 +148,7 @@ public:
     ByteBuffer& put(errType& err, int32_t index, const char *storage, int32_t length) {
         int32_t idx = checkIndex(err, index, length);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         ::memcpy(&m_buffer[idx], storage, static_cast<uint32_t>(length));
         return *this;
@@ -159,12 +159,12 @@ public:
         if (oremaining == 0) {
             return *this;
         }
-        int32_t idx = checkGetPutIndex(err, length);
+        int32_t idx = checkGetPutIndex(err, oremaining);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         ::memcpy(&m_buffer[idx],
-                other->getByReference(oremaining),
+                other->getByReference(err, oremaining),
                 static_cast<uint32_t>(oremaining));
         return *this;
     }
@@ -172,21 +172,21 @@ public:
     int8_t getInt8(errType& err) {
         int32_t idx = checkGetPutIndex(err, 1);
         if (!isOk(err)) {
-            return;
+            return 0x0;
         }
         return m_buffer[idx];
     }
     int8_t getInt8(errType& err, int32_t index) {
         int32_t idx = checkIndex(err, index, 1);
         if (!isOk(err)) {
-            return;
+            return 0x0;
         }
         return m_buffer[idx];
     }
     ByteBuffer& putInt8(errType& err, int8_t value) {
         int32_t idx = checkGetPutIndex(err, 1);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         m_buffer[idx] = value;
         return *this;
@@ -194,7 +194,7 @@ public:
     ByteBuffer& putInt8(errType& err, int32_t index, int8_t value) {
         int32_t idx = checkIndex(err, index, 1);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         m_buffer[idx] = value;
         return *this;
@@ -204,7 +204,7 @@ public:
         int16_t value;
         int32_t idx = checkGetPutIndex(err, 2);
         if (!isOk(err)) {
-            return;
+            return 0x0;
         }
         ::memcpy( &value, &m_buffer[idx], 2);
         return static_cast<int16_t>(ntohs(value));
@@ -213,7 +213,7 @@ public:
         int16_t value;
         int32_t idx = checkIndex(err, index, 2);
         if (!isOk(err)) {
-            return;
+            return 0x0;
         }
         ::memcpy( &value, &m_buffer[idx], 2);
         return static_cast<int16_t>(ntohs(value));
@@ -221,7 +221,7 @@ public:
     ByteBuffer& putInt16(errType& err, int16_t value) {
         int32_t idx = checkGetPutIndex(err, 2);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         *reinterpret_cast<uint16_t*>(&m_buffer[idx]) = htons(value);
         return *this;
@@ -229,7 +229,7 @@ public:
     ByteBuffer& putInt16(errType& err, int32_t index, int16_t value) {
         int32_t idx = checkIndex(err, index, 2);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         *reinterpret_cast<uint16_t*>(&m_buffer[idx]) = htons(value);
         return *this;
@@ -239,7 +239,7 @@ public:
         uint32_t value;
         int32_t idx = checkGetPutIndex(err, 4);
         if (!isOk(err)) {
-            return;
+            return 0;
         }
         ::memcpy( &value, &m_buffer[idx], 4);
         return static_cast<int32_t>(ntohl(value));
@@ -248,7 +248,7 @@ public:
         uint32_t value;
         int32_t idx = checkIndex(err, index, 4);
         if (!isOk(err)) {
-            return;
+            return 0;
         }
         ::memcpy( &value, &m_buffer[idx], 4);
         return static_cast<int32_t>(ntohl(value));
@@ -256,7 +256,7 @@ public:
     ByteBuffer& putInt32(errType& err, int32_t value) {
         int32_t idx = checkGetPutIndex(err, 4);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         *reinterpret_cast<uint32_t*>(&m_buffer[idx]) = htonl(static_cast<uint32_t>(value));
         return *this;
@@ -264,7 +264,7 @@ public:
     ByteBuffer& putInt32(errType& err, int32_t index, int32_t value) {
         int32_t idx = checkIndex(err, index, 4);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         *reinterpret_cast<uint32_t*>(&m_buffer[idx]) = htonl(static_cast<uint32_t>(value));
         return *this;
@@ -274,7 +274,7 @@ public:
         uint64_t value;
         int32_t idx = checkGetPutIndex(err, 8);
         if (!isOk(err)) {
-            return;
+            return 0L;
         }
         ::memcpy( &value, &m_buffer[idx], 8);
         return static_cast<int64_t>(ntohll(value));
@@ -283,7 +283,7 @@ public:
         uint64_t value;
         int32_t idx = checkIndex(err, index, 8);
         if (!isOk(err)) {
-            return;
+            return 0L;
         }
         ::memcpy( &value, &m_buffer[idx], 8);
         return static_cast<int64_t>(ntohll(value));
@@ -291,7 +291,7 @@ public:
     ByteBuffer& putInt64(errType& err, int64_t value) {
         int32_t idx = checkGetPutIndex(err, 8);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         *reinterpret_cast<uint64_t*>(&m_buffer[idx]) = htonll(static_cast<uint64_t>(value));
         return *this;
@@ -299,7 +299,7 @@ public:
     ByteBuffer& putInt64(errType& err, int32_t index, int64_t value) {
         int32_t idx = checkIndex(err, index, 8);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         *reinterpret_cast<uint64_t*>(&m_buffer[idx]) = htonll(static_cast<uint64_t>(value));
         return *this;
@@ -309,7 +309,7 @@ public:
         uint64_t value;
         int32_t idx = checkGetPutIndex(err, 8);
         if (!isOk(err)) {
-            return;
+            return 0.0;
         }
         ::memcpy( &value, &m_buffer[idx], 8);
         value = ntohll(value);
@@ -321,7 +321,7 @@ public:
         uint64_t value;
         int32_t idx = checkIndex(err, index, 8);
         if (!isOk(err)) {
-            return;
+            return 0.0;
         }
         ::memcpy( &value, &m_buffer[idx], 8);
         value = ntohll(value);
@@ -333,7 +333,7 @@ public:
         uint64_t newval;
         int32_t idx = checkGetPutIndex(err, 8);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         ::memcpy(&newval, &value, 8);
         newval = htonll(newval);
@@ -346,7 +346,7 @@ public:
         newval = htonll(newval);
         int32_t idx = checkIndex(err, index, 8);
         if (!isOk(err)) {
-            return;
+            return *this;
         }
         *reinterpret_cast<uint64_t*>(&m_buffer[idx]) = newval;
         return *this;
@@ -355,7 +355,7 @@ public:
     std::string getString(errType& err, bool &wasNull) {
         int32_t length = getInt32(err);
         if (!isOk(err)) {
-            return;
+            return std::string();
         }
         if (length == -1) {
             wasNull = true;
