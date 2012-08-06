@@ -63,16 +63,16 @@ public:
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(std::string hostname, short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
+    void createConnection(std::string hostname, short port);
 
     /*
      * Synchronously invoke a stored procedure and return a the response.
      */
-    InvocationResponse invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
-    void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
-    void invoke(Procedure &proc, ProcedureCallback *callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
-    void runOnce() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
-    void run() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
+    InvocationResponse invoke(Procedure &proc);
+    void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback);
+    void invoke(Procedure &proc, ProcedureCallback *callback);
+    void runOnce();
+    void run();
 
    /*
     * Enter the event loop and process pending events until all responses have been received and then return.
@@ -82,7 +82,7 @@ public:
     * @throws LibEventException An unknown error occured in libevent
     * @return true if all requests were drained and false otherwise
     */
-    bool drain() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
+    bool drain();
     ~ClientImpl();
 
     void regularReadCallback(struct bufferevent *bev);
@@ -92,13 +92,13 @@ public:
 
     /*
      * If one of the run family of methods is running on another thread, this
-     * method will instruct it to exit as soon as it finishes it's current 
+     * method will instruct it to exit as soon as it finishes it's current
      * immediate task. If the thread in the run method is blocked/idle, then
      * it will return immediately.
      */
     void interrupt();
 private:
-    ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException);
+    ClientImpl(ClientConfig config);
 
     struct event_base *m_base;
     int64_t m_nextRequestId;

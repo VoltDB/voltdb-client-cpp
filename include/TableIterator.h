@@ -70,7 +70,7 @@ public:
      * more rows. OverflowUnderflowException and IndexOutOfBoundsException only result if there are bugs
      * and are not expected normally.
      */
-    voltdb::Row next() throw (NoMoreRowsException, OverflowUnderflowException, IndexOutOfBoundsException) {
+    voltdb::Row next() {
         if (m_rowCount <= m_currentRow) {
             throw NoMoreRowsException();
         }

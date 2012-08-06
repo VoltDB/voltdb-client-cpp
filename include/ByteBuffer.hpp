@@ -119,22 +119,22 @@ public:
         return *this;
     }
 
-    void get(char *storage, int32_t length) throw (OverflowUnderflowException) {
+    void get(char *storage, int32_t length) {
         ::memcpy(storage, &m_buffer[checkGetPutIndex(length)], static_cast<uint32_t>(length));
     }
-    void get(int32_t index, char *storage, int32_t length) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    void get(int32_t index, char *storage, int32_t length) {
         ::memcpy(storage, &m_buffer[checkIndex(index, length)], static_cast<uint32_t>(length));
     }
-    ByteBuffer& put(const char *storage, int32_t length) throw (OverflowUnderflowException) {
+    ByteBuffer& put(const char *storage, int32_t length) {
         ::memcpy(&m_buffer[checkGetPutIndex(length)], storage, static_cast<uint32_t>(length));
         return *this;
     }
-    ByteBuffer& put(int32_t index, const char *storage, int32_t length) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    ByteBuffer& put(int32_t index, const char *storage, int32_t length) {
         ::memcpy(&m_buffer[checkIndex(index, length)], storage, static_cast<uint32_t>(length));
         return *this;
     }
 
-    ByteBuffer& put(ByteBuffer *other) throw (OverflowUnderflowException) {
+    ByteBuffer& put(ByteBuffer *other) {
         int32_t oremaining = other->remaining();
         if (oremaining == 0) {
             return *this;
@@ -145,79 +145,79 @@ public:
         return *this;
     }
 
-    int8_t getInt8() throw (OverflowUnderflowException) {
+    int8_t getInt8() {
         return m_buffer[checkGetPutIndex(1)];
     }
-    int8_t getInt8(int32_t index) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    int8_t getInt8(int32_t index) {
         return m_buffer[checkIndex( index, 1)];
     }
-    ByteBuffer& putInt8(int8_t value) throw (OverflowUnderflowException) {
+    ByteBuffer& putInt8(int8_t value) {
         m_buffer[checkGetPutIndex(1)] = value;
         return *this;
     }
-    ByteBuffer& putInt8(int32_t index, int8_t value) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    ByteBuffer& putInt8(int32_t index, int8_t value) {
         m_buffer[checkIndex( index, 1)] = value;
         return *this;
     }
 
-    int16_t getInt16() throw (OverflowUnderflowException) {
+    int16_t getInt16() {
         int16_t value;
         ::memcpy( &value, &m_buffer[checkGetPutIndex(2)], 2);
         return static_cast<int16_t>(ntohs(value));
     }
-    int16_t getInt16(int32_t index) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    int16_t getInt16(int32_t index) {
         int16_t value;
         ::memcpy( &value, &m_buffer[checkIndex(index, 2)], 2);
         return static_cast<int16_t>(ntohs(value));
     }
-    ByteBuffer& putInt16(int16_t value) throw (OverflowUnderflowException) {
+    ByteBuffer& putInt16(int16_t value) {
         *reinterpret_cast<uint16_t*>(&m_buffer[checkGetPutIndex(2)]) = htons(value);
         return *this;
     }
-    ByteBuffer& putInt16(int32_t index, int16_t value) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    ByteBuffer& putInt16(int32_t index, int16_t value) {
         *reinterpret_cast<uint16_t*>(&m_buffer[checkIndex(index, 2)]) = htons(value);
         return *this;
     }
 
-    int32_t getInt32() throw (OverflowUnderflowException) {
+    int32_t getInt32() {
         uint32_t value;
         ::memcpy( &value, &m_buffer[checkGetPutIndex(4)], 4);
         return static_cast<int32_t>(ntohl(value));
     }
-    int32_t getInt32(int32_t index) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    int32_t getInt32(int32_t index) {
         uint32_t value;
         ::memcpy( &value, &m_buffer[checkIndex(index, 4)], 4);
         return static_cast<int32_t>(ntohl(value));
     }
-    ByteBuffer& putInt32(int32_t value) throw (OverflowUnderflowException) {
+    ByteBuffer& putInt32(int32_t value) {
         *reinterpret_cast<uint32_t*>(&m_buffer[checkGetPutIndex(4)]) = htonl(static_cast<uint32_t>(value));
         return *this;
     }
-    ByteBuffer& putInt32(int32_t index, int32_t value) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    ByteBuffer& putInt32(int32_t index, int32_t value) {
         *reinterpret_cast<uint32_t*>(&m_buffer[checkIndex(index, 4)]) = htonl(static_cast<uint32_t>(value));
         return *this;
     }
 
-    int64_t getInt64() throw (OverflowUnderflowException) {
+    int64_t getInt64() {
         uint64_t value;
         ::memcpy( &value, &m_buffer[checkGetPutIndex(8)], 8);
         return static_cast<int64_t>(ntohll(value));
     }
-    int64_t getInt64(int32_t index) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    int64_t getInt64(int32_t index) {
         uint64_t value;
         ::memcpy( &value, &m_buffer[checkIndex(index, 8)], 8);
         return static_cast<int64_t>(ntohll(value));
     }
-    ByteBuffer& putInt64(int64_t value) throw (OverflowUnderflowException) {
+    ByteBuffer& putInt64(int64_t value) {
         *reinterpret_cast<uint64_t*>(&m_buffer[checkGetPutIndex(8)]) = htonll(static_cast<uint64_t>(value));
         return *this;
     }
-    ByteBuffer& putInt64(int32_t index, int64_t value) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    ByteBuffer& putInt64(int32_t index, int64_t value) {
         *reinterpret_cast<uint64_t*>(&m_buffer[checkIndex(index, 8)]) = htonll(static_cast<uint64_t>(value));
         return *this;
     }
 
-    double getDouble() throw (OverflowUnderflowException) {
+    double getDouble() {
         uint64_t value;
         ::memcpy( &value, &m_buffer[checkGetPutIndex(8)], 8);
         value = ntohll(value);
@@ -225,7 +225,7 @@ public:
         ::memcpy( &retval, &value, 8);
         return retval;
     }
-    double getDouble(int32_t index) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    double getDouble(int32_t index) {
         uint64_t value;
         ::memcpy( &value, &m_buffer[checkIndex(index, 8)], 8);
         value = ntohll(value);
@@ -233,14 +233,14 @@ public:
         ::memcpy( &retval, &value, 8);
         return retval;
     }
-    ByteBuffer& putDouble(double value) throw (OverflowUnderflowException) {
+    ByteBuffer& putDouble(double value) {
         uint64_t newval;
         ::memcpy(&newval, &value, 8);
         newval = htonll(newval);
         *reinterpret_cast<uint64_t*>(&m_buffer[checkGetPutIndex(8)]) = newval;
         return *this;
     }
-    ByteBuffer& putDouble(int32_t index, double value) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    ByteBuffer& putDouble(int32_t index, double value) {
         uint64_t newval;
         ::memcpy(&newval, &value, 8);
         newval = htonll(newval);
@@ -248,7 +248,7 @@ public:
         return *this;
     }
 
-    std::string getString(bool &wasNull) throw (OverflowUnderflowException) {
+    std::string getString(bool &wasNull) {
         int32_t length = getInt32();
         if (length == -1) {
             wasNull = true;
@@ -257,7 +257,7 @@ public:
         char *data = getByReference(length);
         return std::string(data, static_cast<uint32_t>(length));
     }
-    std::string getString(int32_t index, bool &wasNull) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    std::string getString(int32_t index, bool &wasNull) {
         int32_t length = getInt32(index);
         if (length == -1) {
             wasNull = true;
@@ -266,15 +266,15 @@ public:
         char *data = getByReference(index + 4, length);
         return std::string(data, static_cast<uint32_t>(length));
     }
-    ByteBuffer& putString(std::string value) throw (OverflowUnderflowException) {
+    ByteBuffer& putString(std::string value) {
         int32_t size = static_cast<int32_t>(value.size());
         putInt32(size);
         put(value.data(), size);
         return *this;
     }
-    
-    bool getBytes(bool &wasNull, int32_t bufsize, uint8_t *out_value, int32_t *out_len) 
-    throw (OverflowUnderflowException) {
+
+    bool getBytes(bool &wasNull, int32_t bufsize, uint8_t *out_value, int32_t *out_len)
+    {
         int32_t length = getInt32();
         *out_len = length;
         if (!out_value)
@@ -289,8 +289,8 @@ public:
         memcpy(out_value, data, length);
         return true;
     }
-    bool getBytes(int32_t index, bool &wasNull, const int32_t bufsize, uint8_t *out_value, int32_t *out_len) 
-    throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    bool getBytes(int32_t index, bool &wasNull, const int32_t bufsize, uint8_t *out_value, int32_t *out_len)
+    {
         int32_t length = getInt32(index);
         *out_len = length;
         if (!out_value)
@@ -305,21 +305,21 @@ public:
         memcpy(out_value, data, length);
         return true;
     }
-    ByteBuffer& putBytes(const int32_t bufsize, const uint8_t *in_value) 
-    throw (OverflowUnderflowException) {
+    ByteBuffer& putBytes(const int32_t bufsize, const uint8_t *in_value)
+    {
         assert(in_value);
         putInt32(bufsize);
         put((const char*)in_value, bufsize);
         return *this;
     }
-    ByteBuffer& putBytes(int32_t index, const int32_t bufsize, const uint8_t *in_value) 
-    throw (OverflowUnderflowException, IndexOutOfBoundsException) {        
+    ByteBuffer& putBytes(int32_t index, const int32_t bufsize, const uint8_t *in_value)
+    {
         assert(in_value);
         putInt32(index, bufsize);
         put(index + 4, (const char*)in_value, bufsize);
         return *this;
     }
-    ByteBuffer& putString(int32_t index, std::string value) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+    ByteBuffer& putString(int32_t index, std::string value) {
         int32_t size = static_cast<int32_t>(value.size());
         putInt32(index, size);
         put(index + 4, value.data(), size);
@@ -329,7 +329,7 @@ public:
     int32_t position() {
         return m_position;
     }
-    ByteBuffer& position(int32_t position) throw (IndexOutOfBoundsException) {
+    ByteBuffer& position(int32_t position) {
         m_position = checkIndex(position, 0);
         return *this;
     }
@@ -345,7 +345,7 @@ public:
         return m_limit;
     }
 
-    ByteBuffer& limit(int32_t newLimit) throw (IndexOutOfBoundsException) {
+    ByteBuffer& limit(int32_t newLimit) {
         if (newLimit > m_capacity || newLimit < 0) {
             throw IndexOutOfBoundsException();
         }
@@ -367,19 +367,19 @@ public:
         return false;
     }
 
-    virtual void ensureRemaining(int32_t remaining) throw(NonExpandableBufferException) {
+    virtual void ensureRemaining(int32_t remaining) {
         remaining = 0;
         throw NonExpandableBufferException();
     }
-    virtual void ensureRemainingExact(int32_t remaining) throw(NonExpandableBufferException) {
+    virtual void ensureRemainingExact(int32_t remaining) {
         remaining = 0;
         throw NonExpandableBufferException();
     }
-    virtual void ensureCapacity(int32_t capacity) throw(NonExpandableBufferException) {
+    virtual void ensureCapacity(int32_t capacity) {
         capacity = 0;
         throw NonExpandableBufferException();
     }
-    virtual void ensureCapacityExact(int32_t capacity) throw(NonExpandableBufferException) {
+    virtual void ensureCapacityExact(int32_t capacity) {
         capacity = 0;
         throw NonExpandableBufferException();
     }
@@ -430,17 +430,17 @@ protected:
 
 class ExpandableByteBuffer : public ByteBuffer {
 public:
-    void ensureRemaining(int32_t amount)  throw(NonExpandableBufferException) {
+    void ensureRemaining(int32_t amount)  {
         if (remaining() < amount) {
             ensureCapacity(position() + amount);
         }
     }
-    void ensureRemainingExact(int32_t amount)  throw(NonExpandableBufferException) {
+    void ensureRemainingExact(int32_t amount)  {
         if (remaining() < amount) {
             ensureCapacityExact(position() + amount);
         }
     }
-    void ensureCapacity(int32_t capacity)  throw(NonExpandableBufferException) {
+    void ensureCapacity(int32_t capacity)  {
         if (m_capacity < capacity) {
             int32_t newCapacity = m_capacity;
             while (newCapacity < capacity) {
@@ -455,7 +455,7 @@ public:
         }
     }
 
-    void ensureCapacityExact(int32_t capacity)  throw(NonExpandableBufferException) {
+    void ensureCapacityExact(int32_t capacity)  {
         if (m_capacity < capacity) {
             char *newBuffer = new char[capacity];
             ::memcpy(newBuffer, m_buffer, static_cast<uint32_t>(m_position));

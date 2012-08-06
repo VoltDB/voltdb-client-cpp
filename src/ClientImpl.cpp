@@ -188,7 +188,7 @@ void initLibevent() {
     }
 }
 
-ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException) :
+ClientImpl::ClientImpl(ClientConfig config)  :
         m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0), m_listener(config.m_listener),
         m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false), m_isDraining(false),
         m_instanceIdIsSet(false), m_outstandingRequests(0), m_username(config.m_username),
@@ -229,7 +229,7 @@ private:
     bool m_success;
 };
 
-void ClientImpl::createConnection(std::string hostname, short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+void ClientImpl::createConnection(std::string hostname, short port) {
     struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE);
     FreeBEVOnFailure protector(bev);
     if (bev == NULL) {
@@ -302,7 +302,7 @@ public:
     SyncCallback(InvocationResponse *responseOut) : m_responseOut(responseOut) {
     }
 
-    bool callback(InvocationResponse response) throw (voltdb::Exception) {
+    bool callback(InvocationResponse response) {
         (*m_responseOut) = response;
         return true;
     }
@@ -310,7 +310,7 @@ private:
     InvocationResponse *m_responseOut;
 };
 
-InvocationResponse ClientImpl::invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
+InvocationResponse ClientImpl::invoke(Procedure &proc) {
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
@@ -338,17 +338,17 @@ class DummyCallback : public ProcedureCallback {
 public:
     ProcedureCallback *m_callback;
     DummyCallback(ProcedureCallback *callback) : m_callback(callback) {}
-    bool callback(InvocationResponse response) throw (voltdb::Exception) {
+    bool callback(InvocationResponse response) {
         return m_callback->callback(response);
     }
 };
 
-void ClientImpl::invoke(Procedure &proc, ProcedureCallback *callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
+void ClientImpl::invoke(Procedure &proc, ProcedureCallback *callback) {
     boost::shared_ptr<ProcedureCallback> wrapper(new DummyCallback(callback));
     invoke(proc, wrapper);
 }
 
-void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
+void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) {
     if (callback.get() == NULL) {
         throw voltdb::NullPointerException();
     }
@@ -442,7 +442,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
     return;
 }
 
-void ClientImpl::runOnce() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException) {
+void ClientImpl::runOnce() {
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
@@ -452,7 +452,7 @@ void ClientImpl::runOnce() throw (voltdb::Exception, voltdb::NoConnectionsExcept
     m_loopBreakRequested = false;
 }
 
-void ClientImpl::run() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException) {
+void ClientImpl::run() {
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
@@ -606,7 +606,7 @@ void ClientImpl::regularWriteCallback(struct bufferevent *bev) {
 static void interrupt_callback(evutil_socket_t fd, short events, void *clientData) {
     ClientImpl *self = reinterpret_cast<ClientImpl*>(clientData);
     self->eventBaseLoopBreak();
-} 
+}
 
 void ClientImpl::eventBaseLoopBreak() {
     event_base_loopbreak(m_base);
@@ -621,7 +621,7 @@ void ClientImpl::interrupt() {
  * @throws NoConnectionsException No connections to the database so there is no work to be done
  * @throws LibEventException An unknown error occured in libevent
  */
-bool ClientImpl::drain() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException) {
+bool ClientImpl::drain() {
     m_isDraining = true;
     run();
     return m_outstandingRequests == 0;

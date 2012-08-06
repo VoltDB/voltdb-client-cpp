@@ -23,7 +23,7 @@ version of libevent - simply replace the libevent tarball.
 Running the tests
 
 The tests require CPPUnit. You can install cppunit on ubuntu with the
-command: `apt get install libcppunit-dev`
+command: `apt-get install libcppunit-dev`
 
 Once you have built either version of the shared library you can build the
 tests using the makefile in Tests and then run the Tests executable that is

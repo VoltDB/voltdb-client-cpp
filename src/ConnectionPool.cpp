@@ -151,7 +151,7 @@ ConnectionPool::acquireClient(
         std::string password,
         StatusListener *listener,
         short port)
-throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+{
     LockGuard guard(m_lock);
     ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
     if (clients == NULL) {
@@ -198,7 +198,7 @@ ConnectionPool::acquireClient(
         std::string username,
         std::string password,
         short port)
-throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+{
     return acquireClient(hostname, username, password, NULL, port);
 }
 
