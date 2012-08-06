@@ -185,7 +185,12 @@ ConnectionPool::acquireClient(
     // no connection available, make a new one
     DelegatingStatusListener *delegatingListener = new DelegatingStatusListener();
     Client client = voltdb::Client::create(ClientConfig( username, password, delegatingListener));
-    client.createConnection(hostname, port);
+    // TODO_ERROR
+    errType err = errOk;
+    client.createConnection(err, hostname, port);
+    if (!isOk(err)) {
+        throw voltdb::Exception();
+    }
     boost::shared_ptr<ClientStuff> stuff(new ClientStuff(client, identifier, delegatingListener));
     stuff->m_listener->m_listener = listener;
     clients->push_back(stuff);
