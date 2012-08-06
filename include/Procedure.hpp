@@ -47,7 +47,8 @@ public:
      * as long as the Procedure itself is still valid, and can be reused after each invocation.
      */
     ParameterSet* params() {
-        m_params.reset();
+        errType TODO_ERROR;
+        m_params.reset(TODO_ERROR);
         return &m_params;
     }
 
@@ -61,14 +62,32 @@ public:
 #ifdef SWIG
 %ignore serializeTo;
 #endif
-    void serializeTo(ByteBuffer *buffer, int64_t clientData) {
-        buffer->position(4);
-        buffer->putInt8(0);
-        buffer->putString(m_name);
-        buffer->putInt64(clientData);
-        m_params.serializeTo(buffer);
+    void serializeTo(errType& err, ByteBuffer *buffer, int64_t clientData) {
+        buffer->position(err, 4);
+        if (!isOk(err)) {
+            return;
+        }
+        buffer->putInt8(err, 0);
+        if (!isOk(err)) {
+            return;
+        }
+        buffer->putString(err, m_name);
+        if (!isOk(err)) {
+            return;
+        }
+        buffer->putInt64(err, clientData);
+        if (!isOk(err)) {
+            return;
+        }
+        m_params.serializeTo(err, buffer);
+        if (!isOk(err)) {
+            return;
+        }
         buffer->flip();
-        buffer->putInt32( 0, buffer->limit() - 4);
+        buffer->putInt32(err, 0, buffer->limit() - 4);
+        if (!isOk(err)) {
+            return;
+        }
     }
 private:
     std::string m_name;
