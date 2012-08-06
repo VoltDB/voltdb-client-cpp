@@ -443,7 +443,7 @@ public:
         if (!isOk(err)) {
             return *this;
         }
-        put((const char*)in_value, bufsize);
+        put(err, (const char*)in_value, bufsize);
         return *this;
     }
     ByteBuffer& putBytes(errType& err, int32_t index, const int32_t bufsize, const uint8_t *in_value)
@@ -476,7 +476,7 @@ public:
         return m_position;
     }
     ByteBuffer& position(errType& err, int32_t position) {
-        int32_t idx = checkIndex(err, index, 0);
+        int32_t idx = checkIndex(err, position, 0);
         if (!isOk(err)) {
             return *this;
         }
@@ -566,14 +566,14 @@ private:
     char * getByReference(errType& err, int32_t length) {
         int32_t idx = checkGetPutIndex(err, length);
         if (!isOk(err)) {
-            return null;
+            return NULL;
         }
         return &m_buffer[idx];
     }
     char * getByReference(errType& err, int32_t index, int32_t length) {
         int32_t idx = checkIndex(err, index, length);
         if (!isOk(err)) {
-            return null;
+            return NULL;
         }
         return &m_buffer[idx];
     }
