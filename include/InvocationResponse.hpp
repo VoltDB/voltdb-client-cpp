@@ -135,7 +135,7 @@ public:
         }
         if ((presentFields & (1 << 6)) != 0) {
             int32_t position = buffer.position() + 4;
-            buffer.position(position + buffer.getInt32(m_err));
+            buffer.position(m_err, position + buffer.getInt32(m_err));
             if (!isOk(m_err)) {
                 return;
             }
@@ -153,7 +153,10 @@ public:
                 return;
             }
             assert(tableLength >= 4);
-            buffer.limit(buffer.position() + tableLength);
+            buffer.limit(m_err, buffer.position() + tableLength);
+            if (!isOk(m_err)) {
+                return;
+            }
             m_results[ii] = voltdb::Table(buffer.slice());
             buffer.limit(m_err, startLimit);
             if (!isOk(m_err)) {
@@ -233,7 +236,7 @@ public:
     }
 
 private:
-    errType m_errType;
+    errType m_err;
     int64_t m_clientData;
     int8_t m_statusCode;
     std::string m_statusString;

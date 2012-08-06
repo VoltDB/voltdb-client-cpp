@@ -52,10 +52,11 @@ public:
         return &m_params;
     }
 
-    int32_t getSerializedSize() {
+    // TODO_ERROR
+    int32_t getSerializedSize(errType& err) {
         return 5 + //length prefix
                4 + static_cast<int32_t>(m_name.size()) + // proc name
-                m_params.getSerializedSize() + //parameters
+                m_params.getSerializedSize(err) + //parameters
                 + 8; //client data
     }
 

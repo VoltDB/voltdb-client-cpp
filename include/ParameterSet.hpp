@@ -302,7 +302,7 @@ public:
         if (!isOk(err)) {
             return *this;
         }
-        m_buffer.putInt16(static_cast<int16_t>(vals.size()));
+        m_buffer.putInt16(err, static_cast<int16_t>(vals.size()));
         if (!isOk(err)) {
             return *this;
         }
