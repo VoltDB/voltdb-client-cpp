@@ -27,7 +27,11 @@
 namespace voltdb {
     Table::Table(SharedByteBuffer buffer) : m_buffer(buffer) {
         buffer.position(5);
-        size_t columnCount = static_cast<size_t>(buffer.getInt16());
+        size_t columnCount = static_cast<size_t>(buffer.getInt16(m_err));
+        if (!isOk(m_err)) {
+            return;
+        }
+
         assert(columnCount > 0);
         boost::shared_ptr<std::vector< voltdb::Column> > columns(
                                 new std::vector< voltdb::Column>(columnCount));
@@ -35,25 +39,49 @@ namespace voltdb {
 
         std::vector<int8_t> types(columnCount);
         for (size_t ii = 0; ii < columnCount; ii++) {
-            types[ii] = buffer.getInt8();
+            types[ii] = buffer.getInt8(m_err);
+            if (!isOk(m_err)) {
+                return;
+            }
         }
         for (size_t ii = 0; ii < columnCount; ii++) {
             bool wasNull = false;
-            m_columns->at(ii) = voltdb::Column(buffer.getString(wasNull), static_cast<WireType>(types[ii]));
+            m_columns->at(ii) = voltdb::Column(buffer.getString(m_err, wasNull), static_cast<WireType>(types[ii]));
             assert(!wasNull);
+            if (!isOk(m_err)) {
+                return;
+            }
         }
-        m_rowStart = m_buffer.getInt32(0) + 4;
-        m_rowCount = m_buffer.getInt32(m_rowStart);
+        m_rowStart = m_buffer.getInt32(m_err, 0) + 4;
+        if (!isOk(m_err)) {
+            return;
+        }
+        m_rowCount = m_buffer.getInt32(m_err, m_rowStart);
+        if (!isOk(m_err)) {
+            return;
+        }
 
-        m_buffer.position(m_buffer.limit());
+        m_buffer.position(m_err, m_buffer.limit());
+        if (!isOk(m_err)) {
+            return;
+        }
+
+        m_status = m_buffer.getInt8(m_err, 4);
+        if (!isOk(m_err)) {
+            return;
+        }
     }
 
     int8_t Table::getStatusCode() {
-        return m_buffer.getInt8(4);
+        return m_status;
     }
 
-    TableIterator Table::iterator() {
-        m_buffer.position(m_rowStart + 4);//skip row count
+    // TODO_ERROR
+    TableIterator Table::iterator(errType& err) {
+        m_buffer.position(m_err, m_rowStart + 4);//skip row count
+        if (!isOk(m_err)) {
+            return null;
+        }
         return TableIterator(m_buffer.slice(), m_columns, m_rowCount);
     }
 

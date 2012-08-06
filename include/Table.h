@@ -46,7 +46,7 @@ public:
      * to the shared buffer indefinitely so watch out for unwanted memory retension.
      */
     Table(SharedByteBuffer buffer);
-    Table() {}
+    Table() { m_err = errOk; }
 
     ~Table() {
     }
@@ -54,7 +54,9 @@ public:
     /*
      * Returns an iterator for iterating over the rows of this table
      */
-    TableIterator iterator();
+    TableIterator iterator(errType& err);
+
+    errType getErr() { return m_err; }
 
     /*
      * Returns the status code associated with this table that was set by the stored procedure.
@@ -88,6 +90,8 @@ public:
      */
     void toString(std::ostringstream &ostream, std::string indent);
 private:
+    errType m_err;
+    int8_t m_status;
     boost::shared_ptr<std::vector<voltdb::Column> > m_columns;
     int32_t m_rowStart;
     int32_t m_rowCount;

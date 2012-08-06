@@ -80,7 +80,8 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
         int read = evbuffer_remove(evbuf, messageLengthBytes, 4);
         assert(read == 4);
         ByteBuffer messageLengthBuffer(messageLengthBytes, 4);
-        int32_t messageLength = messageLengthBuffer.getInt32();
+        errType err = errOk;
+        int32_t messageLength = messageLengthBuffer.getInt32(err);
         assert(messageLength > 0);
         assert(messageLength < 1024 * 1024);
         pc->m_authenticationResponseLength = messageLength;
@@ -477,7 +478,8 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
             char lengthBytes[4];
             ByteBuffer lengthBuffer(lengthBytes, 4);
             evbuffer_remove( evbuf, lengthBytes, 4);
-            context->m_nextLength = static_cast<size_t>(lengthBuffer.getInt32());
+            errType err = errOk;
+            context->m_nextLength = static_cast<size_t>(lengthBuffer.getInt32(err));
             context->m_lengthOrMessage = false;
             remaining -= 4;
         } else if (remaining >= context->m_nextLength) {
