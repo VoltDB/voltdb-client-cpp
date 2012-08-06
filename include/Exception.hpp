@@ -27,6 +27,22 @@
 
 namespace voltdb {
 
+/* Code for each type of exception */
+const int errException = 1;
+const int errNullPointerException = 2;
+const int errInvalidColumnException = 3;
+const int errOverflowUnderflowException = 4;
+const int errIndexOutOfBoundsException = 5;
+const int errNonExpandableBufferException = 6;
+const int errUninitializedParamsException = 7;
+const int errParamMismatchException = 8;
+const int errNoMoreRowsException = 9;
+const int errStringToDecimalException = 10;
+const int errConnectException = 11;
+const int errNoConnectionsException = 12;
+const int errLibEventException = 13;
+const int errClusterInstanceMismatchException = 14;
+
 /*
  * Base class for all exceptions thrown by the VoltDB client API
  */
