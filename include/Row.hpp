@@ -60,9 +60,9 @@ public:
      * not match the type of the get method.
      * @return Whether the buffer provided was large enough.
      */
-    bool getVarbinary(int32_t column, int32_t bufsize, uint8_t *out_value, int32_t *out_len) {
+    bool getVarbinary(errType& err, int32_t column, int32_t bufsize, uint8_t *out_value, int32_t *out_len) {
         validateType(WIRE_TYPE_VARBINARY, column);
-        return m_data.getBytes(getOffset(column), m_wasNull, bufsize, out_value, out_len);
+        return m_data.getBytes(err, getOffset(column), m_wasNull, bufsize, out_value, out_len);
     }
 
     /*
@@ -72,10 +72,10 @@ public:
      * not match the type of the get method.
      * @return Decimal value at the specified column
      */
-    Decimal getDecimal(int32_t column) {
+    Decimal getDecimal(errType& err, int32_t column) {
         validateType(WIRE_TYPE_DECIMAL, column);
         char data[16];
-        m_data.get(getOffset(column), data, 16);
+        m_data.get(err, getOffset(column), data, 16);
         Decimal retval(data);
         m_wasNull = retval.isNull();
         return retval;
@@ -88,9 +88,9 @@ public:
      * not match the type of the get method.
      * @return Timestamp value at the specified column
      */
-    int64_t getTimestamp(int32_t column) {
+    int64_t getTimestamp(errType& err, int32_t column) {
         validateType(WIRE_TYPE_TIMESTAMP, column);
-        int64_t retval = m_data.getInt64(getOffset(column));
+        int64_t retval = m_data.getInt64(err, getOffset(column));
         if (retval == INT64_MIN) m_wasNull = true;
         return retval;
     }
@@ -102,24 +102,24 @@ public:
      * not match the type of the get method.
      * @return int64 value at the specified column
      */
-    int64_t getInt64(int32_t column) {
+    int64_t getInt64(errType& err, int32_t column) {
         WireType type = validateType(WIRE_TYPE_BIGINT, column);
         int64_t retval;
         switch (type) {
         case WIRE_TYPE_BIGINT:
-            retval = m_data.getInt64(getOffset(column));
+            retval = m_data.getInt64(err, getOffset(column));
             if (retval == INT64_MIN) m_wasNull = true;
             break;
         case WIRE_TYPE_INTEGER:
-            retval = m_data.getInt32(getOffset(column));
+            retval = m_data.getInt32(err, getOffset(column));
             if (retval == INT32_MIN) m_wasNull = true;
             break;
         case WIRE_TYPE_SMALLINT:
-            retval = m_data.getInt16(getOffset(column));
+            retval = m_data.getInt16(err, getOffset(column));
             if (retval == INT16_MIN) m_wasNull = true;
             break;
         case WIRE_TYPE_TINYINT:
-            retval = m_data.getInt8(getOffset(column));
+            retval = m_data.getInt8(err, getOffset(column));
             if (retval == INT8_MIN) m_wasNull = true;
             break;
         default:
@@ -135,20 +135,20 @@ public:
      * not match the type of the get method.
      * @return int32 value at the specified column
      */
-    int32_t getInt32(int32_t column) {
+    int32_t getInt32(errType& err, int32_t column) {
         WireType type = validateType(WIRE_TYPE_INTEGER, column);
         int32_t retval;
         switch (type) {
         case WIRE_TYPE_INTEGER:
-            retval = m_data.getInt32(getOffset(column));
+            retval = m_data.getInt32(errType& err, getOffset(column));
             if (retval == INT32_MIN) m_wasNull = true;
             break;
         case WIRE_TYPE_SMALLINT:
-            retval = m_data.getInt16(getOffset(column));
+            retval = m_data.getInt16(errType& err, getOffset(column));
             if (retval == INT16_MIN) m_wasNull = true;
             break;
         case WIRE_TYPE_TINYINT:
-            retval = m_data.getInt8(getOffset(column));
+            retval = m_data.getInt8(errType& err, getOffset(column));
             if (retval == INT8_MIN) m_wasNull = true;
             break;
         default:
@@ -164,16 +164,16 @@ public:
      * not match the type of the get method.
      * @return int16 value at the specified column
      */
-    int16_t getInt16(int32_t column) {
+    int16_t getInt16(errType& err, int32_t column) {
         WireType type = validateType(WIRE_TYPE_SMALLINT, column);
         int16_t retval;
         switch (type) {
         case WIRE_TYPE_SMALLINT:
-            retval = m_data.getInt16(getOffset(column));
+            retval = m_data.getInt16(err, getOffset(column));
             if (retval == INT16_MIN) m_wasNull = true;
             break;
         case WIRE_TYPE_TINYINT:
-            retval = m_data.getInt8(getOffset(column));
+            retval = m_data.getInt8(err, getOffset(column));
             if (retval == INT8_MIN) m_wasNull = true;
             break;
         default:
@@ -189,9 +189,9 @@ public:
      * not match the type of the get method.
      * @return int8 value at the specified column
      */
-    int8_t getInt8(int32_t column) {
+    int8_t getInt8(errType& err, int32_t column) {
         validateType(WIRE_TYPE_TINYINT, column);
-        int8_t retval = m_data.getInt8(getOffset(column));
+        int8_t retval = m_data.getInt8(err, getOffset(column));
         if (retval == INT8_MIN) {
             m_wasNull = true;
         }
@@ -205,9 +205,9 @@ public:
      * not match the type of the get method.
      * @return double value at the specified column
      */
-    double getDouble(int32_t column) {
+    double getDouble(errType& err, int32_t column) {
         validateType(WIRE_TYPE_FLOAT, column);
-        double retval = m_data.getDouble(getOffset(column));
+        double retval = m_data.getDouble(err, getOffset(column));
         if (retval <= -1.7E+308) {
             m_wasNull = true;
         }
@@ -221,9 +221,9 @@ public:
      * not match the type of the get method.
      * @return String value at the specified column
      */
-    std::string getString(int32_t column) {
+    std::string getString(errType& err, int32_t column) {
         validateType(WIRE_TYPE_STRING, column);
-        return m_data.getString(getOffset(column), m_wasNull);
+        return m_data.getString(err, getOffset(column), m_wasNull);
     }
 
     /*
@@ -231,31 +231,31 @@ public:
      * @throws InvalidColumnException The name of the column was invalid.
      * @return true if the value is NULL and false otherwise
      */
-    bool isNull(int32_t column) {
+    bool isNull(errType& err, int32_t column) {
         if (column < 0 || column >= static_cast<ssize_t>(m_columns->size())) {
             throw InvalidColumnException();
         }
         WireType columnType = m_columns->at(static_cast<size_t>(column)).m_type;
         switch (columnType) {
         case WIRE_TYPE_DECIMAL:
-            getDecimal(column); break;
+            getDecimal(err, column); break;
         case WIRE_TYPE_TIMESTAMP:
-            getTimestamp(column); break;
+            getTimestamp(err, column); break;
         case WIRE_TYPE_BIGINT:
-            getInt64(column); break;
+            getInt64(err, column); break;
         case WIRE_TYPE_INTEGER:
-            getInt32(column); break;
+            getInt32(err, column); break;
         case WIRE_TYPE_SMALLINT:
-            getInt64(column); break;
+            getInt64(err, column); break;
         case WIRE_TYPE_TINYINT:
-            getInt8(column); break;
+            getInt8(err, column); break;
         case WIRE_TYPE_FLOAT:
-            getDouble(column); break;
+            getDouble(err, column); break;
         case WIRE_TYPE_STRING:
-            getString(column); break;
+            getString(err, column); break;
         case WIRE_TYPE_VARBINARY:
             int out_len;
-            getVarbinary(column, 0, NULL, &out_len); break;
+            getVarbinary(err, column, 0, NULL, &out_len); break;
         default:
             assert(false);
         }
@@ -269,9 +269,9 @@ public:
      * not match the type of the get method.
      * @return Whether the buffer provided was large enough.
      */
-    bool getVarbinary(std::string cname, int32_t bufsize, uint8_t *out_value, int32_t *out_len)
+    bool getVarbinary(errType& err, std::string cname, int32_t bufsize, uint8_t *out_value, int32_t *out_len)
     {
-        return getVarbinary(getColumnIndexByName(cname), bufsize, out_value, out_len);
+        return getVarbinary(err, getColumnIndexByName(cname), bufsize, out_value, out_len);
     }
 
     /*
@@ -281,8 +281,8 @@ public:
      * does not match the column type.
      * @return Decimal value at the specified column
      */
-    Decimal getDecimal(std::string cname) {
-        return getDecimal(getColumnIndexByName(cname));
+    Decimal getDecimal(errType& err, std::string cname) {
+        return getDecimal(err, getColumnIndexByName(cname));
     }
 
     /*
@@ -292,8 +292,8 @@ public:
      * does not match the column type.
      * @return Timestamp value at the specified column
      */
-    int64_t getTimestamp(std::string cname) {
-        return getTimestamp(getColumnIndexByName(cname));
+    int64_t getTimestamp(errType& err, std::string cname) {
+        return getTimestamp(err, getColumnIndexByName(cname));
     }
 
     /*
@@ -303,8 +303,8 @@ public:
      * does not match the column type.
      * @return int64 value at the specified column
      */
-    int64_t getInt64(std::string cname) {
-        return getInt64(getColumnIndexByName(cname));
+    int64_t getInt64(errType& err, std::string cname) {
+        return getInt64(err, getColumnIndexByName(cname));
     }
 
     /*
@@ -314,8 +314,8 @@ public:
      * does not match the column type.
      * @return int32 value at the specified column
      */
-    int32_t getInt32(std::string cname) {
-        return getInt32(getColumnIndexByName(cname));
+    int32_t getInt32(errType& err, std::string cname) {
+        return getInt32(err, getColumnIndexByName(cname));
     }
 
     /*
@@ -325,8 +325,8 @@ public:
      * does not match the column type.
      * @return int16 value at the specified column
      */
-    int16_t getInt16(std::string cname) {
-        return getInt16(getColumnIndexByName(cname));
+    int16_t getInt16(errType& err, std::string cname) {
+        return getInt16(err, getColumnIndexByName(cname));
     }
 
     /*
@@ -336,8 +336,8 @@ public:
      * does not match the column type.
      * @return int8 value at the specified column
      */
-    int8_t getInt8(std::string cname) {
-        return getInt8(getColumnIndexByName(cname));
+    int8_t getInt8(errType& err, std::string cname) {
+        return getInt8(err, getColumnIndexByName(cname));
     }
 
     /*
@@ -347,8 +347,8 @@ public:
      * does not match the column type.
      * @return double value at the specified column
      */
-    double getDouble(std::string cname) {
-        return getDouble(getColumnIndexByName(cname));
+    double getDouble(errType &err, std::string cname) {
+        return getDouble(err, getColumnIndexByName(cname));
     }
 
     /*
@@ -358,8 +358,8 @@ public:
      * does not match the column type.
      * @return string value at the specified column
      */
-    std::string getString(std::string cname) {
-        return getString(getColumnIndexByName(cname));
+    std::string getString(errType& err, std::string cname) {
+        return getString(err, getColumnIndexByName(cname));
     }
 
     /*
@@ -367,9 +367,9 @@ public:
      * @throws InvalidColumnException The name of the column was invalid.
      * @return true if the value is NULL and false otherwise
      */
-    bool isNull(std::string cname) {
+    bool isNull(errType, std::string cname) {
         int32_t column = getColumnIndexByName(cname);
-        return isNull(column);
+        return isNull(err, column);
     }
 
     /*
@@ -392,34 +392,34 @@ public:
      * Returns a string reprentation of this row with the specified level of indentation
      * before each line
      */
-    void toString(std::ostringstream &ostream, std::string indent) {
+    void toString(errType &err, std::ostringstream &ostream, std::string indent) {
         ostream << indent;
         const int32_t size = static_cast<int32_t>(m_columns->size());
         for (int32_t ii = 0; ii < size; ii++) {
             if (ii != 0) {
                 ostream << ", ";
             }
-            if (isNull(ii)) {
+            if (isNull(err, ii)) {
                 ostream << "NULL";
                 continue;
             }
             switch(m_columns->at(ii).m_type) {
             case WIRE_TYPE_TINYINT:
-                ostream << static_cast<int32_t>(getInt8(ii)); break;
+                ostream << static_cast<int32_t>(getInt8(err, ii)); break;
             case WIRE_TYPE_SMALLINT:
-                ostream << getInt16(ii); break;
+                ostream << getInt16(err, ii); break;
             case WIRE_TYPE_INTEGER:
-                ostream << getInt32(ii); break;
+                ostream << getInt32(err, ii); break;
             case WIRE_TYPE_BIGINT:
-                ostream << getInt64(ii); break;
+                ostream << getInt64(err, ii); break;
             case WIRE_TYPE_FLOAT:
-                ostream << getDouble(ii); break;
+                ostream << getDouble(err, ii); break;
             case WIRE_TYPE_STRING:
-                ostream << "\"" << getString(ii) << "\""; break;
+                ostream << "\"" << getString(err, ii) << "\""; break;
             case WIRE_TYPE_TIMESTAMP:
-                ostream << getTimestamp(ii); break;
+                ostream << getTimestamp(err, ii); break;
             case WIRE_TYPE_DECIMAL:
-                ostream << getDecimal(ii).toString(); break;
+                ostream << getDecimal(err, ii).toString(); break;
             case WIRE_TYPE_VARBINARY:
                 ostream << "VARBINARY VALUE"; break;
             default:
