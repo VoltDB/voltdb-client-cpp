@@ -49,78 +49,78 @@ private:
 public:
     RowBuilder(Table *table);
 
-    void addInt64(int64_t val) {
+    void addInt64(errType& err, int64_t val) {
         validateType(WIRE_TYPE_BIGINT);
         m_buffer.ensureRemaining(8);
         m_buffer.putInt64(val);
         m_currentColumn++;
     }
-    void addInt32(int32_t val) {
+    void addInt32(errType& err, int32_t val) {
         validateType(WIRE_TYPE_INTEGER);
         m_buffer.ensureRemaining(4);
         m_buffer.putInt32(val);
         m_currentColumn++;
     }
-    void addInt16(int16_t val) {
+    void addInt16(errType& err, int16_t val) {
         validateType(WIRE_TYPE_SMALLINT);
         m_buffer.ensureRemaining(2);
         m_buffer.putInt16(val);
         m_currentColumn++;
     }
-    void addInt8(int8_t val) {
+    void addInt8(errType& err, int8_t val) {
         validateType(WIRE_TYPE_TINYINT);
         m_buffer.ensureRemaining(1);
         m_buffer.putInt8(val);
         m_currentColumn++;
     }
-    void addDouble(double val) {
+    void addDouble(errType& err, double val) {
         validateType(WIRE_TYPE_FLOAT);
         m_buffer.ensureRemaining(8);
         m_buffer.putDouble(val);
         m_currentColumn++;
     }
-    void addNull() {
+    void addNull(errType& err) {
         if (m_currentColumn > m_columns.size()) {
             throw new ColumnMismatchException();
         }
         switch (m_columns[m_currentColumn].m_type) {
         case WIRE_TYPE_BIGINT:
-            addInt64(INT64_MIN);
+            addInt64(err, INT64_MIN);
             break;
         case WIRE_TYPE_INTEGER:
-            addInt32(INT32_MIN);
+            addInt32(err, INT32_MIN);
             break;
         case WIRE_TYPE_SMALLINT:
-            addInt16(INT16_MIN);
+            addInt16(err, INT16_MIN);
             break;
         case WIRE_TYPE_TINYINT:
-            addInt8(INT8_MIN);
+            addInt8(err, INT8_MIN);
             break;
         case WIRE_TYPE_FLOAT:
-            addDouble(-1.7976931348623157E+308);
+            addDouble(err, -1.7976931348623157E+308);
             break;
         case WIRE_TYPE_STRING:
             m_buffer.ensureRemaining(4);
-            m_buffer.putInt32(-1);
+            m_buffer.putInt32(err, -1);
             m_currentColumn++;
             break;
         case WIRE_TYPE_VARBINARY:
             m_buffer.ensureRemaining(4);
-            m_buffer.putInt32(-1);
+            m_buffer.putInt32(err, -1);
             m_currentColumn++;
             break;
         default:
             assert(false);
         }
     }
-    void addString(std::string val) {
+    void addString(errType& err, std::string val) {
         validateType(WIRE_TYPE_STRING);
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(val.size()));
         m_buffer.putString(val);
         m_currentColumn++;
     }
 
-    void addVarbinary(const int32_t bufsize, const uint8_t *in_value) {
+    void addVarbinary(errType& err, const int32_t bufsize, const uint8_t *in_value) {
         validateType(WIRE_TYPE_VARBINARY);
         m_buffer.ensureRemaining(4 + bufsize);
         m_buffer.putBytes(bufsize, in_value);
