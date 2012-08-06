@@ -68,9 +68,9 @@ public:
     /*
      * Synchronously invoke a stored procedure and return a the response.
      */
-    InvocationResponse invoke(Procedure &proc);
-    void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback);
-    void invoke(Procedure &proc, ProcedureCallback *callback);
+    InvocationResponse invoke(errType& err, Procedure &proc);
+    void invoke(errType& err, Procedure &proc, boost::shared_ptr<ProcedureCallback> callback);
+    void invoke(errType& err, Procedure &proc, ProcedureCallback *callback);
     void runOnce();
     void run();
 

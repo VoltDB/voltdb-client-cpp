@@ -63,7 +63,7 @@ public:
      * @throws UninitializedParamsException Some or all of the parameters for the stored procedure were not set
      * @throws LibEventException An unknown error occured in libevent
      */
-    voltdb::InvocationResponse invoke(voltdb::Procedure &proc);
+    voltdb::InvocationResponse invoke(errType& err, voltdb::Procedure &proc);
 
     /*
      * Asynchronously invoke a stored procedure. Returns immediately if there is no backpressure, but if there is
@@ -77,7 +77,7 @@ public:
 #ifdef SWIG
 %ignore invoke(voltdb::Procedure &proc, boost::shared_ptr<voltdb::ProcedureCallback> callback);
 #endif
-    void invoke(voltdb::Procedure &proc, boost::shared_ptr<voltdb::ProcedureCallback> callback);
+    void invoke(errType& err, voltdb::Procedure &proc, boost::shared_ptr<voltdb::ProcedureCallback> callback);
 
     /*
      * Asynchronously invoke a stored procedure. Returns immediately if there is no backpressure, but if there is
@@ -88,7 +88,7 @@ public:
      * @throws UninitializedParamsException Some or all of the parameters for the stored procedure were not set
      * @throws LibEventException An unknown error occured in libevent
      */
-    void invoke(voltdb::Procedure &proc, voltdb::ProcedureCallback *callback);
+    void invoke(errType& err, voltdb::Procedure &proc, voltdb::ProcedureCallback *callback);
 
     /*
      * Run the event loop once and process pending events. This writes requests to any ready connections

@@ -48,25 +48,27 @@ Client::createConnection(
  * Synchronously invoke a stored procedure and return a the response.
  */
 InvocationResponse
-Client::invoke(Procedure &proc)
+Client::invoke(errType& err, Procedure &proc)
 {
-    return m_impl->invoke(proc);
+    return m_impl->invoke(err, proc);
 }
 
 void
 Client::invoke(
+        errType& err,
         Procedure &proc,
         boost::shared_ptr<ProcedureCallback> callback)
 {
-    m_impl->invoke(proc, callback);
+    m_impl->invoke(err, proc, callback);
 }
 
 void
 Client::invoke(
+        errType& err,
         Procedure &proc,
         ProcedureCallback *callback)
 {
-    m_impl->invoke(proc, callback);
+    m_impl->invoke(err, proc, callback);
 }
 
 void

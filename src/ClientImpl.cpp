@@ -311,11 +311,15 @@ private:
     InvocationResponse *m_responseOut;
 };
 
-InvocationResponse ClientImpl::invoke(Procedure &proc) {
+// TODO_ERROR
+InvocationResponse ClientImpl::invoke(errType& err, Procedure &proc) {
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
-    int32_t messageSize = proc.getSerializedSize();
+    int32_t messageSize = proc.getSerializedSize(err);
+    if (!isOk(err)) {
+        return null;
+    }
     ScopedByteBuffer sbb(messageSize);
     int64_t clientData = m_nextRequestId++;
     proc.serializeTo(&sbb, clientData);
@@ -344,19 +348,23 @@ public:
     }
 };
 
-void ClientImpl::invoke(Procedure &proc, ProcedureCallback *callback) {
+void ClientImpl::invoke(errType& err, Procedure &proc, ProcedureCallback *callback) {
     boost::shared_ptr<ProcedureCallback> wrapper(new DummyCallback(callback));
-    invoke(proc, wrapper);
+    invoke(err, proc, wrapper);
 }
 
-void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) {
+// TODO_ERROR
+void ClientImpl::invoke(errType& err, Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) {
     if (callback.get() == NULL) {
         throw voltdb::NullPointerException();
     }
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
-    int32_t messageSize = proc.getSerializedSize();
+    int32_t messageSize = proc.getSerializedSize(err);
+    if (!isOk(err)) {
+        return;
+    }
     ScopedByteBuffer sbb(messageSize);
     int64_t clientData = m_nextRequestId++;
     proc.serializeTo(&sbb, clientData);
