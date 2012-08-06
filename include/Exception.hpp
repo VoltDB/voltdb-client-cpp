@@ -28,6 +28,7 @@
 namespace voltdb {
 
 /* Code for each type of exception */
+const int errOk = 0;
 const int errException = 1;
 const int errNullPointerException = 2;
 const int errInvalidColumnException = 3;
@@ -42,6 +43,24 @@ const int errConnectException = 11;
 const int errNoConnectionsException = 12;
 const int errLibEventException = 13;
 const int errClusterInstanceMismatchException = 14;
+
+// out parameter type in case we have to change this again.
+typedef int errType;
+
+// helper to determine if err is anything other than errOk
+bool isOk(const errType outParam) {
+    return outParam == errOk;
+}
+
+// set an outParameter.
+void setErr(errType& outParam, const int errorCode) {
+    outParam = errorCode;
+}
+
+// clear an outParameter.
+void setOk(errType& outParam) {
+    setErr(outParam, errOk)
+}
 
 /*
  * Base class for all exceptions thrown by the VoltDB client API
