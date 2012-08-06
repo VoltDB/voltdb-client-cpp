@@ -361,7 +361,10 @@ public:
             wasNull = true;
             return std::string();
         }
-        char *data = getByReference(length);
+        char *data = getByReference(err, length);
+        if (!isOk(err)) {
+            return std::string();
+        }
         return std::string(data, static_cast<uint32_t>(length));
     }
     std::string getString(errType& err, int32_t index, bool &wasNull) {
@@ -373,7 +376,10 @@ public:
             wasNull = true;
             return std::string();
         }
-        char *data = getByReference(index + 4, length);
+        char *data = getByReference(err, index + 4, length);
+        if (!isOk(err)) {
+            return std::string();
+        }
         return std::string(data, static_cast<uint32_t>(length));
     }
     ByteBuffer& putString(errType& err, std::string value) {
