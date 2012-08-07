@@ -594,6 +594,7 @@ private:
             }
         }
         setErr(err, errInvalidColumnException);
+        return -1;
     }
 
     void ensureCalculatedOffsets() {
