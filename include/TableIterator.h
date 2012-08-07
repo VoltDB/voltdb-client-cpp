@@ -73,25 +73,21 @@ public:
     voltdb::Row next(errType& err) {
         if (m_rowCount <= m_currentRow) {
             setErr(err, errNoMoreRowsException);
-            // TODO_ERROR
-            throw voltdb::Exception();
+            return voltdb::Row();
         }
         int32_t rowLength = m_buffer.getInt32(err);
         if (!isOk(err)) {
-            // TODO_ERROR
-            throw voltdb::Exception();
+            return voltdb::Row();
         }
         int32_t oldLimit = m_buffer.limit();
         m_buffer.limit(err, m_buffer.position() + rowLength);
         if (!isOk(err)) {
-            // TODO_ERROR
-            throw voltdb::Exception();
+            return voltdb::Row();
         }
         SharedByteBuffer buffer = m_buffer.slice();
         m_buffer.limit(err, oldLimit);
         if (!isOk(err)) {
-            // TODO_ERROR
-            throw voltdb::Exception();
+            return voltdb::Row();
         }
         m_currentRow++;
         return voltdb::Row(buffer, m_columns);

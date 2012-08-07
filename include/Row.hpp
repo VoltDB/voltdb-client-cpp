@@ -54,6 +54,12 @@ public:
     }
 
     /*
+     * Produce an empty row. Necessary in some error paths that return rows by value
+     */
+    Row() {
+    }
+
+    /*
      * Retrieve the value at the specified column index as bytes. The type of the column
      * must be Varbinary.
      * @throws InvalidColumnException The index of the column was invalid or the type of the column does
