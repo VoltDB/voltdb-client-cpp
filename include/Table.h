@@ -54,7 +54,7 @@ public:
     /*
      * Returns an iterator for iterating over the rows of this table
      */
-    TableIterator iterator(errType& err);
+    TableIterator iterator();
 
     errType getErr() { return m_err; }
 

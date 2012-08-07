@@ -26,7 +26,10 @@
 
 namespace voltdb {
     Table::Table(SharedByteBuffer buffer) : m_buffer(buffer) {
-        buffer.position(5);
+        buffer.position(m_err, 5);
+        if (!isOk(m_err)) {
+            return;
+        }
         size_t columnCount = static_cast<size_t>(buffer.getInt16(m_err));
         if (!isOk(m_err)) {
             return;
@@ -76,11 +79,11 @@ namespace voltdb {
         return m_status;
     }
 
-    // TODO_ERROR
-    TableIterator Table::iterator(errType& err) {
+    TableIterator Table::iterator() {
         m_buffer.position(m_err, m_rowStart + 4);//skip row count
         if (!isOk(m_err)) {
-            return null;
+            // TODO_ERROR
+            throw voltdb::Exception();
         }
         return TableIterator(m_buffer.slice(), m_columns, m_rowCount);
     }
@@ -123,9 +126,18 @@ namespace voltdb {
         }
         ostream << std::endl;
         TableIterator iter = iterator();
+        if (!isOk(m_err)) {
+            return;
+        }
         while (iter.hasNext()) {
-            Row row = iter.next();
-            row.toString(ostream, indent + "    ");
+            Row row = iter.next(m_err);
+            if (!isOk(m_err)) {
+                return;
+            }
+            row.toString(m_err, ostream, indent + "    ");
+            if (!isOk(m_err)) {
+                return;
+            }
             ostream << std::endl;
         }
     }

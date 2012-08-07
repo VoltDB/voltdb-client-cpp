@@ -140,15 +140,15 @@ public:
         int32_t retval;
         switch (type) {
         case WIRE_TYPE_INTEGER:
-            retval = m_data.getInt32(errType& err, getOffset(column));
+            retval = m_data.getInt32(err, getOffset(column));
             if (retval == INT32_MIN) m_wasNull = true;
             break;
         case WIRE_TYPE_SMALLINT:
-            retval = m_data.getInt16(errType& err, getOffset(column));
+            retval = m_data.getInt16(err, getOffset(column));
             if (retval == INT16_MIN) m_wasNull = true;
             break;
         case WIRE_TYPE_TINYINT:
-            retval = m_data.getInt8(errType& err, getOffset(column));
+            retval = m_data.getInt8(err, getOffset(column));
             if (retval == INT8_MIN) m_wasNull = true;
             break;
         default:
@@ -367,7 +367,7 @@ public:
      * @throws InvalidColumnException The name of the column was invalid.
      * @return true if the value is NULL and false otherwise
      */
-    bool isNull(errType, std::string cname) {
+    bool isNull(errType& err, std::string cname) {
         int32_t column = getColumnIndexByName(cname);
         return isNull(err, column);
     }
@@ -382,9 +382,9 @@ public:
     /*
      * Returns a string representation of this row
      */
-    std::string toString() {
+    std::string toString(errType& err) {
         std::ostringstream ostream;
-        toString(ostream, std::string(""));
+        toString(err, ostream, std::string(""));
         return ostream.str();
     }
 
