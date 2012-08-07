@@ -48,17 +48,17 @@ const int errClusterInstanceMismatchException = 14;
 typedef int errType;
 
 // helper to determine if err is anything other than errOk
-bool isOk(const errType outParam) {
+inline bool isOk(const errType outParam) {
     return outParam == errOk;
 }
 
 // set an outParameter.
-void setErr(errType& outParam, const int errorCode) {
+inline void setErr(errType& outParam, const int errorCode) {
     outParam = errorCode;
 }
 
 // clear an outParameter.
-void setOk(errType& outParam) {
+inline void setOk(errType& outParam) {
     setErr(outParam, errOk);
 }
 
