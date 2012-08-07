@@ -51,15 +51,13 @@ typedef ttmath::Int<4> TTInt;
 class Decimal {
 public:
 
-    Decimal() {
-        m_err = errOk;
+    Decimal() : m_err(errOk) {
     }
 
     /*
      * Construct a decimal value from a string.
      */
-    Decimal(std::string txt) {
-        m_err = errOk;
+    Decimal(std::string txt) : m_err(errOk) {
         const TTInt kMaxScaleFactor("1000000000000");
         if (txt.length() == 0) {
             setErr(m_err, errStringToDecimalException);
@@ -132,7 +130,7 @@ public:
     /*
      * Construct a Decimal value from the VoltDB wire representation
      */
-    Decimal(char data[16]) {
+    Decimal(char data[16]) : m_err(errOk) {
         ByteBuffer buf(data, 16);
         int64_t *longStorage = reinterpret_cast<int64_t*>(m_data);
         //Reverse order for Java BigDecimal BigEndian

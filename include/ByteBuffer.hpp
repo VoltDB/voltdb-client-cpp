@@ -93,7 +93,6 @@ class ByteBuffer {
     friend class ByteBufferTest;
 private:
     int32_t checkGetPutIndex(errType& err, int32_t length) {
-        setOk(err);
         if (m_limit - m_position < length || length < 0) {
             setErr(err, errOverflowUnderflowException);
             return -1;
@@ -104,7 +103,6 @@ private:
     }
 
     int32_t checkIndex(errType& err, int32_t index, int32_t length) {
-        setOk(err);
         if ((index < 0) || (length > m_limit - index) || length < 0) {
             setErr(err, errIndexOutOfBoundsException);
             return -1;

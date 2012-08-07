@@ -587,7 +587,7 @@ public:
 
 private:
 
-    ParameterSet(std::vector<Parameter> parameters) : m_parameters(parameters), m_buffer(8192), m_currentParam(0) {
+    ParameterSet(std::vector<Parameter> parameters) : m_parameters(parameters), m_buffer(8192), m_currentParam(0), m_err(errOk) {
         m_buffer.putInt16(m_err, static_cast<int16_t>(m_parameters.size()));
     }
 

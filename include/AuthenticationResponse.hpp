@@ -31,7 +31,7 @@ public:
         m_err = errOk;
     }
 
-    AuthenticationResponse(ByteBuffer &buf) {
+    AuthenticationResponse(ByteBuffer &buf) : m_err(errOk) {
         char version = buf.getInt8(m_err);
         if (!isOk(m_err)) {
             return;

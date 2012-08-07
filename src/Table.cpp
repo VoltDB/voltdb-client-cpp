@@ -26,7 +26,7 @@
 
 namespace voltdb {
     // caller must check getErr()
-    Table::Table(SharedByteBuffer buffer) : m_buffer(buffer) {
+    Table::Table(SharedByteBuffer buffer) : m_buffer(buffer), m_err(errOk) {
         buffer.position(m_err, 5);
         if (!isOk(m_err)) {
             return;

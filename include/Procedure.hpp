@@ -48,7 +48,7 @@ public:
      */
     ParameterSet* params() {
         // assume reset() doesn't fail.
-        errType TODO_ERROR;
+        errType TODO_ERROR = errOk;
         m_params.reset(TODO_ERROR);
         return &m_params;
     }

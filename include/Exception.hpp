@@ -24,6 +24,8 @@
 #ifndef VOLTDB_EXCEPTION_HPP_
 #define VOLTDB_EXCEPTION_HPP_
 #include <exception>
+#include <cassert>
+#include <cstdio>
 
 namespace voltdb {
 
@@ -55,13 +57,12 @@ inline bool isOk(const errType outParam) {
 
 // set an outParameter.
 inline void setErr(errType& outParam, const int errorCode) {
+    if (!isOk(outParam)) {
+        printf("Exception is %d\n", outParam);
+        throw std::exception();
+    }
     assert(isOk(outParam)); // don't overwrite existing err.
     outParam = errorCode;
-}
-
-// clear an outParameter.
-inline void setOk(errType& outParam) {
-    setErr(outParam, errOk);
 }
 
 /*

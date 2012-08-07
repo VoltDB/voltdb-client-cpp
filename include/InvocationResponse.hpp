@@ -92,7 +92,7 @@ public:
      * Constructor for taking shared ownership of a message buffer
      * containing a response to a stored procedure invocation
      */
-    InvocationResponse(boost::shared_array<char> data, int32_t length) : m_results(0) {
+    InvocationResponse(boost::shared_array<char> data, int32_t length) : m_err(errOk), m_results(0) {
         SharedByteBuffer buffer(data, length);
         int8_t version = buffer.getInt8(m_err);
         if (!isOk(m_err)) {

@@ -60,10 +60,6 @@ CPPUNIT_TEST( testLimitNegative );
 CPPUNIT_TEST( testLimitOver );
 CPPUNIT_TEST( testSlice );
 CPPUNIT_TEST( testIsExpandable );
-CPPUNIT_TEST_EXCEPTION( testEnsureRemainingThrows, voltdb::NonExpandableBufferException );
-CPPUNIT_TEST_EXCEPTION( testEnsureRemainingExactThrows, voltdb::NonExpandableBufferException );
-CPPUNIT_TEST_EXCEPTION( testEnsureCapacityThrows, voltdb::NonExpandableBufferException );
-CPPUNIT_TEST_EXCEPTION( testEnsureCapacityExactThrows, voltdb::NonExpandableBufferException );
 CPPUNIT_TEST( testCopyConstruction );
 CPPUNIT_TEST( testSharedAndScopedByteBuffer );
 CPPUNIT_TEST_SUITE_END();
@@ -468,26 +464,6 @@ public:
         CPPUNIT_ASSERT(!b.isExpandable());
         CPPUNIT_ASSERT(SharedByteBuffer(new char[32], 32).isExpandable());
         CPPUNIT_ASSERT(ScopedByteBuffer(new char[32], 32).isExpandable());
-    }
-
-    void testEnsureRemainingThrows() {
-        ByteBuffer b( reinterpret_cast<char*>(1), 64);
-        b.ensureRemaining(64);
-    }
-
-    void testEnsureRemainingExactThrows() {
-        ByteBuffer b( reinterpret_cast<char*>(1), 64);
-        b.ensureRemainingExact(64);
-    }
-
-    void testEnsureCapacityThrows() {
-        ByteBuffer b( reinterpret_cast<char*>(1), 64);
-        b.ensureCapacity(64);
-    }
-
-    void testEnsureCapacityExactThrows() {
-        ByteBuffer b( reinterpret_cast<char*>(1), 64);
-        b.ensureCapacityExact(64);
     }
 
     void testCopyConstruction() {
