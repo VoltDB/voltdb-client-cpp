@@ -61,7 +61,10 @@ public:
      * @return Whether the buffer provided was large enough.
      */
     bool getVarbinary(errType& err, int32_t column, int32_t bufsize, uint8_t *out_value, int32_t *out_len) {
-        validateType(WIRE_TYPE_VARBINARY, column);
+        validateType(err, WIRE_TYPE_VARBINARY, column);
+        if (!isOk(err)) {
+            return false;
+        }
         return m_data.getBytes(err, getOffset(column), m_wasNull, bufsize, out_value, out_len);
     }
 
@@ -73,7 +76,10 @@ public:
      * @return Decimal value at the specified column
      */
     Decimal getDecimal(errType& err, int32_t column) {
-        validateType(WIRE_TYPE_DECIMAL, column);
+        validateType(err, WIRE_TYPE_DECIMAL, column);
+        if (!isOk(err)) {
+            return Decimal();
+        }
         char data[16];
         m_data.get(err, getOffset(column), data, 16);
         if (!isOk(err)) {
@@ -93,7 +99,10 @@ public:
      * @return Timestamp value at the specified column
      */
     int64_t getTimestamp(errType& err, int32_t column) {
-        validateType(WIRE_TYPE_TIMESTAMP, column);
+        validateType(err, WIRE_TYPE_TIMESTAMP, column);
+        if (!isOk(err)) {
+            return INT64_MIN;
+        }
         int64_t retval = m_data.getInt64(err, getOffset(column));
         if (retval == INT64_MIN) m_wasNull = true;
         return retval;
@@ -107,7 +116,10 @@ public:
      * @return int64 value at the specified column
      */
     int64_t getInt64(errType& err, int32_t column) {
-        WireType type = validateType(WIRE_TYPE_BIGINT, column);
+        WireType type = validateType(err, WIRE_TYPE_BIGINT, column);
+        if (!isOk(err)) {
+            return INT64_MIN;
+        }
         int64_t retval;
         switch (type) {
         case WIRE_TYPE_BIGINT:
@@ -140,7 +152,10 @@ public:
      * @return int32 value at the specified column
      */
     int32_t getInt32(errType& err, int32_t column) {
-        WireType type = validateType(WIRE_TYPE_INTEGER, column);
+        WireType type = validateType(err, WIRE_TYPE_INTEGER, column);
+        if (!isOk(err)) {
+            return INT32_MIN;
+        }
         int32_t retval;
         switch (type) {
         case WIRE_TYPE_INTEGER:
@@ -169,7 +184,10 @@ public:
      * @return int16 value at the specified column
      */
     int16_t getInt16(errType& err, int32_t column) {
-        WireType type = validateType(WIRE_TYPE_SMALLINT, column);
+        WireType type = validateType(err, WIRE_TYPE_SMALLINT, column);
+        if (!isOk(err)) {
+            return INT16_MIN;
+        }
         int16_t retval;
         switch (type) {
         case WIRE_TYPE_SMALLINT:
@@ -194,7 +212,10 @@ public:
      * @return int8 value at the specified column
      */
     int8_t getInt8(errType& err, int32_t column) {
-        validateType(WIRE_TYPE_TINYINT, column);
+        validateType(err, WIRE_TYPE_TINYINT, column);
+        if (!isOk(err)) {
+            return INT8_MIN;
+        }
         int8_t retval = m_data.getInt8(err, getOffset(column));
         if (retval == INT8_MIN) {
             m_wasNull = true;
@@ -210,7 +231,10 @@ public:
      * @return double value at the specified column
      */
     double getDouble(errType& err, int32_t column) {
-        validateType(WIRE_TYPE_FLOAT, column);
+        validateType(err, WIRE_TYPE_FLOAT, column);
+        if (!isOk(err)) {
+            return -1.7E+308;
+        }
         double retval = m_data.getDouble(err, getOffset(column));
         if (retval <= -1.7E+308) {
             m_wasNull = true;
@@ -226,7 +250,10 @@ public:
      * @return String value at the specified column
      */
     std::string getString(errType& err, int32_t column) {
-        validateType(WIRE_TYPE_STRING, column);
+        validateType(err, WIRE_TYPE_STRING, column);
+        if (!isOk(err)) {
+            return std::string();
+        }
         return m_data.getString(err, getOffset(column), m_wasNull);
     }
 
@@ -237,7 +264,8 @@ public:
      */
     bool isNull(errType& err, int32_t column) {
         if (column < 0 || column >= static_cast<ssize_t>(m_columns->size())) {
-            throw InvalidColumnException();
+            setErr(err, errInvalidColumnException);
+            return false;
         }
         WireType columnType = m_columns->at(static_cast<size_t>(column)).m_type;
         switch (columnType) {
@@ -275,7 +303,11 @@ public:
      */
     bool getVarbinary(errType& err, std::string cname, int32_t bufsize, uint8_t *out_value, int32_t *out_len)
     {
-        return getVarbinary(err, getColumnIndexByName(cname), bufsize, out_value, out_len);
+        int32_t colidx = getColumnIndexByName(err, cname);
+        if (!isOk(err)) {
+            return false;
+        }
+        return getVarbinary(err, colidx, bufsize, out_value, out_len);
     }
 
     /*
@@ -286,7 +318,11 @@ public:
      * @return Decimal value at the specified column
      */
     Decimal getDecimal(errType& err, std::string cname) {
-        return getDecimal(err, getColumnIndexByName(cname));
+        int32_t colidx = getColumnIndexByName(err, cname);
+        if (!isOk(err)) {
+            return Decimal();
+        }
+        return getDecimal(err, colidx);
     }
 
     /*
@@ -297,7 +333,11 @@ public:
      * @return Timestamp value at the specified column
      */
     int64_t getTimestamp(errType& err, std::string cname) {
-        return getTimestamp(err, getColumnIndexByName(cname));
+        int32_t colidx = getColumnIndexByName(err, cname);
+        if (!isOk(err)) {
+            return INT64_MIN;
+        }
+        return getTimestamp(err, colidx);
     }
 
     /*
@@ -308,7 +348,11 @@ public:
      * @return int64 value at the specified column
      */
     int64_t getInt64(errType& err, std::string cname) {
-        return getInt64(err, getColumnIndexByName(cname));
+        int32_t colidx = getColumnIndexByName(err, cname);
+        if (!isOk(err)) {
+            return INT64_MIN;
+        }
+        return getInt64(err, colidx);
     }
 
     /*
@@ -319,7 +363,11 @@ public:
      * @return int32 value at the specified column
      */
     int32_t getInt32(errType& err, std::string cname) {
-        return getInt32(err, getColumnIndexByName(cname));
+        int32_t colidx = getColumnIndexByName(err, cname);
+        if (!isOk(err)) {
+            return INT32_MIN;
+        }
+        return getInt32(err, colidx);
     }
 
     /*
@@ -330,7 +378,11 @@ public:
      * @return int16 value at the specified column
      */
     int16_t getInt16(errType& err, std::string cname) {
-        return getInt16(err, getColumnIndexByName(cname));
+        int32_t colidx = getColumnIndexByName(err, cname);
+        if (!isOk(err)) {
+            return INT16_MIN;
+        }
+        return getInt16(err, colidx);
     }
 
     /*
@@ -341,7 +393,11 @@ public:
      * @return int8 value at the specified column
      */
     int8_t getInt8(errType& err, std::string cname) {
-        return getInt8(err, getColumnIndexByName(cname));
+        int32_t colidx = getColumnIndexByName(err, cname);
+        if (!isOk(err)) {
+            return INT8_MIN;
+        }
+        return getInt8(err, colidx);
     }
 
     /*
@@ -352,7 +408,11 @@ public:
      * @return double value at the specified column
      */
     double getDouble(errType &err, std::string cname) {
-        return getDouble(err, getColumnIndexByName(cname));
+        int32_t colidx = getColumnIndexByName(err, cname);
+        if (!isOk(err)) {
+            return -1.7E+308;
+        }
+        return getDouble(err, colidx);
     }
 
     /*
@@ -363,7 +423,11 @@ public:
      * @return string value at the specified column
      */
     std::string getString(errType& err, std::string cname) {
-        return getString(err, getColumnIndexByName(cname));
+        int32_t colidx = getColumnIndexByName(err, cname);
+        if (!isOk(err)) {
+            return std::string();
+        }
+        return getString(err, colidx);
     }
 
     /*
@@ -372,8 +436,11 @@ public:
      * @return true if the value is NULL and false otherwise
      */
     bool isNull(errType& err, std::string cname) {
-        int32_t column = getColumnIndexByName(cname);
-        return isNull(err, column);
+        int32_t colidx = getColumnIndexByName(err, cname);
+        if (!isOk(err)) {
+            return true;
+        }
+        return isNull(err, colidx);
     }
 
     /*
@@ -440,44 +507,72 @@ public:
         return *m_columns;
     }
 private:
-    WireType validateType(WireType type, int32_t index)  {
+    WireType validateType(errType& err, WireType type, int32_t index)  {
         if (index < 0 ||
                 index >= static_cast<ssize_t>(m_columns->size())) {
-            throw InvalidColumnException();
+            setErr(err, errInvalidColumnException);
+            return WIRE_TYPE_INVALID;
         }
         WireType columnType = m_columns->at(static_cast<size_t>(index)).m_type;
         switch (columnType) {
         case WIRE_TYPE_DECIMAL:
-            if (type != WIRE_TYPE_DECIMAL) throw InvalidColumnException();
+            if (type != WIRE_TYPE_DECIMAL) {
+                setErr(err, errInvalidColumnException);
+                return WIRE_TYPE_INVALID;
+            }
             break;
         case WIRE_TYPE_TIMESTAMP:
-            if (type != WIRE_TYPE_TIMESTAMP) throw InvalidColumnException();
+            if (type != WIRE_TYPE_TIMESTAMP) {
+                setErr(err, errInvalidColumnException);
+                return WIRE_TYPE_INVALID;
+            }
             break;
         case WIRE_TYPE_BIGINT:
-            if (type != WIRE_TYPE_BIGINT) throw InvalidColumnException();
+            if (type != WIRE_TYPE_BIGINT) {
+                setErr(err, errInvalidColumnException);
+                return WIRE_TYPE_INVALID;
+            }
             break;
         case WIRE_TYPE_INTEGER:
-            if (type != WIRE_TYPE_BIGINT && type != WIRE_TYPE_INTEGER) throw InvalidColumnException();
+            if (type != WIRE_TYPE_BIGINT && type != WIRE_TYPE_INTEGER) {
+                setErr(err, errInvalidColumnException);
+                return WIRE_TYPE_INVALID;
+            }
             break;
         case WIRE_TYPE_SMALLINT:
             if (type != WIRE_TYPE_BIGINT &&
                     type != WIRE_TYPE_INTEGER &&
-                    type != WIRE_TYPE_SMALLINT) throw InvalidColumnException();
+                    type != WIRE_TYPE_SMALLINT) {
+                setErr(err, errInvalidColumnException);
+                return WIRE_TYPE_INVALID;
+            }
             break;
         case WIRE_TYPE_TINYINT:
             if (type != WIRE_TYPE_BIGINT &&
                     type != WIRE_TYPE_INTEGER &&
                     type != WIRE_TYPE_SMALLINT &&
-                    type != WIRE_TYPE_TINYINT) throw InvalidColumnException();
+                    type != WIRE_TYPE_TINYINT) {
+                setErr(err, errInvalidColumnException);
+                return WIRE_TYPE_INVALID;
+            }
             break;
         case WIRE_TYPE_FLOAT:
-            if (type != WIRE_TYPE_FLOAT) throw InvalidColumnException();
+            if (type != WIRE_TYPE_FLOAT) {
+                setErr(err, errInvalidColumnException);
+                return WIRE_TYPE_INVALID;
+            }
             break;
         case WIRE_TYPE_STRING:
-            if (type != WIRE_TYPE_STRING) throw InvalidColumnException();
+            if (type != WIRE_TYPE_STRING) {
+                setErr(err, errInvalidColumnException);
+                return WIRE_TYPE_INVALID;
+            }
             break;
         case WIRE_TYPE_VARBINARY:
-            if (type != WIRE_TYPE_VARBINARY) throw InvalidColumnException();
+            if (type != WIRE_TYPE_VARBINARY) {
+                setErr(err, errInvalidColumnException);
+                return WIRE_TYPE_VARBINARY;
+            }
             break;
         default:
             assert(false);
@@ -486,13 +581,13 @@ private:
         return columnType;
     }
 
-    int32_t getColumnIndexByName(std::string name) {
+    int32_t getColumnIndexByName(errType &err, std::string name) {
         for (int32_t ii = 0; ii < static_cast<ssize_t>(m_columns->size()); ii++) {
             if (m_columns->at(static_cast<size_t>(ii)).m_name == name) {
                 return ii;
             }
         }
-        throw InvalidColumnException();
+        setErr(err, errInvalidColumnException);
     }
 
     void ensureCalculatedOffsets() {
