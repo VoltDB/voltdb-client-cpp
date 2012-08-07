@@ -419,7 +419,10 @@ public:
     }
     bool getBytes(errType& err, int32_t index, bool &wasNull, const int32_t bufsize, uint8_t *out_value, int32_t *out_len)
     {
-        int32_t length = getInt32(index);
+        int32_t length = getInt32(err, index);
+        if (!isOk(err)) {
+            return false;
+        }
         *out_len = length;
         if (!out_value)
             return false;
@@ -516,23 +519,6 @@ public:
 
     virtual bool isExpandable() {
         return false;
-    }
-
-    virtual void ensureRemaining(int32_t remaining) {
-        remaining = 0;
-        // TODO_ERROR: crash?
-    }
-    virtual void ensureRemainingExact(int32_t remaining) {
-        remaining = 0;
-        // TODO_ERROR: crash?
-    }
-    virtual void ensureCapacity(int32_t capacity) {
-        capacity = 0;
-        // TODO_ERROR: crash?
-    }
-    virtual void ensureCapacityExact(int32_t capacity) {
-        capacity = 0;
-        // TODO_ERROR: crash?
     }
 
     /**

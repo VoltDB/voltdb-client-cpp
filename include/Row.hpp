@@ -597,12 +597,13 @@ private:
     }
 
     void ensureCalculatedOffsets() {
+        errType TODO_ERROR = errOk;
         if (m_hasCalculatedOffsets == true) return;
         m_offsets[0] = m_data.position();
         for (int32_t i = 1; i < static_cast<ssize_t>(m_columns->size()); i++) {
             WireType type = m_columns->at(static_cast<size_t>(i - 1)).m_type;
             if (type == WIRE_TYPE_STRING || (type == WIRE_TYPE_VARBINARY)) {
-                int32_t length = m_data.getInt32(m_offsets[static_cast<size_t>(i - 1)]);
+                int32_t length = m_data.getInt32(TODO_ERROR, m_offsets[static_cast<size_t>(i - 1)]);
                 if (length == -1) {
                     m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + 4;
                 } else if (length < 0) {
