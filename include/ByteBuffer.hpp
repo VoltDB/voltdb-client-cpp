@@ -525,8 +525,10 @@ public:
     ByteBuffer(char *buffer, int32_t capacity) :
         m_buffer(buffer), m_position(0), m_capacity(capacity), m_limit(capacity) {
         if (buffer == NULL) {
-            // throw NullPointerException();
-            // TODO_ERROR
+            m_buffer = NULL;
+            m_position = 0;
+            m_capacity = 0;
+            m_limit = 0;
         }
     }
 

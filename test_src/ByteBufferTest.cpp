@@ -31,7 +31,7 @@ namespace voltdb {
 
 class ByteBufferTest : public CppUnit::TestFixture {
 CPPUNIT_TEST_SUITE( ByteBufferTest );
-CPPUNIT_TEST_EXCEPTION( checkNullBuffer, voltdb::NullPointerException );
+CPPUNIT_TEST( checkNullBuffer );
 CPPUNIT_TEST( checkGetPutIndexValid );
 CPPUNIT_TEST( checkGetPutIndexNegative);
 CPPUNIT_TEST( checkGetPutIndexOver);
@@ -68,6 +68,7 @@ public:
 
     void checkNullBuffer() {
         ByteBuffer b(NULL, 0);
+        CPPUNIT_ASSERT(b.remaining() == 0);
     }
 
     void checkGetPutIndexValid() {

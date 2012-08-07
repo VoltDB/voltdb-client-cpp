@@ -70,12 +70,12 @@ CPPUNIT_TEST_SUITE( ClientTest );
 CPPUNIT_TEST( testConnect );
 CPPUNIT_TEST( testSyncInvoke );
 CPPUNIT_TEST( testLargeReply );
-CPPUNIT_TEST_EXCEPTION( testInvokeSyncNoConnections, voltdb::NoConnectionsException );
-CPPUNIT_TEST_EXCEPTION( testInvokeAsyncNoConnections, voltdb::NoConnectionsException );
-CPPUNIT_TEST_EXCEPTION( testRunNoConnections, voltdb::NoConnectionsException );
-CPPUNIT_TEST_EXCEPTION( testRunOnceNoConnections, voltdb::NoConnectionsException );
-CPPUNIT_TEST_EXCEPTION( testNullCallback, voltdb::NullPointerException );
-CPPUNIT_TEST_EXCEPTION( testLostConnection, voltdb::NoConnectionsException );
+CPPUNIT_TEST( testInvokeSyncNoConnections );
+CPPUNIT_TEST( testInvokeAsyncNoConnections );
+CPPUNIT_TEST( testRunNoConnections );
+CPPUNIT_TEST( testRunOnceNoConnections );
+CPPUNIT_TEST( testNullCallback );
+CPPUNIT_TEST( testLostConnection );
 CPPUNIT_TEST( testLostConnectionBreaksEventLoop );
 CPPUNIT_TEST( testBreakEventLoopViaCallback );
 CPPUNIT_TEST( testCallbackThrows );
@@ -163,7 +163,8 @@ public:
         (m_client)->invoke(err, proc, callback);
         CPPUNIT_ASSERT(err == errOk);
         while (!cb->m_hasResponse) {
-            (m_client)->runOnce();
+            (m_client)->runOnce(err);
+            CPPUNIT_ASSERT(err == errOk);
         }
         InvocationResponse response = cb->m_response;
         CPPUNIT_ASSERT(response.success());
@@ -202,7 +203,7 @@ public:
         proc.params();
         errType err = errOk;
         (m_client)->invoke(err, proc);
-        CPPUNIT_ASSERT(err == errOk);
+        CPPUNIT_ASSERT(err == errNoConnectionsException);
     }
 
     void testInvokeAsyncNoConnections() {
@@ -213,15 +214,19 @@ public:
         boost::shared_ptr<ProcedureCallback> callback(cb);
         errType err = errOk;
         (m_client)->invoke(err, proc, callback);
-        CPPUNIT_ASSERT(err == errOk);
+        CPPUNIT_ASSERT(err == errNoConnectionsException);
     }
 
     void testRunNoConnections() {
-        (m_client)->run();
+        errType err = errOk;
+        (m_client)->run(err);
+        CPPUNIT_ASSERT(err == errNoConnectionsException);
     }
 
     void testRunOnceNoConnections() {
-        (m_client)->runOnce();
+        errType err = errOk;
+        (m_client)->runOnce(err);
+        CPPUNIT_ASSERT(err == errNoConnectionsException);
     }
 
     void testNullCallback() {
@@ -230,7 +235,7 @@ public:
         proc.params();
         errType err = errOk;
         (m_client)->invoke(err, proc, boost::shared_ptr<ProcedureCallback>());
-        CPPUNIT_ASSERT(err == errOk);
+        CPPUNIT_ASSERT(err == errNullPointerException);
     }
 
     void testLostConnection() {
@@ -282,7 +287,8 @@ public:
         CPPUNIT_ASSERT(response.statusCode() == voltdb::STATUS_CODE_CONNECTION_LOST);
         CPPUNIT_ASSERT(response.results().size() == 0);
         CPPUNIT_ASSERT(listener.reported);
-        (m_client)->runOnce();
+        (m_client)->runOnce(err);
+        CPPUNIT_ASSERT(err == errNoConnectionsException);
     }
 
     void testLostConnectionBreaksEventLoop() {
@@ -321,8 +327,10 @@ public:
         CPPUNIT_ASSERT(err == errOk);
         m_voltdb->hangupOnRequestCount(1);
 
-        (m_client)->run();
-        (m_client)->runOnce();
+        (m_client)->run(err);
+        CPPUNIT_ASSERT(err == errOk);
+        (m_client)->runOnce(err);
+        CPPUNIT_ASSERT(err == errOk);
     }
 
     class BreakingSyncCallback : public ProcedureCallback {
@@ -357,7 +365,8 @@ public:
         (m_client)->invoke(err, proc, callback);
         CPPUNIT_ASSERT(err == errOk);
 
-        (m_client)->run();
+        (m_client)->run(err);
+        CPPUNIT_ASSERT(err == errOk);
     }
 
     class ThrowingCallback : public ProcedureCallback {
@@ -412,7 +421,8 @@ public:
         (m_client)->invoke(err, proc, callback);
         CPPUNIT_ASSERT(err == errOk);
 
-        (m_client)->run();
+        (m_client)->run(err);
+        CPPUNIT_ASSERT(err == errOk);
     }
 
     void testBackpressure() {
@@ -450,7 +460,8 @@ public:
         while (!listener.reported) {
             (m_client)->invoke(err, proc, callback);
             CPPUNIT_ASSERT(err == errOk);
-            (m_client)->runOnce();
+            (m_client)->runOnce(err);
+            CPPUNIT_ASSERT(err == errOk);
         }
     }
 
@@ -480,7 +491,8 @@ public:
         for (int ii = 0; ii < 5; ii++) {
             (m_client)->invoke(err, proc, callback);
         }
-        (m_client)->drain();
+        (m_client)->drain(err);
+        CPPUNIT_ASSERT(err == errOk);
         CPPUNIT_ASSERT(cb->m_count == 0);
     }
 
@@ -516,7 +528,8 @@ public:
             CPPUNIT_ASSERT(err == errOk);
         }
         m_voltdb->hangupOnRequestCount(3);
-        (m_client)->drain();
+        (m_client)->drain(err);
+        CPPUNIT_ASSERT(err == errOk);
         CPPUNIT_ASSERT(cb->m_success == 2);
         CPPUNIT_ASSERT(cb->m_connectionLost == 3);
     }
