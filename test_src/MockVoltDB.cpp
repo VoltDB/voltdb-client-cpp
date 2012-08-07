@@ -169,20 +169,48 @@ void MockVoltDB::mimicLargeReply(int64_t clientData, struct bufferevent *bev) {
     // write a valid message header (length and protoVersion)
     int32_t ttl_length = 18 + (51380323);
     response->ensureCapacity(ttl_length);
-    response->putInt32(ttl_length); // msg length prefix (not self-inclusive)
-    response->putInt8(0); // protocol version
+    errType err = errOk;
+    response->putInt32(err, ttl_length); // msg length prefix (not self-inclusive)
+    if (!isOk(err)) {
+        throw voltdb::Exception();
+    }
+    response->putInt8(err, 0); // protocol version
+    if (!isOk(err)) {
+        throw voltdb::Exception();
+    }
 
     // write a valid invocation response header.
-    response->putInt64(clientData); // handle
-    response->putInt8(0);  // opt-out of "optional fields"
-    response->putInt8(1);  // status code:
-    response->putInt8(0);  // appstatus code
-    response->putInt32(1); // client round trip time!
-    response->putInt16(1); // result count.
+    response->putInt64(err, clientData); // handle
+    if (!isOk(err)) {
+        throw voltdb::Exception();
+    }
+    response->putInt8(err, 0);  // opt-out of "optional fields"
+    if (!isOk(err)) {
+        throw voltdb::Exception();
+    }
+    response->putInt8(err, 1);  // status code:
+    if (!isOk(err)) {
+        throw voltdb::Exception();
+    }
+    response->putInt8(err, 0);  // appstatus code
+    if (!isOk(err)) {
+        throw voltdb::Exception();
+    }
+    response->putInt32(err, 1); // client round trip time!
+    if (!isOk(err)) {
+        throw voltdb::Exception();
+    }
+    response->putInt16(err, 1); // result count.
+    if (!isOk(err)) {
+        throw voltdb::Exception();
+    }
 
     // write a table, using the serialized table on disk.
     // response->putInt32(51380323); // table size (via ls).
-    response->put(&tabledata);
+    response->put(err, &tabledata);
+    if (!isOk(err)) {
+        throw voltdb::Exception();
+    }
 
     response->flip();
     struct evbuffer *evbuf = bufferevent_get_output(bev);
@@ -227,7 +255,11 @@ void MockVoltDB::readCallback(struct bufferevent *bev) {
         char lengthBytes[4];
         evbuffer_remove(evbuf, lengthBytes, 4);
         ByteBuffer lengthBuffer(lengthBytes, 4);
-        int32_t length = lengthBuffer.getInt32();
+        errType err = errOk;
+        int32_t length = lengthBuffer.getInt32(err);
+        if (!isOk(err)) {
+            throw voltdb::Exception();
+        }
         boost::scoped_array<char> message(new char[length]);
         evbuffer_remove(evbuf, message.get(), length );
         return;
@@ -252,23 +284,39 @@ void MockVoltDB::readCallback(struct bufferevent *bev) {
         char lengthBytes[4];
         evbuffer_remove(evbuf, lengthBytes, 4);
         ByteBuffer lengthBuffer(lengthBytes, 4);
-        int32_t length = lengthBuffer.getInt32();
+        errType err = errOk;
+        int32_t length = lengthBuffer.getInt32(err);
+        if (!isOk(err)) {
+            throw voltdb::Exception();
+        }
         // message
         boost::scoped_array<char> message(new char[length]);
         evbuffer_remove(evbuf, message.get(), length );
         ByteBuffer messageBuffer(message.get(), length);
         // ??
-        messageBuffer.getInt8();
+        messageBuffer.getInt8(err);
+        if (!isOk(err)) {
+            throw voltdb::Exception();
+        }
         bool wasNull;
-        messageBuffer.getString(wasNull);
-        int64_t clientData = messageBuffer.getInt64();
+        messageBuffer.getString(err, wasNull);
+        if (!isOk(err)) {
+            throw voltdb::Exception();
+        }
+        int64_t clientData = messageBuffer.getInt64(err);
+        if (!isOk(err)) {
+            throw voltdb::Exception();
+        }
 
         if (m_filenameForNextResponse == "mimicLargeReply") {
             this->mimicLargeReply(clientData, bev);
         }
         else {
             SharedByteBuffer response = fileAsByteBuffer(m_filenameForNextResponse);
-            response.putInt64( 5, clientData);
+            response.putInt64(err, 5, clientData);
+            if (!isOk(err)) {
+                throw voltdb::Exception();
+            }
             evbuf = bufferevent_get_output(bev);
             if (evbuffer_add(evbuf, response.bytes(), static_cast<size_t>(response.remaining()))) {
                 throw voltdb::LibEventException();

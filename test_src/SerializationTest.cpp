@@ -94,14 +94,18 @@ void testAuthenticationRequest() {
     SHA1_Update( &context, reinterpret_cast<const unsigned char*>(password.data()), password.size());
     SHA1_Final ( &context, hashedPassword);
     AuthenticationRequest request( "hello", "database", hashedPassword);
-    request.serializeTo(&generated);
+    errType err = errOk;
+    request.serializeTo(err, &generated);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(original.remaining() == generated.remaining());
     CPPUNIT_ASSERT(::memcmp(original.bytes(), generated.bytes(), original.remaining()) == 0);
 }
 
 void testAuthenticationResponse() {
     SharedByteBuffer original = fileAsByteBuffer("authentication_response.msg");
-    original.position(4);//skip length prefix
+    errType err = errOk;
+    original.position(err, 4);//skip length prefix
+    CPPUNIT_ASSERT(err == errOk);
     AuthenticationResponse response(original);
     CPPUNIT_ASSERT(response.success());
     CPPUNIT_ASSERT(response.hostId() == 0);
@@ -132,27 +136,58 @@ void testInvocationAllParams() {
     params.push_back(Parameter(WIRE_TYPE_DECIMAL));
     Procedure proc("foo", params);
     ParameterSet *ps = proc.params();
-    std::vector<std::string> strings; strings.push_back("oh"); strings.push_back("noes"); ps->addString(strings);
-    std::vector<int8_t> bytes; bytes.push_back( 22 ); bytes.push_back( 33 ); bytes.push_back( 44 ); ps->addInt8(bytes);
-    std::vector<int16_t> shorts; shorts.push_back( 22 ); shorts.push_back( 33 ); shorts.push_back( 44 ); ps->addInt16(shorts);
-    std::vector<int32_t> ints; ints.push_back( 22 ); ints.push_back( 33 ); ints.push_back( 44 ); ps->addInt32(ints);
-    std::vector<int64_t> longs; longs.push_back( 22 ); longs.push_back( 33 ); longs.push_back( 44 ); ps->addInt64(longs);
-    std::vector<double> doubles; doubles.push_back( 3 ); doubles.push_back( 3.1 ); doubles.push_back( 3.14 ); doubles.push_back( 3.1459 ); ps->addDouble(doubles);
-    std::vector<int64_t> timestamps; timestamps.push_back(33); timestamps.push_back(44); ps->addTimestamp(timestamps);
-    std::vector<Decimal> decimals; decimals.push_back(Decimal(std::string("3"))); decimals.push_back(std::string("3.14")); decimals.push_back(std::string("3.1459")); ps->addDecimal(decimals);
-    ps->addNull().addString("ohnoes!").addInt8(22).addInt16(22).addInt32(22).addInt64(22).addDouble(3.1459).addTimestamp(33).addDecimal(Decimal(std::string("3.1459")));
-    int32_t size = proc.getSerializedSize();
+    errType err = errOk;
+    std::vector<std::string> strings; strings.push_back("oh"); strings.push_back("noes"); ps->addString(err, strings);
+    CPPUNIT_ASSERT(err == errOk);
+    std::vector<int8_t> bytes; bytes.push_back( 22 ); bytes.push_back( 33 ); bytes.push_back( 44 ); ps->addInt8(err, bytes);
+    CPPUNIT_ASSERT(err == errOk);
+    std::vector<int16_t> shorts; shorts.push_back( 22 ); shorts.push_back( 33 ); shorts.push_back( 44 ); ps->addInt16(err, shorts);
+    CPPUNIT_ASSERT(err == errOk);
+    std::vector<int32_t> ints; ints.push_back( 22 ); ints.push_back( 33 ); ints.push_back( 44 ); ps->addInt32(err, ints);
+    CPPUNIT_ASSERT(err == errOk);
+    std::vector<int64_t> longs; longs.push_back( 22 ); longs.push_back( 33 ); longs.push_back( 44 ); ps->addInt64(err, longs);
+    CPPUNIT_ASSERT(err == errOk);
+    std::vector<double> doubles; doubles.push_back( 3 ); doubles.push_back( 3.1 ); doubles.push_back( 3.14 ); doubles.push_back( 3.1459 ); ps->addDouble(err, doubles);
+    CPPUNIT_ASSERT(err == errOk);
+    std::vector<int64_t> timestamps; timestamps.push_back(33); timestamps.push_back(44); ps->addTimestamp(err, timestamps);
+    CPPUNIT_ASSERT(err == errOk);
+    std::vector<Decimal> decimals; decimals.push_back(Decimal(std::string("3"))); decimals.push_back(std::string("3.14")); decimals.push_back(std::string("3.1459")); ps->addDecimal(err, decimals);
+    CPPUNIT_ASSERT(err == errOk);
+    ps->addNull(err);
+    CPPUNIT_ASSERT(err == errOk);
+    ps->addString(err, "ohnoes!");
+    CPPUNIT_ASSERT(err == errOk);
+    ps->addInt8(err, 22);
+    CPPUNIT_ASSERT(err == errOk);
+    ps->addInt16(err, 22);
+    CPPUNIT_ASSERT(err == errOk);
+    ps->addInt32(err, 22);
+    CPPUNIT_ASSERT(err == errOk);
+    ps->addInt64(err, 22);
+    CPPUNIT_ASSERT(err == errOk);
+    ps->addDouble(err, 3.1459);
+    CPPUNIT_ASSERT(err == errOk);
+    ps->addTimestamp(err, 33);
+    CPPUNIT_ASSERT(err == errOk);
+    ps->addDecimal(err, Decimal(std::string("3.1459")));
+    CPPUNIT_ASSERT(err == errOk);
+    int32_t size = proc.getSerializedSize(err);
+    CPPUNIT_ASSERT(err == errOk);
     ScopedByteBuffer buffer(new char[size], size);
-    proc.serializeTo(&buffer, INT64_MIN);
+    proc.serializeTo(err, &buffer, INT64_MIN);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(original.remaining() == size);
     CPPUNIT_ASSERT(::memcmp(original.bytes(), buffer.bytes(), size) == 0);
 }
 
 void testInvocationResponseSuccess() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_success.msg");
-    original.position(4);
+    errType err = errOk;
+    original.position(err, 4);
+    CPPUNIT_ASSERT(err == errOk);
     boost::shared_array<char> copy(new char[original.remaining()]);
-    original.get(copy.get(), original.remaining());
+    original.get(err, copy.get(), original.remaining());
+    CPPUNIT_ASSERT(err == errOk);
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.success());
     CPPUNIT_ASSERT(response.clientData() == (-9223372036854775807 - 1));
@@ -165,9 +200,12 @@ void testInvocationResponseSuccess() {
 
 void testInvocationResponseFailCV() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_fail_cv.msg");
-    original.position(4);
+    errType err = errOk;
+    original.position(err, 4);
+    CPPUNIT_ASSERT(err == errOk);
     boost::shared_array<char> copy(new char[original.remaining()]);
-    original.get(copy.get(), original.remaining());
+    original.get(err, copy.get(), original.remaining());
+    CPPUNIT_ASSERT(err == errOk);
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.failure());
     CPPUNIT_ASSERT(response.statusCode() == STATUS_CODE_GRACEFUL_FAILURE);
@@ -181,9 +219,12 @@ void testInvocationResponseFailCV() {
 
 void testInvocationResponseSelect() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_select.msg");
-    original.position(4);
+    errType err = errOk;
+    original.position(err, 4);
+    CPPUNIT_ASSERT(err == errOk);
     boost::shared_array<char> copy(new char[original.remaining()]);
-    original.get(copy.get(), original.remaining());
+    original.get(err, copy.get(), original.remaining());
+    CPPUNIT_ASSERT(err == errOk);
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.success());
     CPPUNIT_ASSERT(response.clientData() == -9223372036854775806);
@@ -205,11 +246,16 @@ void testInvocationResponseSelect() {
     TableIterator iterator = results.iterator();
     int resultCount = 0;
     while (iterator.hasNext()) {
-        Row r = iterator.next();
-        CPPUNIT_ASSERT(r.getString(0) == "Hello");
-        CPPUNIT_ASSERT(r.getString("HELLO") == "Hello");
-        CPPUNIT_ASSERT(r.getString(1) == "World");
-        CPPUNIT_ASSERT(r.getString("WORLD") == "World");
+        Row r = iterator.next(err);
+        CPPUNIT_ASSERT(err == errOk);
+        CPPUNIT_ASSERT(r.getString(err, 0) == "Hello");
+        CPPUNIT_ASSERT(err == errOk);
+        CPPUNIT_ASSERT(r.getString(err, "HELLO") == "Hello");
+        CPPUNIT_ASSERT(err == errOk);
+        CPPUNIT_ASSERT(r.getString(err, 1) == "World");
+        CPPUNIT_ASSERT(err == errOk);
+        CPPUNIT_ASSERT(r.getString(err, "WORLD") == "World");
+        CPPUNIT_ASSERT(err == errOk);
         resultCount++;
     }
     CPPUNIT_ASSERT(resultCount == 1);
@@ -217,7 +263,9 @@ void testInvocationResponseSelect() {
 
 void testSerializedTable() {
     SharedByteBuffer original = fileAsByteBuffer("serialized_table.bin");
-    original.position(4);
+    errType err = errOk;
+    original.position(err, 4);
+    CPPUNIT_ASSERT(err == errOk);
     Table t(original.slice());
     CPPUNIT_ASSERT(t.columnCount() == 7);
     CPPUNIT_ASSERT(t.rowCount() == 4);
@@ -240,215 +288,331 @@ void testSerializedTable() {
 
     TableIterator ti = t.iterator();
     CPPUNIT_ASSERT(ti.hasNext());
-    Row r = ti.next();
+    Row r = ti.next(err);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.columnCount() == 7);
 
-    CPPUNIT_ASSERT(r.isNull(0));
-    CPPUNIT_ASSERT(r.isNull("column1"));
-    CPPUNIT_ASSERT(r.getInt8(0) == INT8_MIN);
+    CPPUNIT_ASSERT(r.isNull(err, 0));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column1"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt8(err, 0) == INT8_MIN);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getInt8("column1") == INT8_MIN);
-    CPPUNIT_ASSERT(r.wasNull());
-
-    CPPUNIT_ASSERT(r.isNull(1));
-    CPPUNIT_ASSERT(r.isNull("column2"));
-    CPPUNIT_ASSERT(r.getString(1) == "");
-    CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getString("column2") == "");
+    CPPUNIT_ASSERT(r.getInt8(err, "column1") == INT8_MIN);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
 
-    CPPUNIT_ASSERT(r.isNull(2));
-    CPPUNIT_ASSERT(r.isNull("column3"));
-    CPPUNIT_ASSERT(r.getInt16(2) == INT16_MIN);
+    CPPUNIT_ASSERT(r.isNull(err, 1));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column2"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getString(err, 1) == "");
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getInt16("column3") == INT16_MIN);
-    CPPUNIT_ASSERT(r.wasNull());
-
-    CPPUNIT_ASSERT(r.isNull(3));
-    CPPUNIT_ASSERT(r.isNull("column4"));
-    CPPUNIT_ASSERT(r.getInt32(3) == INT32_MIN);
-    CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getInt32("column4") == INT32_MIN);
+    CPPUNIT_ASSERT(r.getString(err, "column2") == "");
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
 
-    CPPUNIT_ASSERT(r.isNull(4));
-    CPPUNIT_ASSERT(r.isNull("column5"));
-    CPPUNIT_ASSERT(r.getInt64(4) == INT64_MIN);
+    CPPUNIT_ASSERT(r.isNull(err, 2));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column3"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt16(err, 2) == INT16_MIN);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getInt64("column5") == INT64_MIN);
-    CPPUNIT_ASSERT(r.wasNull());
-
-    CPPUNIT_ASSERT(r.isNull(5));
-    CPPUNIT_ASSERT(r.isNull("column6"));
-    CPPUNIT_ASSERT(r.getTimestamp(5) == INT64_MIN);
-    CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getTimestamp("column6") == INT64_MIN);
+    CPPUNIT_ASSERT(r.getInt16(err, "column3") == INT16_MIN);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
 
-    CPPUNIT_ASSERT(r.isNull(6));
-    CPPUNIT_ASSERT(r.isNull("column7"));
-    CPPUNIT_ASSERT(r.getDecimal(6).isNull());
+    CPPUNIT_ASSERT(r.isNull(err, 3));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column4"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt32(err, 3) == INT32_MIN);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getDecimal("column7").isNull());
+    CPPUNIT_ASSERT(r.getInt32(err, "column4") == INT32_MIN);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+
+    CPPUNIT_ASSERT(r.isNull(err, 4));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column5"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt64(err, 4) == INT64_MIN);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+    CPPUNIT_ASSERT(r.getInt64(err, "column5") == INT64_MIN);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+
+    CPPUNIT_ASSERT(r.isNull(err, 5));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column6"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getTimestamp(err, 5) == INT64_MIN);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+    CPPUNIT_ASSERT(r.getTimestamp(err, "column6") == INT64_MIN);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+
+    CPPUNIT_ASSERT(r.isNull(err, 6));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column7"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getDecimal(err, 6).isNull());
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+    CPPUNIT_ASSERT(r.getDecimal(err, "column7").isNull());
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
 
     CPPUNIT_ASSERT(ti.hasNext());
-    r = ti.next();
+    r = ti.next(err);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.columnCount() == 7);
 
-    CPPUNIT_ASSERT(!r.isNull(0));
-    CPPUNIT_ASSERT(!r.isNull("column1"));
-    CPPUNIT_ASSERT(r.getInt8(0) == 0);
+    CPPUNIT_ASSERT(!r.isNull(err, 0));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column1"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt8(err, 0) == 0);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getInt8("column1") == 0);
-    CPPUNIT_ASSERT(!r.wasNull());
-
-    CPPUNIT_ASSERT(!r.isNull(1));
-    CPPUNIT_ASSERT(!r.isNull("column2"));
-    CPPUNIT_ASSERT(r.getString(1) == "");
-    CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getString("column2") == "");
+    CPPUNIT_ASSERT(r.getInt8(err, "column1") == 0);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
 
-    CPPUNIT_ASSERT(!r.isNull(2));
-    CPPUNIT_ASSERT(!r.isNull("column3"));
-    CPPUNIT_ASSERT(r.getInt16(2) == 2);
+    CPPUNIT_ASSERT(!r.isNull(err, 1));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column2"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getString(err, 1) == "");
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getInt16("column3") == 2);
-    CPPUNIT_ASSERT(!r.wasNull());
-
-    CPPUNIT_ASSERT(!r.isNull(3));
-    CPPUNIT_ASSERT(!r.isNull("column4"));
-    CPPUNIT_ASSERT(r.getInt32(3) == 4);
-    CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getInt32("column4") == 4);
+    CPPUNIT_ASSERT(r.getString(err, "column2") == "");
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
 
-    CPPUNIT_ASSERT(!r.isNull(4));
-    CPPUNIT_ASSERT(!r.isNull("column5"));
-    CPPUNIT_ASSERT(r.getInt64(4) == 5);
+    CPPUNIT_ASSERT(!r.isNull(err, 2));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column3"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt16(err, 2) == 2);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getInt64("column5") == 5);
-    CPPUNIT_ASSERT(!r.wasNull());
-
-    CPPUNIT_ASSERT(!r.isNull(5));
-    CPPUNIT_ASSERT(!r.isNull("column6"));
-    CPPUNIT_ASSERT(r.getTimestamp(5) == 44);
-    CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getTimestamp("column6") == 44);
+    CPPUNIT_ASSERT(r.getInt16(err, "column3") == 2);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
 
-    CPPUNIT_ASSERT(!r.isNull(6));
-    CPPUNIT_ASSERT(!r.isNull("column7"));
-    CPPUNIT_ASSERT(r.getDecimal(6).toString() == "3.145900000000");
+    CPPUNIT_ASSERT(!r.isNull(err, 3));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column4"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt32(err, 3) == 4);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getDecimal("column7").toString() == "3.145900000000");
+    CPPUNIT_ASSERT(r.getInt32(err, "column4") == 4);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+
+    CPPUNIT_ASSERT(!r.isNull(err, 4));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column5"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt64(err, 4) == 5);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+    CPPUNIT_ASSERT(r.getInt64(err, "column5") == 5);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+
+    CPPUNIT_ASSERT(!r.isNull(err, 5));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column6"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getTimestamp(err, 5) == 44);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+    CPPUNIT_ASSERT(r.getTimestamp(err, "column6") == 44);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+
+    CPPUNIT_ASSERT(!r.isNull(err, 6));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column7"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getDecimal(err, 6).toString() == "3.145900000000");
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+    CPPUNIT_ASSERT(r.getDecimal(err, "column7").toString() == "3.145900000000");
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
 
     CPPUNIT_ASSERT(ti.hasNext());
-    r = ti.next();
+    r = ti.next(err);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.columnCount() == 7);
 
-    CPPUNIT_ASSERT(!r.isNull(0));
-    CPPUNIT_ASSERT(!r.isNull("column1"));
-    CPPUNIT_ASSERT(r.getInt8(0) == 0);
+    CPPUNIT_ASSERT(!r.isNull(err, 0));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column1"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt8(err, 0) == 0);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getInt8("column1") == 0);
+    CPPUNIT_ASSERT(r.getInt8(err, "column1") == 0);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
 
-    CPPUNIT_ASSERT(r.isNull(1));
-    CPPUNIT_ASSERT(r.isNull("column2"));
-    CPPUNIT_ASSERT(r.getString(1) == "");
+    CPPUNIT_ASSERT(r.isNull(err, 1));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column2"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getString(err, 1) == "");
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getString("column2") == "");
-    CPPUNIT_ASSERT(r.wasNull());
-
-    CPPUNIT_ASSERT(!r.isNull(2));
-    CPPUNIT_ASSERT(!r.isNull("column3"));
-    CPPUNIT_ASSERT(r.getInt16(2) == 2);
-    CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getInt16("column3") == 2);
-    CPPUNIT_ASSERT(!r.wasNull());
-
-    CPPUNIT_ASSERT(!r.isNull(3));
-    CPPUNIT_ASSERT(!r.isNull("column4"));
-    CPPUNIT_ASSERT(r.getInt32(3) == 4);
-    CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getInt32("column4") == 4);
-    CPPUNIT_ASSERT(!r.wasNull());
-
-    CPPUNIT_ASSERT(!r.isNull(4));
-    CPPUNIT_ASSERT(!r.isNull("column5"));
-    CPPUNIT_ASSERT(r.getInt64(4) == 5);
-    CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getInt64("column5") == 5);
-    CPPUNIT_ASSERT(!r.wasNull());
-
-    CPPUNIT_ASSERT(r.isNull(5));
-    CPPUNIT_ASSERT(r.isNull("column6"));
-    CPPUNIT_ASSERT(r.getTimestamp(5) == INT64_MIN);
-    CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getTimestamp("column6") == INT64_MIN);
+    CPPUNIT_ASSERT(r.getString(err, "column2") == "");
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
 
-    CPPUNIT_ASSERT(r.isNull(6));
-    CPPUNIT_ASSERT(r.isNull("column7"));
-    CPPUNIT_ASSERT(r.getDecimal(6).isNull());
+    CPPUNIT_ASSERT(!r.isNull(err, 2));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column3"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt16(err, 2) == 2);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+    CPPUNIT_ASSERT(r.getInt16(err, "column3") == 2);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+
+    CPPUNIT_ASSERT(!r.isNull(err, 3));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column4"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt32(err, 3) == 4);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+    CPPUNIT_ASSERT(r.getInt32(err, "column4") == 4);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+
+    CPPUNIT_ASSERT(!r.isNull(err, 4));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column5"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt64(err, 4) == 5);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+    CPPUNIT_ASSERT(r.getInt64(err, "column5") == 5);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+
+    CPPUNIT_ASSERT(r.isNull(err, 5));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column6"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getTimestamp(err, 5) == INT64_MIN);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getDecimal("column7").isNull());
+    CPPUNIT_ASSERT(r.getTimestamp(err, "column6") == INT64_MIN);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+
+    CPPUNIT_ASSERT(r.isNull(err, 6));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column7"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getDecimal(err, 6).isNull());
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+    CPPUNIT_ASSERT(r.getDecimal(err, "column7").isNull());
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
 
     CPPUNIT_ASSERT(ti.hasNext());
-    r = ti.next();
+    r = ti.next(err);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.columnCount() == 7);
 
-    CPPUNIT_ASSERT(r.isNull(0));
-    CPPUNIT_ASSERT(r.isNull("column1"));
-    CPPUNIT_ASSERT(r.getInt8(0) == INT8_MIN);
+    CPPUNIT_ASSERT(r.isNull(err, 0));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column1"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt8(err, 0) == INT8_MIN);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getInt8("column1") == INT8_MIN);
+    CPPUNIT_ASSERT(r.getInt8(err, "column1") == INT8_MIN);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(r.wasNull());
 
-    CPPUNIT_ASSERT(!r.isNull(1));
-    CPPUNIT_ASSERT(!r.isNull("column2"));
-    CPPUNIT_ASSERT(r.getString(1) == "woobie");
+    CPPUNIT_ASSERT(!r.isNull(err, 1));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column2"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getString(err, 1) == "woobie");
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getString("column2") == "woobie");
-    CPPUNIT_ASSERT(!r.wasNull());
-
-    CPPUNIT_ASSERT(r.isNull(2));
-    CPPUNIT_ASSERT(r.isNull("column3"));
-    CPPUNIT_ASSERT(r.getInt16(2) == INT16_MIN);
-    CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getInt16("column3") == INT16_MIN);
-    CPPUNIT_ASSERT(r.wasNull());
-
-    CPPUNIT_ASSERT(r.isNull(3));
-    CPPUNIT_ASSERT(r.isNull("column4"));
-    CPPUNIT_ASSERT(r.getInt32(3) == INT32_MIN);
-    CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getInt32("column4") == INT32_MIN);
-    CPPUNIT_ASSERT(r.wasNull());
-
-    CPPUNIT_ASSERT(r.isNull(4));
-    CPPUNIT_ASSERT(r.isNull("column5"));
-    CPPUNIT_ASSERT(r.getInt64(4) == INT64_MIN);
-    CPPUNIT_ASSERT(r.wasNull());
-    CPPUNIT_ASSERT(r.getInt64("column5") == INT64_MIN);
-    CPPUNIT_ASSERT(r.wasNull());
-
-    CPPUNIT_ASSERT(!r.isNull(5));
-    CPPUNIT_ASSERT(!r.isNull("column6"));
-    CPPUNIT_ASSERT(r.getTimestamp(5) == 44);
-    CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getTimestamp("column6") == 44);
+    CPPUNIT_ASSERT(r.getString(err, "column2") == "woobie");
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
 
-    CPPUNIT_ASSERT(!r.isNull(6));
-    CPPUNIT_ASSERT(!r.isNull("column7"));
-    CPPUNIT_ASSERT(r.getDecimal(6).toString() == "3.145900000000");
+    CPPUNIT_ASSERT(r.isNull(err, 2));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column3"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt16(err, 2) == INT16_MIN);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+    CPPUNIT_ASSERT(r.getInt16(err, "column3") == INT16_MIN);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+
+    CPPUNIT_ASSERT(r.isNull(err, 3));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column4"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt32(err, 3) == INT32_MIN);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+    CPPUNIT_ASSERT(r.getInt32(err, "column4") == INT32_MIN);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+
+    CPPUNIT_ASSERT(r.isNull(err, 4));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.isNull(err, "column5"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getInt64(err, 4) == INT64_MIN);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+    CPPUNIT_ASSERT(r.getInt64(err, "column5") == INT64_MIN);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.wasNull());
+
+    CPPUNIT_ASSERT(!r.isNull(err, 5));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column6"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getTimestamp(err, 5) == 44);
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
-    CPPUNIT_ASSERT(r.getDecimal("column7").toString() == "3.145900000000");
+    CPPUNIT_ASSERT(r.getTimestamp(err, "column6") == 44);
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+
+    CPPUNIT_ASSERT(!r.isNull(err, 6));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.isNull(err, "column7"));
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(r.getDecimal(err, 6).toString() == "3.145900000000");
+    CPPUNIT_ASSERT(err == errOk);
+    CPPUNIT_ASSERT(!r.wasNull());
+    CPPUNIT_ASSERT(r.getDecimal(err, "column7").toString() == "3.145900000000");
+    CPPUNIT_ASSERT(err == errOk);
     CPPUNIT_ASSERT(!r.wasNull());
 }
 };
