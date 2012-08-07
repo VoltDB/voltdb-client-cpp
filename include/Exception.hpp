@@ -43,6 +43,7 @@ const int errConnectException = 11;
 const int errNoConnectionsException = 12;
 const int errLibEventException = 13;
 const int errClusterInstanceMismatchException = 14;
+const int errColumnMismatchException = 15;
 
 // out parameter type in case we have to change this again.
 typedef int errType;
@@ -54,6 +55,7 @@ inline bool isOk(const errType outParam) {
 
 // set an outParameter.
 inline void setErr(errType& outParam, const int errorCode) {
+    assert(isOk(outParam)); // don't overwrite existing err.
     outParam = errorCode;
 }
 
@@ -223,6 +225,13 @@ public:
         return "Attempted to connect a client to two separate VoltDB clusters";
     }
 };
+
+class ColumnMismatchException : public Exception {
+    const char * what() const throw() {
+        return "Attempted to set a column using the wrong type";
+    }
+};
+
 }
 
 #endif /* VOLTDB_EXCEPTION_HPP_ */

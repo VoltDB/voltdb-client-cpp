@@ -31,26 +31,24 @@
 #include "Exception.hpp"
 
 namespace voltdb {
-class ColumnMismatchException : public voltdb::Exception {
-    const char * what() const throw() {
-        return "Attempted to set a column using the wrong type";
-    }
-};
 class Table;
 class RowBuilder {
     friend class Table;
 private:
-    void validateType(WireType type) {
+    void validateType(errType& err, WireType type) {
         if (m_columns[m_currentColumn].m_type != type ||
                 m_currentColumn > m_columns.size()) {
-            throw ColumnMismatchException();
+            setErr(err, errColumnMismatchException);
         }
     }
 public:
     RowBuilder(Table *table);
 
     void addInt64(errType& err, int64_t val) {
-        validateType(WIRE_TYPE_BIGINT);
+        validateType(err, WIRE_TYPE_BIGINT);
+        if (!isOk(err)) {
+            return;
+        }
         m_buffer.ensureRemaining(8);
         m_buffer.putInt64(err, val);
         if (!isOk(err)) {
@@ -59,7 +57,10 @@ public:
         m_currentColumn++;
     }
     void addInt32(errType& err, int32_t val) {
-        validateType(WIRE_TYPE_INTEGER);
+        validateType(err, WIRE_TYPE_INTEGER);
+        if (!isOk(err)) {
+            return;
+        }
         m_buffer.ensureRemaining(4);
         m_buffer.putInt32(err, val);
         if (!isOk(err)) {
@@ -68,7 +69,10 @@ public:
         m_currentColumn++;
     }
     void addInt16(errType& err, int16_t val) {
-        validateType(WIRE_TYPE_SMALLINT);
+        validateType(err, WIRE_TYPE_SMALLINT);
+        if (!isOk(err)) {
+            return;
+        }
         m_buffer.ensureRemaining(2);
         m_buffer.putInt16(err, val);
         if (!isOk(err)) {
@@ -77,7 +81,10 @@ public:
         m_currentColumn++;
     }
     void addInt8(errType& err, int8_t val) {
-        validateType(WIRE_TYPE_TINYINT);
+        validateType(err, WIRE_TYPE_TINYINT);
+        if (!isOk(err)) {
+            return;
+        }
         m_buffer.ensureRemaining(1);
         m_buffer.putInt8(err, val);
         if (!isOk(err)) {
@@ -86,7 +93,10 @@ public:
         m_currentColumn++;
     }
     void addDouble(errType& err, double val) {
-        validateType(WIRE_TYPE_FLOAT);
+        validateType(err, WIRE_TYPE_FLOAT);
+        if (!isOk(err)) {
+            return;
+        }
         m_buffer.ensureRemaining(8);
         m_buffer.putDouble(err, val);
         if (!isOk(err)) {
@@ -96,7 +106,8 @@ public:
     }
     void addNull(errType& err) {
         if (m_currentColumn > m_columns.size()) {
-            throw new ColumnMismatchException();
+            setErr(err, errColumnMismatchException);
+            return;
         }
         switch (m_columns[m_currentColumn].m_type) {
         case WIRE_TYPE_BIGINT:
@@ -129,7 +140,10 @@ public:
         }
     }
     void addString(errType& err, std::string val) {
-        validateType(WIRE_TYPE_STRING);
+        validateType(err, WIRE_TYPE_STRING);
+        if (!isOk(err)) {
+            return;
+        }
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(val.size()));
         m_buffer.putString(err, val);
         if (!isOk(err)) {
@@ -139,7 +153,10 @@ public:
     }
 
     void addVarbinary(errType& err, const int32_t bufsize, const uint8_t *in_value) {
-        validateType(WIRE_TYPE_VARBINARY);
+        validateType(err, WIRE_TYPE_VARBINARY);
+        if (!isOk(err)) {
+            return;
+        }
         m_buffer.ensureRemaining(4 + bufsize);
         m_buffer.putBytes(err, bufsize, in_value);
         if (!isOk(err)) {
