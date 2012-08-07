@@ -71,8 +71,8 @@ public:
     InvocationResponse invoke(errType& err, Procedure &proc);
     void invoke(errType& err, Procedure &proc, boost::shared_ptr<ProcedureCallback> callback);
     void invoke(errType& err, Procedure &proc, ProcedureCallback *callback);
-    void runOnce();
-    void run();
+    void runOnce(errType&);
+    void run(errType&);
 
    /*
     * Enter the event loop and process pending events until all responses have been received and then return.
@@ -82,7 +82,7 @@ public:
     * @throws LibEventException An unknown error occured in libevent
     * @return true if all requests were drained and false otherwise
     */
-    bool drain();
+    bool drain(errType&);
     ~ClientImpl();
 
     void regularReadCallback(struct bufferevent *bev);

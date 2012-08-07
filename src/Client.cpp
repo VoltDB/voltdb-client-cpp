@@ -73,21 +73,21 @@ Client::invoke(
 }
 
 void
-Client::runOnce()
+Client::runOnce(errType& err)
 {
-    m_impl->runOnce();
+    m_impl->runOnce(err);
 }
 
 void
-Client::run()
+Client::run(errType& err)
 {
-    m_impl->run();
+    m_impl->run(err);
 }
 
 bool
-Client::drain()
+Client::drain(errType& err)
 {
-    return m_impl->drain();
+    return m_impl->drain(err);
 }
 
 void Client::interrupt() {

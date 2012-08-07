@@ -185,7 +185,7 @@ pthread_once_t once_initLibevent = PTHREAD_ONCE_INIT;
 void initLibevent() {
     // try to run threadsafe libevent
     if (evthread_use_pthreads()) {
-        throw voltdb::LibEventException();
+        throw voltdb::LibEventException(); // TODO_ERROR
     }
 }
 
@@ -204,7 +204,7 @@ ClientImpl::ClientImpl(ClientConfig config)  :
     m_base = event_base_new();
     assert(m_base);
     if (!m_base) {
-        throw voltdb::LibEventException();
+        throw voltdb::LibEventException(); // TODO_ERROR
     }
     SHA1_CTX context;
     SHA1_Init(&context);
@@ -215,7 +215,6 @@ ClientImpl::ClientImpl(ClientConfig config)  :
 class FreeBEVOnFailure {
 public:
     FreeBEVOnFailure(struct bufferevent *bev) : m_bev(bev), m_success(false) {
-
     }
     ~FreeBEVOnFailure() {
         if (!m_success) {
@@ -230,36 +229,41 @@ private:
     bool m_success;
 };
 
-// TODO_ERROR
 void ClientImpl::createConnection(errType& err, std::string hostname, short port) {
     struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE);
     FreeBEVOnFailure protector(bev);
     if (bev == NULL) {
-        throw ConnectException();
+        setErr(err, errConnectException);
+        return;
     }
     PendingConnection pc(m_base);
     bufferevent_setcb(bev, authenticationReadCallback, NULL, authenticationEventCallback, &pc);
     if (bufferevent_socket_connect_hostname(bev, NULL, AF_INET, hostname.c_str(), port) != 0) {
-        throw voltdb::LibEventException();
+        setErr(err, errLibEventException);
+        return;
     }
     if (event_base_dispatch(m_base) == -1) {
-        throw voltdb::LibEventException();
+        setErr(err, errLibEventException);
+        return;
     }
     if (pc.m_status) {
         bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
         bufferevent_setwatermark( bev, EV_WRITE, 8192, 262144);
         if (bufferevent_enable(bev, EV_READ)) {
-            throw voltdb::LibEventException();
+            setErr(err, errLibEventException);
+            return;
         }
         AuthenticationRequest authRequest( m_username, "database", m_passwordHash );
         ScopedByteBuffer bb(authRequest.getSerializedSize());
         authRequest.serializeTo(err, &bb);
         struct evbuffer *evbuf = bufferevent_get_output(bev);
         if (evbuffer_add( evbuf, bb.bytes(), static_cast<size_t>(bb.remaining()))) {
-            throw voltdb::LibEventException();
+            setErr(err, errLibEventException);
+            return;
         }
         if (event_base_dispatch(m_base) == -1) {
-            throw voltdb::LibEventException();
+            setErr(err, errLibEventException);
+            return;
         }
         if (pc.m_status) {
             if (!m_instanceIdIsSet) {
@@ -269,7 +273,8 @@ void ClientImpl::createConnection(errType& err, std::string hostname, short port
             } else {
                 if (m_clusterStartTime != pc.m_response.clusterStartTime() ||
                         m_leaderAddress != pc.m_response.leaderAddress()) {
-                    throw ClusterInstanceMismatchException();
+                    setErr(err, errClusterInstanceMismatchException);
+                    return;
                 }
             }
             bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
@@ -287,12 +292,15 @@ void ClientImpl::createConnection(errType& err, std::string hostname, short port
             protector.success();
             return;
         } else {
-            throw ConnectException();
+            setErr(err, errConnectException);
+            return;
         }
     } else {
-        throw ConnectException();
+            setErr(err, errConnectException);
+            return;
     }
-    throw ConnectException();
+    setErr(err, errConnectException);
+    return;
 }
 
 /*
@@ -312,34 +320,34 @@ private:
     InvocationResponse *m_responseOut;
 };
 
-// TODO_ERROR
 InvocationResponse ClientImpl::invoke(errType& err, Procedure &proc) {
     if (m_bevs.empty()) {
-        throw voltdb::NoConnectionsException();
+        setErr(err, errNoConnectionsException);
+        return InvocationResponse();
     }
     int32_t messageSize = proc.getSerializedSize(err);
     if (!isOk(err)) {
-        // TODO_ERRROR
-        throw voltdb::Exception();
+        return InvocationResponse();
     }
     ScopedByteBuffer sbb(messageSize);
     int64_t clientData = m_nextRequestId++;
     proc.serializeTo(err, &sbb, clientData);
     if (!isOk(err)) {
-        // TODO_ERRROR
-        throw voltdb::Exception();
+        return InvocationResponse();
     }
     struct bufferevent *bev = m_bevs[m_nextConnectionIndex++ % m_bevs.size()];
     InvocationResponse response;
     boost::shared_ptr<ProcedureCallback> callback(new SyncCallback(&response));
     struct evbuffer *evbuf = bufferevent_get_output(bev);
     if (evbuffer_add(evbuf, sbb.bytes(), static_cast<size_t>(sbb.remaining()))) {
-        throw voltdb::LibEventException();
+        setErr(err, errLibEventException);
+        return InvocationResponse();
     }
     m_outstandingRequests++;
     (*m_callbacks[bev])[clientData] = callback;
     if (event_base_dispatch(m_base) == -1) {
-        throw voltdb::LibEventException();
+        setErr(err, errLibEventException);
+        return InvocationResponse();
     }
     m_loopBreakRequested = false;
     return response;
@@ -359,13 +367,14 @@ void ClientImpl::invoke(errType& err, Procedure &proc, ProcedureCallback *callba
     invoke(err, proc, wrapper);
 }
 
-// TODO_ERROR
 void ClientImpl::invoke(errType& err, Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) {
     if (callback.get() == NULL) {
-        throw voltdb::NullPointerException();
+        setErr(err, errNullPointerException);
+        return;
     }
     if (m_bevs.empty()) {
-        throw voltdb::NoConnectionsException();
+        setErr(err, errNoConnectionsException);
+        return;
     }
     int32_t messageSize = proc.getSerializedSize(err);
     if (!isOk(err)) {
@@ -432,7 +441,8 @@ void ClientImpl::invoke(errType& err, Procedure &proc, boost::shared_ptr<Procedu
             if (callEventLoop) {
                 m_invocationBlockedOnBackpressure = true;
                 if (event_base_dispatch(m_base) == -1) {
-                    throw voltdb::LibEventException();
+                    setErr(err, errLibEventException);
+                    return;
                 }
                 if (m_loopBreakRequested) {
                     m_loopBreakRequested = false;
@@ -448,7 +458,8 @@ void ClientImpl::invoke(errType& err, Procedure &proc, boost::shared_ptr<Procedu
 
     struct evbuffer *evbuf = bufferevent_get_output(bev);
     if (evbuffer_add(evbuf, sbb.bytes(), static_cast<size_t>(sbb.remaining()))) {
-        throw voltdb::LibEventException();
+        setErr(err, errLibEventException);
+        return;
     }
     m_outstandingRequests++;
     (*m_callbacks[bev])[clientData] = callback;
@@ -460,22 +471,26 @@ void ClientImpl::invoke(errType& err, Procedure &proc, boost::shared_ptr<Procedu
     return;
 }
 
-void ClientImpl::runOnce() {
+void ClientImpl::runOnce(errType& err) {
     if (m_bevs.empty()) {
-        throw voltdb::NoConnectionsException();
+        setErr(err, errNoConnectionsException);
+        return;
     }
     if (event_base_loop(m_base, EVLOOP_NONBLOCK) == -1) {
-        throw voltdb::LibEventException();
+        setErr(err, errLibEventException);
+        return;
     }
     m_loopBreakRequested = false;
 }
 
-void ClientImpl::run() {
+void ClientImpl::run(errType& err) {
     if (m_bevs.empty()) {
-        throw voltdb::NoConnectionsException();
+        setErr(err, errNoConnectionsException);
+        return;
     }
     if (event_base_dispatch(m_base) == -1) {
-        throw voltdb::LibEventException();
+        setErr(err, errLibEventException);
+        return;
     }
     m_loopBreakRequested = false;
 }
@@ -640,9 +655,9 @@ void ClientImpl::interrupt() {
  * @throws NoConnectionsException No connections to the database so there is no work to be done
  * @throws LibEventException An unknown error occured in libevent
  */
-bool ClientImpl::drain() {
+bool ClientImpl::drain(errType& err) {
     m_isDraining = true;
-    run();
+    run(err);
     return m_outstandingRequests == 0;
 }
 

@@ -97,7 +97,7 @@ public:
      * @throws NoConnectionsException No connections to the database so there is no work to be done
      * @throws LibEventException An unknown error occured in libevent
      */
-    void runOnce();
+    void runOnce(errType&);
 
     /*
      * Enter the event loop and process pending events indefinitely. This writes requests to any ready connections
@@ -106,7 +106,7 @@ public:
      * @throws NoConnectionsException No connections to the database so there is no work to be done
      * @throws LibEventException An unknown error occured in libevent
      */
-    void run();
+    void run(errType&);
 
     /*
      * Enter the event loop and process pending events until all responses have been received and then return.
@@ -116,7 +116,7 @@ public:
      * @throws LibEventException An unknown error occured in libevent
      * @return true if all requests were drained and false otherwise
      */
-    bool drain();
+    bool drain(errType&);
 
     /*
      * If one of the run family of methods is running on another thread, this

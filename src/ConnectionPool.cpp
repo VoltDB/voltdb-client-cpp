@@ -170,7 +170,14 @@ ConnectionPool::acquireClient(
         clientStuffs->pop_back();
 
         // run the event loop once to verify the connection is still available
-        clientStuff->m_client.runOnce();
+        clientStuff->m_client.runOnce(err);
+        // RTB: TODO_ERROR.  Is continue viable here? This would throw
+        // before and escape the while loop. Now we'll march through
+        // the connection pool.
+        if (!isOk(err)) {
+            err = errOk;
+            continue;
+        }
 
         if (clientStuff->m_listener->m_connectionLost) {
             // if this connection is lost, try the next
