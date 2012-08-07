@@ -39,9 +39,14 @@ int main(int argc, char **argv) {
     /*
      * Instantiate a client and connect to the database.
      */
+    voltdb::errType err = voltdb::errOk;
     voltdb::ClientConfig config("program", "password");
     voltdb::Client client = voltdb::Client::create();
-    client.createConnection("localhost");
+    client.createConnection(err, "localhost");
+    if (!voltdb::isOk(err)) {
+        std::cout << "Error connecting to database: "  << err  << std::endl;
+        return -1;
+    }
 
     /*
      * Describe the stored procedure to be invoked
@@ -57,25 +62,35 @@ int main(int argc, char **argv) {
      * Load the database.
      */
     voltdb::ParameterSet* params = procedure.params();
-    params->addString("Hello").addString("World").addString("English");
-    response = client.invoke(procedure);
-    if (response.failure()) { std::cout << response.toString() << std::endl; return -1; }
+    params->addString(err, "Hello").addString(err, "World").addString(err, "English");
+    if (!voltdb::isOk(err)) {
+        std::cout << "Failed to add parameter Hello, World, English" << std::endl;
+        return -1;
+    }
+    response = client.invoke(err, procedure);
+    if (!voltdb::isOk(err)) {
+        std::cout << "Failed to invoke procedure. Error: " << err << std::endl;
+        return -1;
+    }
+    if (response.failure()) {
+        std::cout << response.toString() << std::endl;
+        return -1;
+    }
 
-    params->addString("Bonjour").addString("Monde").addString("French");
-    response = client.invoke(procedure);
-    if (response.failure()) { std::cout << response.toString(); return -1; }
-
-    params->addString("Hola").addString("Mundo").addString("Spanish");
-    response = client.invoke(procedure);
-    if (response.failure()) { std::cout << response.toString(); return -1; }
-
-    params->addString("Hej").addString("Verden").addString("Danish");
-    response = client.invoke(procedure);
-    if (response.failure()) { std::cout << response.toString(); return -1; }
-
-    params->addString("Ciao").addString("Mondo").addString("Italian");
-    response = client.invoke(procedure);
-    if (response.failure()) { std::cout << response.toString(); return -1; }
+    params->addString(err, "Bonjour").addString(err, "Monde").addString(err, "French");
+    if (!voltdb::isOk(err)) {
+        std::cout << "Failed to add parameter Bonjour, Monde, French" << std::endl;
+        return -1;
+    }
+    response = client.invoke(err, procedure);
+    if (!voltdb::isOk(err)) {
+        std::cout << "Failed to invoke procedure. Error: " << err << std::endl;
+        return -1;
+    }
+    if (response.failure()) {
+        std::cout << response.toString();
+        return -1;
+    }
 
     /*
      * Describe procedure to retrieve message
@@ -86,18 +101,25 @@ int main(int argc, char **argv) {
     /*
      * Retrieve the message
      */
-    selectProc.params()->addString("Spanish");
-    response = client.invoke(selectProc);
+    selectProc.params()->addString(err, "French");
+    if (!voltdb::isOk(err)) {
+        std::cout << "Failed to add parameter French" << std::endl;
+        return -1;
+    }
+    response = client.invoke(err, selectProc);
+    if (!voltdb::isOk(err)) {
+        std::cout << "Failed to invoke procedure. Error: " << err << std::endl;
+        return -1;
+    }
+    if (response.failure()) {
+        std::cout << response.toString();
+        return -1;
+    }
 
     /*
      * Print the response
      */
     std::cout << response.toString();
-
-    if (response.statusCode() != voltdb::STATUS_CODE_SUCCESS) {
-        return -1;
-    } else {
-        return 0;
-    }
+    return 0;
 }
 
