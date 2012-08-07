@@ -76,7 +76,11 @@ public:
         validateType(WIRE_TYPE_DECIMAL, column);
         char data[16];
         m_data.get(err, getOffset(column), data, 16);
+        if (!isOk(err)) {
+            return Decimal();
+        }
         Decimal retval(data);
+        setErr(err, retval.getErr());
         m_wasNull = retval.isNull();
         return retval;
     }

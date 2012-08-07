@@ -51,15 +51,19 @@ typedef ttmath::Int<4> TTInt;
 class Decimal {
 public:
 
-    Decimal() {}
+    Decimal() {
+        m_err = errOk;
+    }
 
     /*
      * Construct a decimal value from a string.
      */
     Decimal(std::string txt) {
+        m_err = errOk;
         const TTInt kMaxScaleFactor("1000000000000");
         if (txt.length() == 0) {
-            throw StringToDecimalException();
+            setErr(m_err, errStringToDecimalException);
+            return;
         }
         bool setSign = false;
         if (txt[0] == '-') {
@@ -71,7 +75,8 @@ public:
          */
         for (size_t ii = (setSign ? 1 : 0); ii < txt.size(); ii++) {
             if ((txt[ii] < '0' || txt[ii] > '9') && txt[ii] != '.') {
-                throw StringToDecimalException();
+                setErr(m_err, errStringToDecimalException);
+                return;
             }
         }
 
@@ -80,7 +85,8 @@ public:
             const std::string wholeString = txt.substr( setSign ? 1 : 0, txt.size());
             const std::size_t wholeStringSize = wholeString.size();
             if (wholeStringSize > 26) {
-                throw StringToDecimalException();
+                setErr(m_err, errStringToDecimalException);
+                return;
             }
             TTInt whole(wholeString);
             if (setSign) {
@@ -92,18 +98,21 @@ public:
         }
 
         if (txt.find( '.', separatorPos + 1) != std::string::npos) {
-            throw StringToDecimalException();;
+            setErr(m_err, errStringToDecimalException);
+            return;
         }
 
         const std::string wholeString = txt.substr( setSign ? 1 : 0, separatorPos - (setSign ? 1 : 0));
         const std::size_t wholeStringSize = wholeString.size();
         if (wholeStringSize > 26) {
-            throw StringToDecimalException();;
+            setErr(m_err, errStringToDecimalException);
+            return;
         }
         TTInt whole(wholeString);
         std::string fractionalString = txt.substr( separatorPos + 1, txt.size() - (separatorPos + 1));
         if (fractionalString.size() > 12) {
-            throw StringToDecimalException();;
+            setErr(m_err, errStringToDecimalException);
+            return;
         }
         while(fractionalString.size() < kMaxDecScale) {
             fractionalString.push_back('0');
@@ -127,9 +136,11 @@ public:
         ByteBuffer buf(data, 16);
         int64_t *longStorage = reinterpret_cast<int64_t*>(m_data);
         //Reverse order for Java BigDecimal BigEndian
-        errType TODO_ERROR;
-        longStorage[1] = buf.getInt64(TODO_ERROR);
-        longStorage[0] = buf.getInt64(TODO_ERROR);
+        longStorage[1] = buf.getInt64(m_err);
+        if (!isOk(m_err)) {
+            return;
+        }
+        longStorage[0] = buf.getInt64(m_err);
     }
 
     /*
@@ -146,6 +157,10 @@ public:
     const TTInt& getDecimal() const {
         const void *retval = reinterpret_cast<const void*>(m_data);
         return *reinterpret_cast<const TTInt*>(retval);
+    }
+
+    errType getErr() const {
+        return m_err;
     }
 
     /*
@@ -212,6 +227,7 @@ private:
     static const uint16_t kMaxDecPrec = 38;
     static const uint16_t kMaxDecScale = 12;
 
+    errType m_err;
     char m_data[16];
 };
 }
