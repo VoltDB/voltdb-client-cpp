@@ -49,7 +49,10 @@ public:
      */
     ParameterSet& addBytes(errType& err, const int32_t bufsize, const uint8_t *in_value)
     {
-        validateType(WIRE_TYPE_VARBINARY, false);
+        validateType(err, WIRE_TYPE_VARBINARY, false);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(1 + 4 + bufsize);
         m_buffer.putInt8(err, WIRE_TYPE_VARBINARY);
         if (!isOk(err)) {
@@ -69,7 +72,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addDecimal(errType& err, Decimal val) {
-        validateType(WIRE_TYPE_DECIMAL, false);
+        validateType(err, WIRE_TYPE_DECIMAL, false);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(static_cast<int32_t>(sizeof(Decimal)) + 1);
         m_buffer.putInt8(err, WIRE_TYPE_DECIMAL);
         if (!isOk(err)) {
@@ -89,7 +95,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addDecimal(errType& err, std::vector<Decimal> vals) {
-        validateType(WIRE_TYPE_DECIMAL, true);
+        validateType(err, WIRE_TYPE_DECIMAL, true);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(sizeof(Decimal) * vals.size()));
         if (!isOk(err)) {
             return *this;
@@ -122,7 +131,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addTimestamp(errType& err, int64_t val) {
-        validateType(WIRE_TYPE_TIMESTAMP, false);
+        validateType(err, WIRE_TYPE_TIMESTAMP, false);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(9);
         m_buffer.putInt8(err, WIRE_TYPE_TIMESTAMP);
         if (!isOk(err)) {
@@ -142,7 +154,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addTimestamp(errType& err, std::vector<int64_t> vals) {
-        validateType(WIRE_TYPE_TIMESTAMP, true);
+        validateType(err, WIRE_TYPE_TIMESTAMP, true);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(sizeof(int64_t) * vals.size()));
         m_buffer.putInt8(err, WIRE_TYPE_ARRAY);
         if (!isOk(err)) {
@@ -172,7 +187,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addInt64(errType& err, int64_t val) {
-        validateType(WIRE_TYPE_BIGINT, false);
+        validateType(err, WIRE_TYPE_BIGINT, false);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(9);
         m_buffer.putInt8(err, WIRE_TYPE_BIGINT);
         if (!isOk(err)) {
@@ -192,7 +210,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addInt64(errType& err, std::vector<int64_t> vals) {
-        validateType(WIRE_TYPE_BIGINT, true);
+        validateType(err, WIRE_TYPE_BIGINT, true);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(sizeof(int64_t) * vals.size()));
         m_buffer.putInt8(err,WIRE_TYPE_ARRAY);
         if (!isOk(err)) {
@@ -222,7 +243,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addInt32(errType& err, int32_t val) {
-        validateType(WIRE_TYPE_INTEGER, false);
+        validateType(err, WIRE_TYPE_INTEGER, false);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(5);
         m_buffer.putInt8(err, WIRE_TYPE_INTEGER);
         if (!isOk(err)) {
@@ -242,7 +266,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addInt32(errType &err, std::vector<int32_t> vals) {
-        validateType(WIRE_TYPE_INTEGER, true);
+        validateType(err, WIRE_TYPE_INTEGER, true);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(sizeof(int32_t) * vals.size()));
         m_buffer.putInt8(err, WIRE_TYPE_ARRAY);
         if (!isOk(err)) {
@@ -272,7 +299,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addInt16(errType& err, int16_t val) {
-        validateType(WIRE_TYPE_SMALLINT, false);
+        validateType(err, WIRE_TYPE_SMALLINT, false);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(3);
         m_buffer.putInt8(err, WIRE_TYPE_SMALLINT);
         if (!isOk(err)) {
@@ -292,7 +322,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addInt16(errType& err, std::vector<int16_t> vals) {
-        validateType(WIRE_TYPE_SMALLINT, true);
+        validateType(err, WIRE_TYPE_SMALLINT, true);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(sizeof(int16_t) * vals.size()));
         m_buffer.putInt8(err, WIRE_TYPE_ARRAY);
         if (!isOk(err)) {
@@ -322,7 +355,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addInt8(errType& err, int8_t val) {
-        validateType(WIRE_TYPE_TINYINT, false);
+        validateType(err, WIRE_TYPE_TINYINT, false);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(2);
         m_buffer.putInt8(err, WIRE_TYPE_TINYINT);
         if (!isOk(err)) {
@@ -342,7 +378,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addInt8(errType &err, std::vector<int8_t> vals) {
-        validateType(WIRE_TYPE_TINYINT, true);
+        validateType(err, WIRE_TYPE_TINYINT, true);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(6 + static_cast<int32_t>(sizeof(int8_t) * vals.size()));
         m_buffer.putInt8(err, WIRE_TYPE_ARRAY);
         if (!isOk(err)) {
@@ -372,7 +411,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addDouble(errType& err, double val) {
-        validateType(WIRE_TYPE_FLOAT, false);
+        validateType(err, WIRE_TYPE_FLOAT, false);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(9);
         m_buffer.putInt8(err, WIRE_TYPE_FLOAT);
         if (!isOk(err)) {
@@ -392,7 +434,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addDouble(errType& err, std::vector<double> vals) {
-        validateType(WIRE_TYPE_FLOAT, true);
+        validateType(err, WIRE_TYPE_FLOAT, true);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(2 + static_cast<int32_t>(sizeof(double) * vals.size()));
         m_buffer.putInt8(err, WIRE_TYPE_ARRAY);
         if (!isOk(err)) {
@@ -426,7 +471,8 @@ public:
      */
     ParameterSet& addNull(errType& err) {
         if (m_currentParam > m_parameters.size()) {
-            throw new ParamMismatchException();
+            setErr(m_err, errParamMismatchException);
+            return *this;
         }
         m_buffer.ensureRemaining(1);
         m_buffer.putInt8(err, WIRE_TYPE_NULL);
@@ -443,7 +489,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addString(errType& err, std::string val) {
-        validateType(WIRE_TYPE_STRING, false);
+        validateType(err, WIRE_TYPE_STRING, false);
+        if (!isOk(err)) {
+            return *this;
+        }
         m_buffer.ensureRemaining(5 + static_cast<int32_t>(val.size()));
         m_buffer.putInt8(err, WIRE_TYPE_STRING);
         if (!isOk(err)) {
@@ -463,7 +512,10 @@ public:
      * @return Reference to this parameter set to allow invocation chaining.
      */
     ParameterSet& addString(errType& err, std::vector<std::string> vals) {
-        validateType(WIRE_TYPE_STRING, true);
+        validateType(err, WIRE_TYPE_STRING, true);
+        if (!isOk(err)) {
+            return *this;
+        }
         int32_t totalStringLength = 0;
         for (std::vector<std::string>::iterator i = vals.begin(); i != vals.end(); i++) {
             totalStringLength += static_cast<int32_t>((*i).size());
@@ -499,6 +551,9 @@ public:
      * set is associated with is invoked.
      */
     void reset(errType& err) {
+        // clear the parameter set error code and return any error
+        // caused by reset in errType.
+        m_err = errOk;
         m_buffer.clear();
         m_currentParam = 0;
         m_buffer.putInt16(err, static_cast<int16_t>(m_parameters.size()));
@@ -509,6 +564,10 @@ public:
             setErr(err, errUninitializedParamsException);
         }
         return m_buffer.position();
+    }
+
+    errType getErr() const {
+        return m_err;
     }
 
 #ifdef SWIG
@@ -529,21 +588,21 @@ public:
 private:
 
     ParameterSet(std::vector<Parameter> parameters) : m_parameters(parameters), m_buffer(8192), m_currentParam(0) {
-        errType TODO_ERROR;
-        m_buffer.putInt16(TODO_ERROR, static_cast<int16_t>(m_parameters.size()));
+        m_buffer.putInt16(m_err, static_cast<int16_t>(m_parameters.size()));
     }
 
-    void validateType(WireType type, bool isArray) {
+    void validateType(errType& err, WireType type, bool isArray) {
         if (m_currentParam >= m_parameters.size() ||
                 m_parameters[m_currentParam].m_type != type ||
                 m_parameters[m_currentParam].m_array != isArray) {
-            throw ParamMismatchException();
+            setErr(err, errParamMismatchException);
         }
     }
 
     std::vector<Parameter> m_parameters;
     ScopedByteBuffer m_buffer;
     uint32_t m_currentParam;
+    errType m_err;
 };
 }
 #endif /* VOLTDB_PARAMETERSET_HPP_ */

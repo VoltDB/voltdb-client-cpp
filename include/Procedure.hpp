@@ -47,6 +47,7 @@ public:
      * as long as the Procedure itself is still valid, and can be reused after each invocation.
      */
     ParameterSet* params() {
+        // assume reset() doesn't fail.
         errType TODO_ERROR;
         m_params.reset(TODO_ERROR);
         return &m_params;
