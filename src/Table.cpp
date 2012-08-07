@@ -25,6 +25,7 @@
 #include "Row.hpp"
 
 namespace voltdb {
+    // caller must check getErr()
     Table::Table(SharedByteBuffer buffer) : m_buffer(buffer) {
         buffer.position(m_err, 5);
         if (!isOk(m_err)) {
@@ -79,11 +80,11 @@ namespace voltdb {
         return m_status;
     }
 
+    // caller must check getErr()
     TableIterator Table::iterator() {
         m_buffer.position(m_err, m_rowStart + 4);//skip row count
         if (!isOk(m_err)) {
-            // TODO_ERROR
-            throw voltdb::Exception();
+            return TableIterator();
         }
         return TableIterator(m_buffer.slice(), m_columns, m_rowCount);
     }
@@ -107,6 +108,7 @@ namespace voltdb {
         return ostream.str();
     }
 
+    // caller must check getErr()
     void Table::toString(std::ostringstream &ostream, std::string indent) {
         ostream << indent << "Table size: " << m_buffer.capacity() << std::endl;
         ostream << indent << "Status code: " << static_cast<int32_t>(getStatusCode()) << std::endl;

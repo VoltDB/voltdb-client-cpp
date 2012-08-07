@@ -54,6 +54,12 @@ public:
             int32_t rowCount) :
         m_buffer(rows), m_columns(columns), m_rowCount(rowCount), m_currentRow(0) {}
 
+    // Create an empty iterator - required by error paths that return iterators by value.
+    TableIterator() {
+        m_rowCount = 0;
+        m_currentRow = 0;
+    }
+
     /*
      * Returns true if the table has more rows that can be retrieved via invoking next and false otherwise.
      */
