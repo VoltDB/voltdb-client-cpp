@@ -51,12 +51,12 @@ public:
     /*
      * Retrieve a client that connects to the specified hostname and port using the provided username and password
      */
-    voltdb::Client acquireClient(std::string hostname, std::string username, std::string password, short port = 21212);
+    voltdb::Client acquireClient(errType&, std::string hostname, std::string username, std::string password, short port = 21212);
 
     /*
      * Retrieve a client that connects to the specified hostname and port using the provided username and password
      */
-    voltdb::Client acquireClient(std::string hostname, std::string username, std::string password, StatusListener *listener, short port = 21212);
+    voltdb::Client acquireClient(errType&, std::string hostname, std::string username, std::string password, StatusListener *listener, short port = 21212);
 
     /*
      * Release any unreleased clients associated with this thread/script

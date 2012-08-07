@@ -146,6 +146,7 @@ ConnectionPool::~ConnectionPool() {
  */
 voltdb::Client
 ConnectionPool::acquireClient(
+        errType& err,
         std::string hostname,
         std::string username,
         std::string password,
@@ -185,26 +186,24 @@ ConnectionPool::acquireClient(
     // no connection available, make a new one
     DelegatingStatusListener *delegatingListener = new DelegatingStatusListener();
     Client client = voltdb::Client::create(ClientConfig( username, password, delegatingListener));
-    // TODO_ERROR
-    errType err = errOk;
-    client.createConnection(err, hostname, port);
-    if (!isOk(err)) {
-        throw voltdb::Exception();
-    }
     boost::shared_ptr<ClientStuff> stuff(new ClientStuff(client, identifier, delegatingListener));
     stuff->m_listener->m_listener = listener;
     clients->push_back(stuff);
+
+    // connect the client - do this last to preserve err for the caller.
+    client.createConnection(err, hostname, port);
     return client;
 }
 
 voltdb::Client
 ConnectionPool::acquireClient(
+        errType &err,
         std::string hostname,
         std::string username,
         std::string password,
         short port)
 {
-    return acquireClient(hostname, username, password, NULL, port);
+    return acquireClient(err, hostname, username, password, NULL, port);
 }
 
 /*
