@@ -206,10 +206,10 @@ ClientImpl::ClientImpl(ClientConfig config)  :
     if (!m_base) {
         throw voltdb::LibEventException(); // TODO_ERROR
     }
-    SHA1_CTX context;
-    SHA1_Init(&context);
-    SHA1_Update( &context, reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size());
-    SHA1_Final ( &context, m_passwordHash);
+    VDB_SHA1_CTX context;
+    VDB_SHA1_Init(&context);
+    VDB_SHA1_Update( &context, reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size());
+    VDB_SHA1_Final ( &context, m_passwordHash);
 }
 
 class FreeBEVOnFailure {

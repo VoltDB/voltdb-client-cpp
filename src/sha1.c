@@ -10,10 +10,10 @@ Still 100% Public Domain
 
 Corrected a problem which generated improper hash values on 16 bit machines
 Routine SHA1Update changed from
-	void SHA1Update(SHA1_CTX* context, unsigned char* data, unsigned int
+	void SHA1Update(VDB_SHA1_CTX* context, unsigned char* data, unsigned int
 len)
 to
-	void SHA1Update(SHA1_CTX* context, unsigned char* data, unsigned
+	void SHA1Update(VDB_SHA1_CTX* context, unsigned char* data, unsigned
 long len)
 
 The 'len' parameter was declared an int which works fine on 32 bit machines.
@@ -113,7 +113,7 @@ void SHA1_Transform(uint32_t state[5], const uint8_t buffer[64]);
 
 
 #ifdef VERBOSE  /* SAK */
-void SHAPrintContext(SHA1_CTX *context, char *msg){
+void SHAPrintContext(VDB_SHA1_CTX *context, char *msg){
   printf("%s (%d,%d) %x %x %x %x %x\n",
 	 msg,
 	 context->count[0], context->count[1], 
@@ -185,7 +185,7 @@ void SHA1_Transform(uint32_t state[5], const uint8_t buffer[64])
 
 
 /* SHA1Init - Initialize new context */
-void SHA1_Init(SHA1_CTX* context)
+void VDB_SHA1_Init(VDB_SHA1_CTX* context)
 {
     /* SHA1 initialization constants */
     context->state[0] = 0x67452301;
@@ -198,7 +198,7 @@ void SHA1_Init(SHA1_CTX* context)
 
 
 /* Run your data through this. */
-void SHA1_Update(SHA1_CTX* context, const uint8_t* data, const size_t len)
+void VDB_SHA1_Update(VDB_SHA1_CTX* context, const uint8_t* data, const size_t len)
 {
     size_t i, j;
 
@@ -227,7 +227,7 @@ void SHA1_Update(SHA1_CTX* context, const uint8_t* data, const size_t len)
 
 
 /* Add padding and return the message digest. */
-void SHA1_Final(SHA1_CTX* context, uint8_t digest[SHA1_DIGEST_SIZE])
+void VDB_SHA1_Final(VDB_SHA1_CTX* context, uint8_t digest[VDB_SHA1_DIGEST_SIZE])
 {
     uint32_t i;
     uint8_t  finalcount[8];
@@ -236,12 +236,12 @@ void SHA1_Final(SHA1_CTX* context, uint8_t digest[SHA1_DIGEST_SIZE])
         finalcount[i] = (unsigned char)((context->count[(i >= 4 ? 0 : 1)]
          >> ((3-(i & 3)) * 8) ) & 255);  /* Endian independent */
     }
-    SHA1_Update(context, (uint8_t *)"\200", 1);
+    VDB_SHA1_Update(context, (uint8_t *)"\200", 1);
     while ((context->count[0] & 504) != 448) {
-        SHA1_Update(context, (uint8_t *)"\0", 1);
+        VDB_SHA1_Update(context, (uint8_t *)"\0", 1);
     }
-    SHA1_Update(context, finalcount, 8);  /* Should cause a SHA1_Transform() */
-    for (i = 0; i < SHA1_DIGEST_SIZE; i++) {
+    VDB_SHA1_Update(context, finalcount, 8);  /* Should cause a SHA1_Transform() */
+    for (i = 0; i < VDB_SHA1_DIGEST_SIZE; i++) {
         digest[i] = (uint8_t)
          ((context->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
     }
@@ -264,7 +264,7 @@ void SHA1_Final(SHA1_CTX* context, uint8_t digest[SHA1_DIGEST_SIZE])
 int main(int argc, char** argv)
 {
 int i, j;
-SHA1_CTX context;
+VDB_SHA1_CTX context;
 unsigned char digest[SHA1_DIGEST_SIZE], buffer[16384];
 FILE* file;
 
@@ -283,12 +283,12 @@ FILE* file;
             return(-1);
         }
     } 
-    SHA1_Init(&context);
+    VDB_SHA1_Init(&context);
     while (!feof(file)) {  /* note: what if ferror(file) */
         i = fread(buffer, 1, 16384, file);
-        SHA1_Update(&context, buffer, i);
+        VDB_SHA1_Update(&context, buffer, i);
     }
-    SHA1_Final(&context, digest);
+    VDB_SHA1_Final(&context, digest);
     fclose(file);
     for (i = 0; i < SHA1_DIGEST_SIZE/4; i++) {
         for (j = 0; j < 4; j++) {
@@ -334,16 +334,16 @@ void digest_to_hex(const uint8_t digest[SHA1_DIGEST_SIZE], char *output)
 int main(int argc, char** argv)
 {
     int k;
-    SHA1_CTX context;
+    VDB_SHA1_CTX context;
     uint8_t digest[20];
     char output[80];
 
     fprintf(stdout, "verifying SHA-1 implementation... ");
     
     for (k = 0; k < 2; k++){ 
-        SHA1_Init(&context);
-        SHA1_Update(&context, (uint8_t*)test_data[k], strlen(test_data[k]));
-        SHA1_Final(&context, digest);
+        VDB_SHA1_Init(&context);
+        VDB_SHA1_Update(&context, (uint8_t*)test_data[k], strlen(test_data[k]));
+        VDB_SHA1_Final(&context, digest);
 	digest_to_hex(digest, output);
 
         if (strcmp(output, test_results[k])) {
@@ -355,10 +355,10 @@ int main(int argc, char** argv)
         }    
     }
     /* million 'a' vector we feed separately */
-    SHA1_Init(&context);
+    VDB_SHA1_Init(&context);
     for (k = 0; k < 1000000; k++)
-        SHA1_Update(&context, (uint8_t*)"a", 1);
-    SHA1_Final(&context, digest);
+        VDB_SHA1_Update(&context, (uint8_t*)"a", 1);
+    VDB_SHA1_Final(&context, digest);
     digest_to_hex(digest, output);
     if (strcmp(output, test_results[2])) {
         fprintf(stdout, "FAIL\n");
