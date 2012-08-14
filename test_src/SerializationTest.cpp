@@ -89,10 +89,10 @@ void testAuthenticationRequest() {
     SharedByteBuffer generated(new char[8192], 8192);
     unsigned char hashedPassword[20];
     std::string password("world");
-    SHA1_CTX context;
-    SHA1_Init(&context);
-    SHA1_Update( &context, reinterpret_cast<const unsigned char*>(password.data()), password.size());
-    SHA1_Final ( &context, hashedPassword);
+    VDB_SHA1_CTX context;
+    VDB_SHA1_Init(&context);
+    VDB_SHA1_Update( &context, reinterpret_cast<const unsigned char*>(password.data()), password.size());
+    VDB_SHA1_Final ( &context, hashedPassword);
     AuthenticationRequest request( "hello", "database", hashedPassword);
     errType err = errOk;
     request.serializeTo(err, &generated);
