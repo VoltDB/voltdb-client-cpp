@@ -632,6 +632,7 @@ public:
         m_buffer = other.m_buffer;
         m_position = other.m_position;
         m_limit = other.m_limit;
+        m_capacity = other.m_capacity;
         return *this;
     }
 
