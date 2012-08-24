@@ -26,6 +26,16 @@
 #include <exception>
 #include <cassert>
 #include <cstdio>
+#include <boost/throw_exception.hpp>
+
+/*
+ * Boost requires that throw_exceptions() is defined by the user if
+ * BOOST_NO_EXCEPTIONS is defined. So define it as a no-op here.
+ */
+#ifdef BOOST_NO_EXCEPTIONS
+inline void boost::throw_exception(std::exception const &e) {}
+#endif
+
 
 namespace voltdb {
 
