@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 -O3 -Wall
 LIB_NAME=libvoltdbcpp
-KIT_NAME=voltdb-client-cpp-x86_64-2.5
+KIT_NAME=voltdb-client-cpp-x86_64-3.0
 
 PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
