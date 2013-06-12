@@ -74,6 +74,8 @@ public:
 	bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception)
 	{
 		bool retVal = false;
+		voltdb::errType err = voltdb::errOk;
+
 		if (response.failure())
 		{
 			cout << "Failed to execute!!!" << endl;
@@ -86,7 +88,7 @@ public:
 			if (numSPCalls - totExecutions < minAllowedOutstanding)
 				retVal = true;
 			vector<voltdb::Table> vtResults = response.results();
-			int32_t voteResult = (int32_t) (vtResults[0].iterator().next().getInt64(0));
+			int32_t voteResult = (int32_t) (vtResults[0].iterator().next(err).getInt64(err, 0));
 			voteResultCounter[voteResult]++;
 
 			if (checkLatency)
@@ -149,6 +151,7 @@ int main(int argc, char* argv[])
 	string serverList = argv[9];
 	int64_t thisOutstanding = 0;
 	int64_t lastOutstanding = 0;
+	voltdb::errType err = voltdb::errOk;
 
 	string cNames = "Edwina Burnam,Tabatha Gehling,Kelly Clauss,Jessie Alloway,Alana Bregman,Jessie Eichman,Allie Rogalski,Nita Coster,Kurt Walser,Ericka Dieter,Loraine Nygren,Tania Mattioli";
 
@@ -172,7 +175,7 @@ int main(int argc, char* argv[])
 	for (int i = 0; i < (int)servers.size(); i++)
 	{
 		cout << "Connecting to server: '" << servers[i] << "'" << endl;
-		client.createConnection(servers[i]);
+		client.createConnection(err, servers[i]);
 	}
 
 	vector<voltdb::Parameter> parameterTypes(2);
@@ -180,9 +183,9 @@ int main(int argc, char* argv[])
 	parameterTypes[1] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
 	voltdb::Procedure initProc("Initialize", parameterTypes);
 	voltdb::ParameterSet* params = initProc.params();
-	params->addInt32(maxContestant).addString(cNames);
-	voltdb::InvocationResponse vtInitialize = client.invoke(initProc);
-	maxContestant = (int32_t)vtInitialize.results()[0].iterator().next().getInt64(0);
+	params->addInt32(err, maxContestant).addString(err, cNames);
+	voltdb::InvocationResponse vtInitialize = client.invoke(err, initProc);
+	maxContestant = (int32_t)vtInitialize.results()[0].iterator().next(err).getInt64(err, 0);
 	cout << "Running for " << maxContestant << " contestant(s)" << endl;
 
 	int64_t startTime = millisec_time();
@@ -200,7 +203,7 @@ int main(int argc, char* argv[])
 	{
 		numSPCalls++;
 		if (numSPCalls - totExecutions > maxAllowedOutstanding)
-			client.run();
+			client.run(err);
 
 		phoneNumber = rand() % 100000000000;
 		contestantNumber = (int8_t) (((rand() % maxContestant) * (rand() % maxContestant)) % maxContestant + 1);
@@ -212,13 +215,13 @@ int main(int argc, char* argv[])
 		parameterTypes[2] = voltdb::Parameter(voltdb::WIRE_TYPE_BIGINT);
 		voltdb::Procedure voteProc("Vote", parameterTypes);
 		voltdb::ParameterSet* params = voteProc.params();
-		params->addInt64(phoneNumber).addInt8(contestantNumber).addInt64(maxVotesPerPhoneNumber);
-		client.invoke(voteProc, callback);
+		params->addInt64(err, phoneNumber).addInt8(err, contestantNumber).addInt64(err, maxVotesPerPhoneNumber);
+		client.invoke(err, voteProc, callback);
 
 		transactionsThisSecond++;
 		if (transactionsThisSecond >= transactionsPerMilli)
 		{
-			client.runOnce();
+			client.runOnce(err);
 			thisMillisecond = millisec_time();
 			while (thisMillisecond <= lastMillisecond)
 			{
@@ -255,7 +258,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	while (!client.drain()) {}
+	while (!client.drain(err)) {}
 
 	int64_t elapsedTimeMillis = millisec_time() - startTime;
 
@@ -272,7 +275,7 @@ int main(int argc, char* argv[])
 	int64_t winnerVotes = -1;
 	parameterTypes.clear();
 	voltdb::Procedure resultProc("Results", parameterTypes);
-	voltdb::InvocationResponse vtResults = client.invoke(resultProc);
+	voltdb::InvocationResponse vtResults = client.invoke(err, resultProc);
 	int32_t rowCount = (int32_t) vtResults.results()[0].rowCount();
 	if (rowCount == 0)
 	{
@@ -283,9 +286,9 @@ int main(int argc, char* argv[])
 		voltdb::TableIterator tableIter = vtResults.results()[0].iterator();
 		for (int i = 0; i < rowCount; i++)
 		{
-			voltdb::Row row = tableIter.next();
-			string resultName = row.getString(0);
-			int64_t resultVotes = row.getInt64(2);
+			voltdb::Row row = tableIter.next(err);
+			string resultName = row.getString(err, 0);
+			int64_t resultVotes = row.getInt64(err, 2);
 			cout << " - Contestant " << resultName << " received " << resultVotes << " vote(s)" << endl;
 
 			if (resultVotes > winnerVotes)
