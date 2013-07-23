@@ -42,7 +42,6 @@ public:
     struct event_base *m_base;
     int32_t m_authenticationResponseLength;
     AuthenticationResponse m_response;
-    struct timeval m_post_connect_wait;
     bool m_loginExchangeCompleted;
 };
 
@@ -94,10 +93,8 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
     int read = evbuffer_remove(evbuf, buffer.bytes(), static_cast<size_t>(pc->m_authenticationResponseLength));
     assert(read == pc->m_authenticationResponseLength);
     pc->m_response = AuthenticationResponse(buffer);
-    pc->m_post_connect_wait.tv_sec = 0;
-    pc->m_post_connect_wait.tv_usec = 10000;
     pc->m_loginExchangeCompleted = true;
-    event_base_loopexit( pc->m_base, &pc->m_post_connect_wait);
+    event_base_loopexit( pc->m_base, NULL);
     bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
 }
 
