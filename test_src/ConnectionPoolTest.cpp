@@ -37,6 +37,7 @@ namespace voltdb {
 class ConnectionPoolTest : public CppUnit::TestFixture {
 CPPUNIT_TEST_SUITE( ConnectionPoolTest );
 CPPUNIT_TEST( testReuse );
+CPPUNIT_TEST( testReturn );
 CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -54,6 +55,14 @@ public:
 
         voltdb::Client client_reuse = m_connectionPool->acquireClient("localhost", "program", "password", NULL, 21212);
         CPPUNIT_ASSERT(m_connectionPool->numClientsBorrowed() == numClientsBorrowed);
+    }
+
+    void testReturn() {
+         std::cout << "RETURN TEST" << std::endl;
+         voltdb::Client client = m_connectionPool->acquireClient("localhost", "program", "password", NULL, 21212);
+         m_connectionPool->returnClient(client);
+         voltdb::Client client2 = m_connectionPool->acquireClient("localhost", "program", "password", NULL, 21212);
+         CPPUNIT_ASSERT(client == client2);
     }
 
 private:
