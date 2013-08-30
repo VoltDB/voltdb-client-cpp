@@ -90,4 +90,9 @@ throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventExcept
 void Client::interrupt() {
     return m_impl->interrupt();
 }
+
+bool
+Client::operator==(const Client &other) {
+    return m_impl == other.m_impl;
+}
 }
