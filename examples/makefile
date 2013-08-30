@@ -12,7 +12,7 @@ endif
 all: helloworld asynchelloworld voter
 
 asynchelloworld: AsyncHelloWorld.cpp ../libvoltdbcpp.a
-	$(CC) $(CFLAGS) HelloWorld.cpp ../libvoltdbcpp.a ../libevent.a ../libevent_pthreads.a $(SYSTEM_LIBS) -o asynchelloworld
+	$(CC) $(CFLAGS) AsyncHelloWorld.cpp ../libvoltdbcpp.a ../libevent.a ../libevent_pthreads.a $(SYSTEM_LIBS) -o asynchelloworld
 
 helloworld: HelloWorld.cpp ../libvoltdbcpp.a
 	$(CC) $(CFLAGS) HelloWorld.cpp ../libvoltdbcpp.a ../libevent.a ../libevent_pthreads.a $(SYSTEM_LIBS) -o helloworld
