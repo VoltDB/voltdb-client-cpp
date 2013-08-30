@@ -211,6 +211,17 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
 }
 
 /*
+ * Return the number of clients held by this thread
+ */
+int ConnectionPool::numClientsBorrowed() {
+    ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
+    if (clients != NULL) {
+        return clients->size();
+    }
+    return 0;
+}
+
+/*
  * Release any unreleased clients associated with this thread/script
  */
 void ConnectionPool::onScriptEnd() {
