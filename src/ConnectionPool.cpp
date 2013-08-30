@@ -210,6 +210,25 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     return acquireClient(hostname, username, password, NULL, port);
 }
 
+void ConnectionPool::returnClient(Client client) throw (voltdb::Exception) {
+    LockGuard guard(m_lock);
+    ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
+    if (clients == NULL) {
+        throw MisplacedClientException();
+    }
+
+    for (ClientSet::iterator i = clients->begin(); i != clients->end(); i++) {
+        if ((*i)->m_client == client) {
+            (*i)->m_listener->m_listener = NULL;
+            m_clients[(*i)->m_identifier].push_back(*i);
+            clients->erase(i);
+            return;
+        }
+    }
+
+    throw MisplacedClientException();
+}
+
 /*
  * Return the number of clients held by this thread
  */

@@ -58,6 +58,11 @@ public:
      */
     voltdb::Client acquireClient(std::string hostname, std::string username, std::string password, StatusListener *listener, short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
 
+    void returnClient(Client client) throw (voltdb::Exception);
+
+    /*
+     * Return the number of clients held by this thread
+     */
     int numClientsBorrowed();
 
     /*
