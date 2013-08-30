@@ -162,6 +162,14 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     int portInt = port;
     snprintf(portBytes, 16, "%d", portInt);
     std::string identifier = hostname + "," + std::string(portBytes) + "," + username + "," + password;
+
+    // if a thread calls acquireClient() multiple times with the same identifier, reuse the same client
+    for (ClientSet::iterator i = clients->begin(); i != clients->end(); i++) {
+        if ((*i)->m_identifier == identifier) {
+            return (*i)->m_client;
+        }
+    }
+
     std::vector<boost::shared_ptr<ClientStuff> > *clientStuffs = &m_clients[identifier];
 
     while (clientStuffs->size() > 0) {
@@ -200,6 +208,17 @@ ConnectionPool::acquireClient(
         short port)
 throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     return acquireClient(hostname, username, password, NULL, port);
+}
+
+/*
+ * Return the number of clients held by this thread
+ */
+int ConnectionPool::numClientsBorrowed() {
+    ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
+    if (clients != NULL) {
+        return clients->size();
+    }
+    return 0;
 }
 
 /*
