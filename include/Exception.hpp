@@ -170,6 +170,18 @@ public:
 };
 
 /*
+ * Thrown when an attempt is made to return a client that does not belong to this thread
+ * back to connection pool.
+ */
+class MisplacedClientException : public voltdb::Exception {
+public:
+    MisplacedClientException() : Exception() {}
+    virtual const char* what() const throw() {
+        return "Attempted to return a client that does not belong to this thread";
+    }
+};
+
+/*
  * Thrown when libevent returns a failure code. These codes are not specific so it isn't possible
  * to tell what happened.
  */
