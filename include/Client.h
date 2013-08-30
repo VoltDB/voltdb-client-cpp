@@ -127,6 +127,11 @@ public:
     void interrupt();
 
     /*
+     * Return true if the two Clients being compared points to the same ClientImpl
+     */
+    bool operator==(const Client &other);
+
+    /*
      * Create a client with the specified configuration
      */
     static Client create(voltdb::ClientConfig config = voltdb::ClientConfig());
