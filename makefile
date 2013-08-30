@@ -31,6 +31,9 @@ TEST_OBJS := test_obj/ByteBufferTest.o \
 			 test_obj/SerializationTest.o \
 			 test_obj/Tests.o
 
+CPTEST_OBJS := test_obj/ConnectionPoolTest.o \
+			 test_obj/Tests.o
+
 RM := rm -rf
 
 # All Target
@@ -102,11 +105,24 @@ test: testbin
 	-./testbin
 	@echo ' '
 
+# Connection pool testing is put separately since for now it requires a local running Volt server
+cptestbin: $(LIB_NAME).a $(CPTEST_OBJS)
+	@echo 'Compiling Connection Pool CPPUnit tests'
+	$(CC) $(CFLAGS) $(CPTEST_OBJS) $(LIB_NAME).a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -lcppunit -o cptestbin
+	@echo ' '
+
+cptest: cptestbin
+	@echo 'Running Connection Pool CPPUnit tests'
+	-./cptestbin
+	@echo ' '
+
 # Other Targets
 clean:
 	-$(RM) $(OBJS)
 	-$(RM) $(TEST_OBJS)
+	-$(RM) $(CPTEST_OBJS)
 	-$(RM) testbin*
+	-$(RM) cptestbin*
 	-$(RM) $(LIB_NAME).a
 	-$(RM) $(LIB_NAME).so
 	-$(RM) $(KIT_NAME)
