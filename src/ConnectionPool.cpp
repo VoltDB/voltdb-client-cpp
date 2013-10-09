@@ -163,6 +163,14 @@ ConnectionPool::acquireClient(
     int portInt = port;
     snprintf(portBytes, 16, "%d", portInt);
     std::string identifier = hostname + "," + std::string(portBytes) + "," + username + "," + password;
+
+    // if a thread calls acquireClient() multiple times with the same identifier, reuse the same client
+    for (ClientSet::iterator i = clients->begin(); i != clients->end(); i++) {
+        if ((*i)->m_identifier == identifier) {
+            return (*i)->m_client;
+        }
+    }
+
     std::vector<boost::shared_ptr<ClientStuff> > *clientStuffs = &m_clients[identifier];
 
     while (clientStuffs->size() > 0) {
@@ -211,6 +219,38 @@ ConnectionPool::acquireClient(
         short port)
 {
     return acquireClient(err, hostname, username, password, NULL, port);
+}
+
+void ConnectionPool::returnClient(errType& err, Client client) throw (voltdb::Exception) {
+    LockGuard guard(m_lock);
+    ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
+    if (clients == NULL) {
+        setErr(err, errMisplacedClientException);
+        return;
+    }
+
+    for (ClientSet::iterator i = clients->begin(); i != clients->end(); i++) {
+        if ((*i)->m_client == client) {
+            (*i)->m_listener->m_listener = NULL;
+            m_clients[(*i)->m_identifier].push_back(*i);
+            clients->erase(i);
+            return;
+        }
+    }
+
+    setErr(err, errMisplacedClientException);
+    return;
+} 
+
+/*
+ * Return the number of clients held by this thread
+ */
+int ConnectionPool::numClientsBorrowed() {
+    ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
+    if (clients != NULL) {
+        return clients->size();
+    }
+    return 0;
 }
 
 /*
