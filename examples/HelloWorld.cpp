@@ -57,23 +57,23 @@ int main(int argc, char **argv) {
      * Load the database.
      */
     voltdb::ParameterSet* params = procedure.params();
-    params->addString("Hello").addString("World").addString("English");
+    params->addString("English").addString("Hello").addString("World");
     response = client.invoke(procedure);
     if (response.failure()) { std::cout << response.toString() << std::endl; return -1; }
 
-    params->addString("Bonjour").addString("Monde").addString("French");
+    params->addString("French").addString("Bonjour").addString("Monde");
     response = client.invoke(procedure);
     if (response.failure()) { std::cout << response.toString(); return -1; }
 
-    params->addString("Hola").addString("Mundo").addString("Spanish");
+    params->addString("Spanish").addString("Hola").addString("Mundo");
     response = client.invoke(procedure);
     if (response.failure()) { std::cout << response.toString(); return -1; }
 
-    params->addString("Hej").addString("Verden").addString("Danish");
+    params->addString("Danish").addString("Hej").addString("Verden");
     response = client.invoke(procedure);
     if (response.failure()) { std::cout << response.toString(); return -1; }
 
-    params->addString("Ciao").addString("Mondo").addString("Italian");
+    params->addString("Italian").addString("Ciao").addString("Mondo");
     response = client.invoke(procedure);
     if (response.failure()) { std::cout << response.toString(); return -1; }
 

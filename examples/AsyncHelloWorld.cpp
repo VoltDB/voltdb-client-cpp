@@ -98,19 +98,19 @@ int main(int argc, char **argv) {
      * Load the database.
      */
     voltdb::ParameterSet* params = procedure.params();
-    params->addString("Hello").addString("World").addString("English");
+    params->addString("English").addString("Hello").addString("World");
     client.invoke(procedure, callback);
 
-    params->addString("Bonjour").addString("Monde").addString("French");
+    params->addString("French").addString("Bonjour").addString("Monde");
     client.invoke(procedure, callback);
 
-    params->addString("Hola").addString("Mundo").addString("Spanish");
+    params->addString("Spanish").addString("Hola").addString("Mundo");
     client.invoke(procedure, callback);
 
-    params->addString("Hej").addString("Verden").addString("Danish");
+    params->addString("Danish").addString("Hej").addString("Verden");
     client.invoke(procedure, callback);
 
-    params->addString("Ciao").addString("Mondo").addString("Italian");
+    params->addString("Italian").addString("Ciao").addString("Mondo");
     client.invoke(procedure, callback);
 
     /*
