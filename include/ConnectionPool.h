@@ -22,7 +22,7 @@
  */
 
 #ifndef VOLT_CONNECTION_POOL_H_
-#define VOLT_CONNECTION_POOL_
+#define VOLT_CONNECTION_POOL_H_
 #include "Client.h"
 #include "StatusListener.h"
 #include <pthread.h>
