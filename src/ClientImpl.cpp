@@ -31,8 +31,6 @@
 #define HIGH_WATERMARK 1024 * 1024 * 55
 namespace voltdb {
 
-static bool voltdb_clientimpl_debug_init_libevent = false;
-
 class PendingConnection {
 public:
     PendingConnection(struct event_base *base)
