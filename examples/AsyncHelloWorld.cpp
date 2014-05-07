@@ -21,8 +21,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#ifndef __STDC_CONSTANT_MACROS
 #define __STDC_CONSTANT_MACROS
+#endif
+#ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
+#endif
 
 #include <vector>
 #include <boost/shared_ptr.hpp>
@@ -81,7 +85,8 @@ int main(int argc, char **argv) {
      */
     voltdb::ClientConfig clientConfig("program", "password");
     voltdb::Client client = voltdb::Client::create();
-    client.createConnection("localhost");
+    voltdb::errType err = voltdb::errOk;
+    client.createConnection(err, "localhost");
 
     /*
      * Describe the stored procedure to be invoked
@@ -98,26 +103,26 @@ int main(int argc, char **argv) {
      * Load the database.
      */
     voltdb::ParameterSet* params = procedure.params();
-    params->addString("Hello").addString("World").addString("English");
-    client.invoke(procedure, callback);
+    params->addString(err, "Hello").addString(err, "World").addString(err, "English");
+    client.invoke(err, procedure, callback);
 
-    params->addString("Bonjour").addString("Monde").addString("French");
-    client.invoke(procedure, callback);
+    params->addString(err, "Bonjour").addString(err, "Monde").addString(err, "French");
+    client.invoke(err, procedure, callback);
 
-    params->addString("Hola").addString("Mundo").addString("Spanish");
-    client.invoke(procedure, callback);
+    params->addString(err, "Hola").addString(err, "Mundo").addString(err, "Spanish");
+    client.invoke(err, procedure, callback);
 
-    params->addString("Hej").addString("Verden").addString("Danish");
-    client.invoke(procedure, callback);
+    params->addString(err, "Hej").addString(err, "Verden").addString(err, "Danish");
+    client.invoke(err, procedure, callback);
 
-    params->addString("Ciao").addString("Mondo").addString("Italian");
-    client.invoke(procedure, callback);
+    params->addString(err, "Ciao").addString(err, "Mondo").addString(err, "Italian");
+    client.invoke(err, procedure, callback);
 
     /*
      * Run the client event loop to poll the network and invoke callbacks.
      * The event loop will break on an error or when a callback returns true
      */
-    client.run();
+    client.run(err);
 
     /*
      * Describe procedure to retrieve message
@@ -128,13 +133,13 @@ int main(int argc, char **argv) {
     /*
      * Retrieve the message
      */
-    selectProc.params()->addString("Spanish");
-    client.invoke(selectProc, boost::shared_ptr<PrintingCallback>(new PrintingCallback()));
+    selectProc.params()->addString(err, "Spanish");
+    client.invoke(err, selectProc, boost::shared_ptr<PrintingCallback>(new PrintingCallback()));
 
     /*
      * Invoke event loop
      */
-    client.run();
+    client.run(err);
 
     return 0;
 }

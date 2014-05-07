@@ -50,6 +50,8 @@ std::string wireTypeToString(WireType type) {
         return std::string("VARBINARY");
     default:
         assert(false);
+        // Avoid warning.
+        return std::string("<UNKNOWN>");
     }
 }
 }

@@ -21,8 +21,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#ifndef __STDC_CONSTANT_MACROS
 #define __STDC_CONSTANT_MACROS
+#endif
+#ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
+#endif
 
 #include <vector>
 #include <boost/shared_ptr.hpp>

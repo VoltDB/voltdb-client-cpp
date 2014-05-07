@@ -23,6 +23,7 @@
 
 #ifndef VOLTDB_CLIENTIMPL_H_
 #define VOLTDB_CLIENTIMPL_H_
+#include "PlatformInterface.hpp"
 #include <event2/event.h>
 #include <event2/bufferevent.h>
 #include <map>

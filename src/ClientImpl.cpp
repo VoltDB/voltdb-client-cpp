@@ -178,12 +178,18 @@ ClientImpl::~ClientImpl() {
 }
 
 // Initialization for the library that only gets called once
-pthread_once_t once_initLibevent = PTHREAD_ONCE_INIT;
+CALL_ONCE_DECLARE(once_initLibevent);
 void initLibevent() {
     // try to run threadsafe libevent
+#ifdef _MSC_VER
+    if (evthread_use_windows_threads()) {
+        throw voltdb::LibEventException(); // TODO_ERROR
+    }
+#else
     if (evthread_use_pthreads()) {
         throw voltdb::LibEventException(); // TODO_ERROR
     }
+#endif
 }
 
 ClientImpl::ClientImpl(ClientConfig config)  :
@@ -191,7 +197,7 @@ ClientImpl::ClientImpl(ClientConfig config)  :
         m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false), m_isDraining(false),
         m_instanceIdIsSet(false), m_outstandingRequests(0), m_username(config.m_username),
         m_maxOutstandingRequests(config.m_maxOutstandingRequests), m_ignoreBackpressure(false) {
-    pthread_once(&once_initLibevent, initLibevent);
+    CALL_ONCE_INVOKE(once_initLibevent, initLibevent);
 #ifdef DEBUG
     if (!voltdb_clientimpl_debug_init_libevent) {
         event_enable_debug_mode();
@@ -569,7 +575,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         if (m_listener.get() != NULL) {
             try {
                 m_ignoreBackpressure = true;
-                breakEventLoop |= m_listener->connectionLost( m_contexts[bev]->m_name, m_bevs.size() - 1);
+                breakEventLoop |= m_listener->connectionLost( m_contexts[bev]->m_name, (int32_t)m_bevs.size() - 1);
                 m_ignoreBackpressure = false;
             } catch (std::exception e) {
                 std::cerr << "Status listener threw exception on connection lost: " << e.what() << std::endl;

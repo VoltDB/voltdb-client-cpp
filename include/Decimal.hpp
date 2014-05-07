@@ -28,7 +28,9 @@
  * ASM doesn't compile on 32-bit Ubuntu 10.04
  */
 #if !defined _M_X64 && !defined __x86_64__
+#ifndef TTMATH_NOASM
 #define TTMATH_NOASM
+#endif // TTMATH_NOASM
 #endif
 #include "ttmath/ttmathint.h"
 #include "Exception.hpp"

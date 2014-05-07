@@ -75,7 +75,7 @@ public:
 
     errType getErr() { return m_err; }
     int32_t hostId() { return m_hostId; }
-    int32_t connectionId() { return m_connectionId; }
+    int64_t connectionId() { return m_connectionId; }
     int64_t clusterStartTime() { return m_clusterStartTime; }
     int32_t leaderAddress() { return m_leaderAddress; }
     std::string buildString() { return m_buildString; }

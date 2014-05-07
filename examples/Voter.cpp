@@ -21,8 +21,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#ifndef __STDC_CONSTANT_MACROS
 #define __STDC_CONSTANT_MACROS
+#endif
+#ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
+#endif
 
 #include <vector>
 #include <string>
@@ -31,7 +35,9 @@
 #include <stdio.h>
 #include <time.h>
 #include <algorithm>
+#ifndef _MSC_VER
 #include <sys/time.h>
+#endif
 #include <boost/shared_ptr.hpp>
 #include "Client.h"
 #include "Table.h"
@@ -61,12 +67,20 @@ int64_t numSPCalls;
 int64_t minAllowedOutstanding;
 int64_t maxAllowedOutstanding;
 
+#ifdef _MSC_VER
+int64_t millisec_time() {
+    __int64 t;
+    QueryPerformanceCounter((LARGE_INTEGER*)&t);
+    return t;
+}
+#else
 int64_t millisec_time() {
     struct timeval tp;
     int res = gettimeofday(&tp, NULL);
     assert(res == 0);
     return (tp.tv_sec * 1000) + (tp.tv_usec / 1000);
 }
+#endif
 
 class VoterCallback : public voltdb::ProcedureCallback
 {
@@ -245,12 +259,12 @@ int main(int argc, char* argv[])
 			if (totExecutionsLatency == 0)
 				totExecutionsLatency = 1;
 
-			float percentComplete = 100 * elapsedTimeMillis2 / runTimeMillis;
+			double percentComplete = 100. * elapsedTimeMillis2 / runTimeMillis;
 			if (percentComplete > 100.)
 				percentComplete = 100.;
 
 			thisOutstanding = numSPCalls - totExecutions;
-			float avgLatency = (float) totExecutionMilliseconds / (float) totExecutionsLatency;
+			double avgLatency = (float) totExecutionMilliseconds / (float) totExecutionsLatency;
 
 			cout << percentComplete << "% Complete | SP Calls: " << numSPCalls << " at " << ((numSPCalls * 1000) / elapsedTimeMillis2) << " SP/sec | outstanding = " << thisOutstanding << " (" << (thisOutstanding - lastOutstanding) << ") | min = " << minExecutionMilliseconds << " | max = " << maxExecutionMilliseconds << " | avg = " << avgLatency << endl;
 
