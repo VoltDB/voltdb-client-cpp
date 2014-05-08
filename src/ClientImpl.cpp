@@ -182,6 +182,8 @@ CALL_ONCE_DECLARE(once_initLibevent);
 void initLibevent() {
     // try to run threadsafe libevent
 #ifdef _MSC_VER
+    WSADATA wsa_data;
+    WSAStartup(0x0201, &wsa_data);
     if (evthread_use_windows_threads()) {
         throw voltdb::LibEventException(); // TODO_ERROR
     }
