@@ -69,9 +69,12 @@ int64_t maxAllowedOutstanding;
 
 #ifdef _MSC_VER
 int64_t millisec_time() {
-    __int64 t;
-    QueryPerformanceCounter((LARGE_INTEGER*)&t);
-    return t;
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    ULARGE_INTEGER t;
+    t.HighPart = ft.dwHighDateTime;
+    t.LowPart = ft.dwLowDateTime;
+    return t.QuadPart / 10000;
 }
 #else
 int64_t millisec_time() {
