@@ -35,11 +35,11 @@ public:
     std::string m_name;
     WireType m_type;
 
-    std::string name() {
+    const std::string& name() const {
         return m_name;
     }
 
-    WireType type() {
+    WireType type() const {
         return m_type;
     }
 };

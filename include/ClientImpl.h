@@ -27,19 +27,23 @@
 #include <event2/bufferevent.h>
 #include <map>
 #include <set>
+#include <list>
 #include "ProcedureCallback.hpp"
 #include "StatusListener.h"
 #include "Procedure.hpp"
 #include <boost/shared_ptr.hpp>
 #include "ClientConfig.h"
-
+#include "Hashinator.h"
 namespace voltdb {
 
 class CxnContext;
 class MockVoltDB;
 class Client;
+class PendingConnection;
+
 class ClientImpl {
     friend class MockVoltDB;
+    friend class PendingConnection;
 public:
     friend class Client;
 
@@ -55,6 +59,7 @@ public:
 
     class Client;
 
+
     /*
      * Create a connection to the VoltDB process running at the specified host authenticating
      * using the username and password provided when this client was constructed
@@ -63,7 +68,14 @@ public:
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(std::string hostname, short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
+    void createConnection(const std::string &hostname, const short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
+
+    /*
+     * Reconnects to the node when connection was lost
+     * @param hostname Hostname or IP address to connect to
+     * @param port Port to connect to
+     */
+    void initiateReconnect(const std::string &hostname, const short port);
 
     /*
      * Synchronously invoke a stored procedure and return a the response.
@@ -97,14 +109,40 @@ public:
      * it will return immediately.
      */
     void interrupt();
+
+    /*
+     * API to be called to enable client affinity (transaction homing)
+     */
+    void setClientAffinity(bool enable);
+    bool getClientAffinity(){return m_useClientAffinity;}
 private:
     ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException);
 
+    void initiateAuthentication(PendingConnection* pc) throw (voltdb::LibEventException);
+    void finalizeAuthentication(PendingConnection* pc) throw (voltdb::Exception, voltdb::ConnectException);
+
+    /*
+     * Updates procedures and topology information for transaction routing algorithm
+     */
+    void updateHashinator();
+
+    /*
+     * Get the buffered event based on transaction routing algorithm
+     */
+    struct bufferevent *routeProcedure(Procedure &proc, ScopedByteBuffer &sbb);
+
+    /*
+     * Initiate connection based on pending connection instance
+     */
+    void initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException, voltdb::LibEventException);
+
+    Hashinator  m_hash;
     struct event_base *m_base;
     int64_t m_nextRequestId;
     size_t m_nextConnectionIndex;
     std::vector<struct bufferevent*> m_bevs;
     std::map<struct bufferevent *, boost::shared_ptr<CxnContext> > m_contexts;
+    std::map<int, struct bufferevent *> m_hostIdToEvent;
     std::set<struct bufferevent *> m_backpressuredBevs;
     BEVToCallbackMap m_callbacks;
     boost::shared_ptr<voltdb::StatusListener> m_listener;
@@ -122,6 +160,10 @@ private:
     const int32_t m_maxOutstandingRequests;
 
     bool m_ignoreBackpressure;
+    bool m_useClientAffinity;
+    //Flag to be set if topology is changed: node disconnected/rejoied
+    bool m_updateHashinator;
+    std::list<boost::shared_ptr<PendingConnection> > m_pendingConnectionList;
 
 };
 }
