@@ -20,6 +20,7 @@ OBJS := obj/Client.o \
 		obj/ClientConfig.o \
 		obj/ClientImpl.o \
 		obj/ConnectionPool.o \
+        obj/Hashinator.o \
 		obj/RowBuilder.o \
 		obj/sha1.o \
 		obj/Table.o \
@@ -80,7 +81,7 @@ $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 		  include/Exception.hpp include/InvocationResponse.hpp include/Parameter.hpp \
 		  include/ParameterSet.hpp include/Procedure.hpp include/ProcedureCallback.hpp \
 		  include/Row.hpp include/RowBuilder.h include/StatusListener.h include/Table.h \
-		  include/TableIterator.h include/WireType.h $(KIT_NAME)/include/
+		  include/TableIterator.h include/WireType.h include/Hashinator.h $(KIT_NAME)/include/
 	cp -R include/ttmath/*.h $(KIT_NAME)/include/ttmath/
 	cp -R include/boost $(KIT_NAME)/include/
 

@@ -38,10 +38,17 @@ Client::~Client() {
 
 void
 Client::createConnection(
-        std::string hostname,
-        short port)
+        const std::string &hostname,
+        const short port)
 throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     m_impl->createConnection(hostname, port);
+}
+
+void 
+Client::initiateReconnect(
+        const std::string &hostname, 
+        const short port) {
+    m_impl->initiateReconnect(hostname, port);
 }
 
 /*
@@ -95,4 +102,16 @@ bool
 Client::operator==(const Client &other) {
     return m_impl == other.m_impl;
 }
+
+/*
+ * API to be called to enable client affinity (transaction homing)
+ */
+void Client::setClientAffinity(bool enable) {
+    m_impl->setClientAffinity(enable);
+}
+
+bool Client::getClientAffinity() {
+    return m_impl->getClientAffinity();
+}
+
 }

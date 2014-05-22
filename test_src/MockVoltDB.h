@@ -33,7 +33,12 @@
 #include "Client.h"
 
 namespace voltdb {
+SharedByteBuffer fileAsByteBuffer(std::string filename);
+
 class CxnContext;
+
+SharedByteBuffer fileAsByteBuffer(std::string filename);
+
 class MockVoltDB {
     friend class ClientTest;
 public:
@@ -50,12 +55,32 @@ public:
         m_filenameForNextResponse = filename;
     }
 
+    void filenameForFirstResponse(std::string filename) {
+        m_filenameForFirstResponse = filename;
+    }
+
     void hangupOnRequestCount(int32_t count) {
         m_hangupOnRequestCounter = count;
     }
 
     void dontRead() {
         m_dontRead = true;
+    }
+
+    /**
+     * Forces a timeout after N transactions, to allow for testing execute multi.
+     * @param the number of transactions to allow before forcing a timeout
+     */
+    void forceTimeoutAfter(int count) {
+    	m_timeoutCount = count;
+    }
+
+    /**
+     * Forces an error response after N transactions, to allow for testing execute multi.
+     * @param the number of transactions to allow before forcing an error
+     */
+    void forceErrorAfter(int count) {
+    	m_errorCount = count;
     }
 
     Client* client() { return &m_client; }
@@ -65,8 +90,11 @@ private:
     std::set<struct bufferevent*> m_connections;
     std::map<struct bufferevent*, boost::shared_ptr<CxnContext> > m_contexts;
     std::string m_filenameForNextResponse;
+    std::string m_filenameForFirstResponse;
     int32_t m_hangupOnRequestCounter;
     bool m_dontRead;
+    int m_timeoutCount;
+    int m_errorCount;
     Client m_client;
 };
 }

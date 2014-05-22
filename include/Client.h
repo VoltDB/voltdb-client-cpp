@@ -54,7 +54,14 @@ public:
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(std::string hostname, short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
+    void createConnection(const std::string &hostname, const short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
+
+    /*
+     * Reconnects to the node when connection was lost
+     * @param hostname Hostname or IP address to connect to
+     * @param port Port to connect to
+     */
+    void initiateReconnect(const std::string &hostname, const short port);
 
     /*
      * Synchronously invoke a stored procedure and return a the response. Callbacks for asynchronous requests
@@ -135,6 +142,12 @@ public:
      * Create a client with the specified configuration
      */
     static Client create(voltdb::ClientConfig config = voltdb::ClientConfig()) throw(voltdb::LibEventException, voltdb::Exception);
+
+    /*
+     * API to be called to enable client affinity (transaction homing)
+     */
+    void setClientAffinity(bool enable);
+    bool getClientAffinity();
 
     ~Client();
 private:

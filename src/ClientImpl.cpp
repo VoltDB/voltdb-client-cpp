@@ -27,31 +27,77 @@
 #include <event2/buffer.h>
 #include <event2/thread.h>
 #include "sha1.h"
+#include <boost/foreach.hpp>
+
 
 #define HIGH_WATERMARK 1024 * 1024 * 55
+#define RECONNECT_INTERVAL 10
+
 namespace voltdb {
+
+#ifdef DEBUG
+static bool voltdb_clientimpl_debug_init_libevent = false;
+#endif
+
+int64_t get_sec_time() {
+    struct timeval tp;
+    int res = gettimeofday(&tp, NULL);
+    assert(res == 0);
+    return tp.tv_sec;
+}
 
 class PendingConnection {
 public:
-    PendingConnection(struct event_base *base)
-        :  m_status(true), m_base(base), m_authenticationResponseLength(-1),
-           m_loginExchangeCompleted(false) {}
-    bool m_status;
+    PendingConnection(const std::string& hostname,const short port, struct event_base *base, ClientImpl* ci)
+        :  m_hostname(hostname), m_port(port), m_base(base), m_bev(NULL), m_authenticationResponseLength(-1),
+           m_status(true), m_loginExchangeCompleted(false), m_startPending(0), m_ci(ci) {
+        m_bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+        if (m_bev == NULL) {
+            throw ConnectException();
+        }
+    }
+
+    void initiateAuthentication() {
+       m_ci->initiateAuthentication(this);
+    }
+
+    void finalizeAuthentication() {
+        m_ci->finalizeAuthentication(this);
+    }
+
+    ~PendingConnection() {}
+
+    /*
+     * Host and port of pending connection
+     * */
+    const std::string m_hostname;
+    const short m_port;
+
+    /*
+     *Event and event base associated with connection
+     */
     struct event_base *m_base;
+    struct bufferevent *m_bev;
     int32_t m_authenticationResponseLength;
     AuthenticationResponse m_response;
+    bool m_status;
     bool m_loginExchangeCompleted;
+    int64_t m_startPending;
+    ClientImpl* m_ci;
 };
+
+typedef boost::shared_ptr<PendingConnection> PendingConnectionSPtr;
 
 class CxnContext {
 /*
  * Data associated with a specific connection
  */
 public:
-    CxnContext(std::string name) : m_name(name), m_nextLength(4), m_lengthOrMessage(true) {
+    CxnContext(const std::string& name, short port) : m_name(name), m_port(port), m_nextLength(4), m_lengthOrMessage(true) {
 
     }
     const std::string m_name;
+    const short m_port;
     int32_t m_nextLength;
     bool m_lengthOrMessage;
 };
@@ -92,8 +138,12 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
     assert(read == pc->m_authenticationResponseLength);
     pc->m_response = AuthenticationResponse(buffer);
     pc->m_loginExchangeCompleted = true;
-    event_base_loopexit( pc->m_base, NULL);
+
     bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
+    pc->finalizeAuthentication();
+
+    if (pc->m_startPending == 0)//connection is pending from regular createConeection API
+    event_base_loopexit( pc->m_base, NULL);
 }
 
 /**
@@ -113,11 +163,13 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
 static void authenticationEventCallback(struct bufferevent *bev, short events, void *ctx) {
     PendingConnection *pc = reinterpret_cast<PendingConnection*>(ctx);
     if (events & BEV_EVENT_CONNECTED) {
+        pc->initiateAuthentication();
     } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
         pc->m_status = false;
         pc->m_loginExchangeCompleted = true;
     }
-    event_base_loopexit(pc->m_base, NULL);
+    if (pc->m_startPending == 0)
+   		event_base_loopexit(pc->m_base, NULL);
 }
 
 /**
@@ -187,7 +239,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0), m_listener(config.m_listener),
         m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false), m_isDraining(false),
         m_instanceIdIsSet(false), m_outstandingRequests(0), m_username(config.m_username),
-        m_maxOutstandingRequests(config.m_maxOutstandingRequests), m_ignoreBackpressure(false) {
+        m_maxOutstandingRequests(config.m_maxOutstandingRequests), m_ignoreBackpressure(false), m_useClientAffinity(false),m_updateHashinator(false) {
     pthread_once(&once_initLibevent, initLibevent);
 #ifdef DEBUG
     if (!voltdb_clientimpl_debug_init_libevent) {
@@ -208,39 +260,38 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
 
 class FreeBEVOnFailure {
 public:
-    FreeBEVOnFailure(struct bufferevent *bev) : m_bev(bev), m_success(false) {
+    FreeBEVOnFailure(struct bufferevent *bev) : m_bev(bev) {
 
     }
     ~FreeBEVOnFailure() {
-        if (!m_success) {
+        if (m_bev) {
             bufferevent_free(m_bev);
         }
     }
     void success() {
-        m_success = true;
+        m_bev = NULL;
     }
 private:
     struct bufferevent *m_bev;
-    bool m_success;
 };
 
-void ClientImpl::createConnection(std::string hostname, short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
-    struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE);
+void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException, voltdb::LibEventException){
+
+    FreeBEVOnFailure protector(pc->m_bev);
+
+    bufferevent_setcb(pc->m_bev, authenticationReadCallback, NULL, authenticationEventCallback, pc.get());
+    if (bufferevent_socket_connect_hostname(pc->m_bev, NULL, AF_INET, pc->m_hostname.c_str(), pc->m_port) != 0) {
+        throw voltdb::LibEventException();
+    }
+    protector.success();
+    }
+
+void ClientImpl::initiateAuthentication(PendingConnection* pc)throw (voltdb::LibEventException) {
+    struct bufferevent *bev = pc->m_bev;
     FreeBEVOnFailure protector(bev);
-    if (bev == NULL) {
-        throw ConnectException();
-    }
-    PendingConnection pc(m_base);
-    bufferevent_setcb(bev, authenticationReadCallback, NULL, authenticationEventCallback, &pc);
-    if (bufferevent_socket_connect_hostname(bev, NULL, AF_INET, hostname.c_str(), port) != 0) {
-        throw voltdb::LibEventException();
-    }
-    if (event_base_dispatch(m_base) == -1) {
-        throw voltdb::LibEventException();
-    }
-    if (pc.m_status) {
         bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
         bufferevent_setwatermark( bev, EV_WRITE, 8192, 262144);
+
         if (bufferevent_enable(bev, EV_READ)) {
             throw voltdb::LibEventException();
         }
@@ -251,25 +302,32 @@ void ClientImpl::createConnection(std::string hostname, short port) throw (voltd
         if (evbuffer_add( evbuf, bb.bytes(), static_cast<size_t>(bb.remaining()))) {
             throw voltdb::LibEventException();
         }
-        if (event_base_dispatch(m_base) == -1) {
-            throw voltdb::LibEventException();
+    protector.success();
         }
-        if (pc.m_status) {
+
+void ClientImpl::finalizeAuthentication(PendingConnection* pc) throw (voltdb::Exception, voltdb::ConnectException){
+    struct bufferevent *bev = pc->m_bev;
+    FreeBEVOnFailure protector(bev);
+    if (pc->m_loginExchangeCompleted) {
             if (!m_instanceIdIsSet) {
                 m_instanceIdIsSet = true;
-                m_clusterStartTime = pc.m_response.clusterStartTime();
-                m_leaderAddress = pc.m_response.leaderAddress();
+            m_clusterStartTime = pc->m_response.clusterStartTime();
+            m_leaderAddress = pc->m_response.leaderAddress();
             } else {
-                if (m_clusterStartTime != pc.m_response.clusterStartTime() ||
-                        m_leaderAddress != pc.m_response.leaderAddress()) {
+            if (m_clusterStartTime != pc->m_response.clusterStartTime() ||
+                    m_leaderAddress != pc->m_response.leaderAddress()) {
                     throw ClusterInstanceMismatchException();
                 }
             }
+        	//save event for host id
+       		m_hostIdToEvent[pc->m_response.hostId()] = bev;
+
             bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
             m_bevs.push_back(bev);
+
             m_contexts[bev] =
                     boost::shared_ptr<CxnContext>(
-                            new CxnContext(hostname));
+                        new CxnContext(pc->m_hostname, pc->m_port));
             boost::shared_ptr<CallbackMap> callbackMap(new CallbackMap());
             m_callbacks[bev] = callbackMap;
             bufferevent_setcb(
@@ -277,16 +335,51 @@ void ClientImpl::createConnection(std::string hostname, short port) throw (voltd
                     voltdb::regularReadCallback,
                     voltdb::regularWriteCallback,
                     voltdb::regularEventCallback, this);
-            protector.success();
-            return;
-        } else {
-            throw ConnectException();
+
+        for (std::list<PendingConnectionSPtr>::iterator i = m_pendingConnectionList.begin(); i != m_pendingConnectionList.end(); ++i) {
+            if ((*i).get() == pc) {
+                m_pendingConnectionList.erase(i);
+                break;
+            }
         }
-    } else {
+        //update topology info and procedures info
+        if (m_useClientAffinity)
+            updateHashinator();
+    }
+    else {
         throw ConnectException();
+    }
+            protector.success();
+}
+
+
+void ClientImpl::createConnection(const std::string& hostname, const short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+    PendingConnectionSPtr pc(new PendingConnection(hostname, port, m_base, this));
+    initiateConnection(pc);
+
+    if (event_base_dispatch(m_base) == -1) {
+            throw voltdb::LibEventException();
+    }
+
+    if (pc->m_status) {
+        if (event_base_dispatch(m_base) == -1) {
+            throw voltdb::LibEventException();
+        }
+
+        if (pc->m_loginExchangeCompleted) {
+            return;
+        }
     }
     throw ConnectException();
 }
+
+void ClientImpl::initiateReconnect(const std::string &hostname, const short port){
+    PendingConnectionSPtr pc(new PendingConnection(hostname, port, m_base, this));
+    pc->m_startPending = get_sec_time();
+    initiateConnection(pc);
+    m_pendingConnectionList.push_back(pc);
+}
+
 
 /*
  * A synchronous callback returns the invocation response to the provided address
@@ -343,6 +436,27 @@ void ClientImpl::invoke(Procedure &proc, ProcedureCallback *callback) throw (vol
     invoke(proc, wrapper);
 }
 
+struct bufferevent *ClientImpl::routeProcedure(Procedure &proc, ScopedByteBuffer &sbb){
+    ProcedureInfo *procInfo = m_hash.getProcedure(proc.getName());
+
+    //route transaction to correct event if procedure is found, transaction is single partitioned and
+    //elastic scalability is disabled
+    if (procInfo && !procInfo->m_multiPart && !m_hash.hashType().compare("LEGACY")){
+        const int hashedPartition = m_hash.getHashedPartitionForParameter(sbb,
+                                        procInfo->m_partitionParameter,
+                                        procInfo->m_partitionParameterType);
+        if (hashedPartition >= 0) {
+            const int hostId = m_hash.getHostIdByPartitionId(hashedPartition);
+            if (hostId >= 0) {
+                struct bufferevent *bev = m_hostIdToEvent[hostId];
+                return bev;
+            }
+        }
+    }
+    return NULL;
+}
+
+
 void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
     if (callback.get() == NULL) {
         throw voltdb::NullPointerException();
@@ -375,52 +489,61 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
      *  break the event loop later.
      */
     struct bufferevent *bev = NULL;
-    while (true) {
-        if (m_ignoreBackpressure) {
-            bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
-            break;
-        }
 
-        //Assume backpressure if the number of outstanding requests is too large
-        if (m_outstandingRequests <= m_maxOutstandingRequests) {
-            for (size_t ii = 0; ii < m_bevs.size(); ii++) {
-                bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
-                if (m_backpressuredBevs.find(bev) != m_backpressuredBevs.end()) {
-                    bev = NULL;
-                } else {
-                    break;
-                }
-            }
-        }
 
-        if (bev) {
-            break;
-        } else {
-            bool callEventLoop = true;
-            if (m_listener.get() != NULL) {
-                try {
-                    m_ignoreBackpressure = true;
-                    callEventLoop = !m_listener->backpressure(true);
-                    m_ignoreBackpressure = false;
-                } catch (std::exception e) {
-                    std::cerr << "Exception thrown on invocation of backpressure callback: " << e.what() << std::endl;
+    //route transaction to correct event if client affinity is enabled and hashinator updating is not in progress
+    //elastic scalability is disabled
+    if (m_useClientAffinity && !m_hash.isUpdating())
+        bev = routeProcedure(proc, sbb);
+
+    if(!bev){
+   		while (true) {
+    	    if (m_ignoreBackpressure) {
+    	        bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+    	        break;
+    	    }
+
+      	  //Assume backpressure if the number of outstanding requests is too large
+        	if (m_outstandingRequests <= m_maxOutstandingRequests) {
+        	    for (size_t ii = 0; ii < m_bevs.size(); ii++) {
+        	        bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+        	        if (m_backpressuredBevs.find(bev) != m_backpressuredBevs.end()) {
+        	            bev = NULL;
+        	        } else {
+        	            break;
+        	        }
+        	    }
+	        }
+
+    	    if (bev) {
+    	        break;
+    	    } else {
+    	        bool callEventLoop = true;
+    	        if (m_listener.get() != NULL) {
+    	            try {
+    	                m_ignoreBackpressure = true;
+    	                callEventLoop = !m_listener->backpressure(true);
+    	                m_ignoreBackpressure = false;
+                    } catch (const std::exception& e) {
+    	                std::cerr << "Exception thrown on invocation of backpressure callback: " << e.what() << std::endl;
+    	            }
+    	        }
+                if (callEventLoop && !m_hash.isUpdating()) {
+    	            m_invocationBlockedOnBackpressure = true;
+    	            if (event_base_dispatch(m_base) == -1) {
+    	                throw voltdb::LibEventException();
+    	            }
+    	            if (m_loopBreakRequested) {
+    	                m_loopBreakRequested = false;
+    	                m_invocationBlockedOnBackpressure = false;
+    	                bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+    	            }
+    	        } else {
+    	            bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+    	            break;
                 }
-            }
-            if (callEventLoop) {
-                m_invocationBlockedOnBackpressure = true;
-                if (event_base_dispatch(m_base) == -1) {
-                    throw voltdb::LibEventException();
-                }
-                if (m_loopBreakRequested) {
-                    m_loopBreakRequested = false;
-                    m_invocationBlockedOnBackpressure = false;
-                    bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
-                }
-            } else {
-                bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
-                break;
-            }
-        }
+    		}
+		}
     }
 
     struct evbuffer *evbuf = bufferevent_get_output(bev);
@@ -438,9 +561,19 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
 }
 
 void ClientImpl::runOnce() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException) {
+    BOOST_FOREACH( PendingConnectionSPtr pc, m_pendingConnectionList )
+    {
+        int64_t now = get_sec_time();
+        if ((now - pc->m_startPending) > RECONNECT_INTERVAL && !pc->m_status){
+            pc->m_startPending = get_sec_time();
+            initiateConnection(pc);
+        }
+    }
+
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
+
     if (event_base_loop(m_base, EVLOOP_NONBLOCK) == -1) {
         throw voltdb::LibEventException();
     }
@@ -454,6 +587,7 @@ void ClientImpl::run() throw (voltdb::Exception, voltdb::NoConnectionsException,
     if (event_base_dispatch(m_base) == -1) {
         throw voltdb::LibEventException();
     }
+
     m_loopBreakRequested = false;
 }
 
@@ -493,7 +627,7 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
                         m_ignoreBackpressure = true;
                         breakEventLoop |= m_listener->uncaughtException( e, i->second, response);
                         m_ignoreBackpressure = false;
-                    } catch (std::exception e) {
+                    } catch (const std::exception& e) {
                         std::cerr << "Uncaught exception handler threw exception: " << e.what() << std::endl;
                     }
                 }
@@ -535,11 +669,10 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
                 m_ignoreBackpressure = true;
                 breakEventLoop |= m_listener->connectionLost( m_contexts[bev]->m_name, m_bevs.size() - 1);
                 m_ignoreBackpressure = false;
-            } catch (std::exception e) {
+            } catch (const std::exception& e) {
                 std::cerr << "Status listener threw exception on connection lost: " << e.what() << std::endl;
             }
         }
-
         /*
          * Iterate the list of callbacks for this connection and invoke them
          * with the appropriate error response
@@ -547,7 +680,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         BEVToCallbackMap::iterator callbackMapIter = m_callbacks.find(bev);
         boost::shared_ptr<CallbackMap> callbackMap = callbackMapIter->second;
         for (CallbackMap::iterator i =  callbackMap->begin();
-                i != callbackMap->end(); i++) {
+                i != callbackMap->end(); ++i) {
             try {
                 breakEventLoop |=
                         i->second->callback(InvocationResponse());
@@ -568,11 +701,12 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
 
         //remove the entry for the backpressured connection set
         m_backpressuredBevs.erase(bev);
+        initiateReconnect(m_contexts[bev]->m_name, m_contexts[bev]->m_port);
 
         //Remove the connection context
         m_contexts.erase(bev);
 
-        for (std::vector<struct bufferevent *>::iterator i = m_bevs.begin(); i != m_bevs.end(); i++) {
+        for (std::vector<struct bufferevent *>::iterator i = m_bevs.begin(); i != m_bevs.end(); ++i) {
             if (*i == bev) {
                 m_bevs.erase(i);
                 break;
@@ -582,6 +716,12 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         bufferevent_free(bev);
         if (breakEventLoop || m_bevs.size() == 0) {
             event_base_loopbreak( m_base );
+        }
+
+        //update topology info and procedures info
+        if (m_useClientAffinity)
+        {
+            updateHashinator();
         }
     }
 }
@@ -621,5 +761,79 @@ bool ClientImpl::drain() throw (voltdb::Exception, voltdb::NoConnectionsExceptio
     run();
     return m_outstandingRequests == 0;
 }
+
+
+/*
+ *Callback for async topology update for transaction routing algorithm
+ */
+class TopoUpdateCallback : public voltdb::ProcedureCallback
+{
+public:
+    TopoUpdateCallback(Hashinator *dist):m_dist(dist){}
+    bool callback(InvocationResponse response) throw (voltdb::Exception)
+    {
+        if (response.failure()){
+            //TODO:log
+            return false;
+        }
+        m_dist->updateAffinityTopology(response.results());
+        return true;
+    }
+ private:
+    Hashinator *m_dist;
+};
+/*
+ * Callback for ("@SystemCatalog", "PROCEDURES")
+ */
+class ProcUpdateCallback : public voltdb::ProcedureCallback
+{
+public:
+    ProcUpdateCallback(Hashinator *dist):m_dist(dist){}
+    bool callback(InvocationResponse response) throw (voltdb::Exception)
+    {
+        if (response.failure()){
+            //TODO:log
+            return false;
+        }
+        m_dist->updateProcedurePartitioning(response.results());
+        return true;
+    }
+
+ private:
+    Hashinator *m_dist;
+};
+
+
+
+void ClientImpl::updateHashinator(){
+    m_hash.startUpdate();
+    std::vector<voltdb::Parameter> parameterTypes(1);
+    parameterTypes[0] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
+    voltdb::Procedure systemCatalogProc("@SystemCatalog", parameterTypes);
+    voltdb::ParameterSet* params = systemCatalogProc.params();
+    params->addString("PROCEDURES");
+
+    boost::shared_ptr<ProcUpdateCallback> procCallback(new ProcUpdateCallback(&m_hash));
+    invoke(systemCatalogProc, procCallback);
+
+    parameterTypes.resize(2);
+    parameterTypes[0] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
+    parameterTypes[1] = voltdb::Parameter(voltdb::WIRE_TYPE_INTEGER);
+
+    voltdb::Procedure statisticsProc("@Statistics", parameterTypes);
+    params = statisticsProc.params();
+    params->addString("TOPO").addInt32(0);
+
+    boost::shared_ptr<TopoUpdateCallback> topoCallback(new TopoUpdateCallback(&m_hash));
+
+    invoke(statisticsProc, topoCallback);
+}
+
+void ClientImpl::setClientAffinity(bool enable){
+    if(enable && !m_useClientAffinity && !m_bevs.empty())
+        updateHashinator();
+    m_useClientAffinity = enable;
+}
+
 
 }

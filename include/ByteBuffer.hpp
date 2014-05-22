@@ -76,7 +76,13 @@ namespace voltdb {
 
 #ifdef __bswap_64 // recent linux
 
+#ifdef htonll
+    #undef htonll
+#endif
 #define htonll(x) static_cast<uint64_t>(__bswap_constant_64(x))
+#ifdef ntohll
+    #undef ntohll
+#endif
 #define ntohll(x) static_cast<uint64_t>(__bswap_constant_64(x))
 
 #else // unix in general again
@@ -90,6 +96,7 @@ namespace voltdb {
 
 class ByteBufferTest;
 class ByteBuffer {
+    static const int MAX_VALUE_LENGTH = 1024 * 1024; // 1Mb is the maximum allowed size of binary or string data
     friend class ByteBufferTest;
 private:
     int32_t checkGetPutIndex(int32_t length) {
@@ -266,24 +273,16 @@ public:
         char *data = getByReference(index + 4, length);
         return std::string(data, static_cast<uint32_t>(length));
     }
-    ByteBuffer& putString(std::string value) throw (OverflowUnderflowException) {
-        int32_t size = static_cast<int32_t>(value.size());
-        putInt32(size);
-        put(value.data(), size);
-        return *this;
-    }
     
     bool getBytes(bool &wasNull, int32_t bufsize, uint8_t *out_value, int32_t *out_len) 
     throw (OverflowUnderflowException) {
         int32_t length = getInt32();
         *out_len = length;
-        if (!out_value)
-            return false;
         if (length == -1) {
             wasNull = true;
             return true;
         }
-        if (length > bufsize)
+        if (!out_value || length > bufsize)
             return false;
         char *data = getByReference(length);
         memcpy(out_value, data, length);
@@ -293,13 +292,11 @@ public:
     throw (OverflowUnderflowException, IndexOutOfBoundsException) {
         int32_t length = getInt32(index);
         *out_len = length;
-        if (!out_value)
-            return false;
         if (length == -1) {
             wasNull = true;
             return true;
         }
-        if (length > bufsize)
+        if (!out_value || length > bufsize)
             return false;
         char *data = getByReference(index + 4, length);
         memcpy(out_value, data, length);
@@ -307,26 +304,30 @@ public:
     }
     ByteBuffer& putBytes(const int32_t bufsize, const uint8_t *in_value) 
     throw (OverflowUnderflowException) {
-        assert(in_value);
+        assert(in_value  || bufsize==0);
         putInt32(bufsize);
         put((const char*)in_value, bufsize);
         return *this;
     }
     ByteBuffer& putBytes(int32_t index, const int32_t bufsize, const uint8_t *in_value) 
     throw (OverflowUnderflowException, IndexOutOfBoundsException) {        
-        assert(in_value);
+        assert(in_value  || bufsize==0);
         putInt32(index, bufsize);
         put(index + 4, (const char*)in_value, bufsize);
         return *this;
     }
-    ByteBuffer& putString(int32_t index, std::string value) throw (OverflowUnderflowException, IndexOutOfBoundsException) {
-        int32_t size = static_cast<int32_t>(value.size());
-        putInt32(index, size);
-        put(index + 4, value.data(), size);
-        return *this;
+
+    ByteBuffer& putString(const std::string& value)
+    throw (OverflowUnderflowException) {
+        return putBytes(static_cast<int32_t>(value.size()), (const uint8_t*)value.data());
     }
 
-    int32_t position() {
+    ByteBuffer& putString(int32_t index, const std::string& value)
+    throw (OverflowUnderflowException, IndexOutOfBoundsException) {
+        return putBytes(index, static_cast<int32_t>(value.size()), (const uint8_t*)value.data());
+    }
+
+    int32_t position() const {
         return m_position;
     }
     ByteBuffer& position(int32_t position) throw (IndexOutOfBoundsException) {
@@ -334,14 +335,14 @@ public:
         return *this;
     }
 
-    int32_t remaining() {
+    int32_t remaining() const {
         return m_limit - m_position;
     }
-    bool hasRemaining() {
+    bool hasRemaining() const {
         return m_position < m_limit;
     }
 
-    int32_t limit() {
+    int32_t limit() const {
         return m_limit;
     }
 
@@ -353,7 +354,7 @@ public:
         return *this;
     }
 
-    char* bytes() {
+    char* bytes() const {
         return m_buffer;
     }
 
@@ -501,7 +502,7 @@ public:
     }
 
     SharedByteBuffer(char *data, int32_t length) : ExpandableByteBuffer(data, length), m_ref(data) {}
-    SharedByteBuffer(boost::shared_array<char> data, int32_t length) : ExpandableByteBuffer(data.get(), length), m_ref(data) {}
+    SharedByteBuffer(boost::shared_array<char>& data, int32_t length) : ExpandableByteBuffer(data.get(), length), m_ref(data) {}
 
 protected:
     void resetRef(char *data)  {
