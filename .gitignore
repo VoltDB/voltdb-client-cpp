@@ -8,8 +8,10 @@
 /*.tar.gz
 
 # Visual Studio cruft
-**/windows/**/win32
-**/windows/**/x64
+/windows/**/win32
+/windows/**/x64
+/third_party_libs/src/**/win32
+/third_party_libs/src/**/x64
 **/windows/**/*.opensdf
 **/windows/**/*.sdf
 **/windows/**/*.suo
@@ -17,3 +19,4 @@
 
 # Vim backup files
 *~
+*.swp

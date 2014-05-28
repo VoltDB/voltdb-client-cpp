@@ -70,6 +70,10 @@
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -80,13 +84,15 @@
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(OutDir)$(TargetName)$(TargetExt)" "$(ProjectDir)..\..\..\windows\$(Platform)\"</Command>
+      <Command>mkdir  "$(ProjectDir)..\..\..\windows\$(Platform)\$(Configuration)\" 2&gt; NUL
+copy "$(OutDir)$(TargetName)$(TargetExt)" "$(ProjectDir)..\..\..\windows\$(Platform)\$(Configuration)\"</Command>
       <Message>Copy library to third_party_libs</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -106,7 +112,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(OutDir)$(TargetName)$(TargetExt)" "$(ProjectDir)..\..\..\windows\$(Platform)\"</Command>
+      <Command>mkdir  "$(ProjectDir)..\..\..\windows\$(Platform)\$(Configuration)\" 2&gt; NUL
+copy "$(OutDir)$(TargetName)$(TargetExt)" "$(ProjectDir)..\..\..\windows\$(Platform)\$(Configuration)\"</Command>
       <Message>Copy library to third_party_libs</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -130,7 +137,8 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(OutDir)$(TargetName)$(TargetExt)" "$(ProjectDir)..\..\..\windows\$(Platform)\"</Command>
+      <Command>mkdir  "$(ProjectDir)..\..\..\windows\$(Platform)\$(Configuration)\" 2&gt; NUL
+copy "$(OutDir)$(TargetName)$(TargetExt)" "$(ProjectDir)..\..\..\windows\$(Platform)\$(Configuration)\"</Command>
       <Message>Copy library to third_party_libs</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -154,7 +162,8 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(OutDir)$(TargetName)$(TargetExt)" "$(ProjectDir)..\..\..\windows\$(Platform)\"</Command>
+      <Command>mkdir  "$(ProjectDir)..\..\..\windows\$(Platform)\$(Configuration)\" 2&gt; NUL
+copy "$(OutDir)$(TargetName)$(TargetExt)" "$(ProjectDir)..\..\..\windows\$(Platform)\$(Configuration)\"</Command>
       <Message>Copy library to third_party_libs</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
