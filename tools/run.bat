@@ -2,46 +2,88 @@
 
 setlocal
 
-set SOLUTION=..\windows\voltdbcpp\voltdbcpp.vcxproj
-set PROJECT=voltdbcpp
+rem -- Data
+set MAIN_DIR=..\windows
+set MAIN_SOLUTION=voltdbclientcpp.sln
+set MAIN_PROJECT=voltdbcpp
+set COMMANDS=build clean rebuild
+set CLEAN_COMMANDS=clean rebuild
+set CONFIGURATIONS=release debug
+set PLATFORMS=win32 x64
 
-:checkcommand
-if /I "%1" == "build" goto checkconfig
-if /I "%1" == "clean" goto checkconfig
-if /I "%1" == "rebuild" goto checkconfig
-goto usage
+rem -- Check the command
+set COMMAND=
+for %%C in (%COMMANDS%) do (
+    if /I "%1" == "%%C" (
+        set COMMAND=%%C
+    )
+)
+if "%COMMAND%" == "" goto exitusage
 
-:checkconfig
-if /I "%2" == "release" goto checkplatform
-if /I "%2" == "debug" goto checkplatform
-goto usage
+rem -- Check the configuration
+set CONFIGURATION=
+for %%C in (%CONFIGURATIONS%) do (
+    if /I "%2" == "%%C" (
+        set CONFIGURATION=%%C
+    )
+)
+if "%CONFIGURATION%" == "" goto exitusage
 
-:checkplatform
-set CONFIGURATION=%1
-if /I "%3" == "win32" goto clean
-if /I "%3" == "x64" goto clean
-goto usage
+rem -- Check the platform
+set PLATFORM=
+for %%P in (%PLATFORMS%) do (
+    if /I "%3" == "%%P" (
+        set PLATFORM=%%P
+    )
+)
+if "%PLATFORM%" == "" goto exitusage
 
+rem -- Clean?
+set DO_CLEAN=no
+for %%C in (%CLEAN_COMMANDS%) do (
+    if /I "%COMMAND%" == "%%C" (
+        set DO_CLEAN=yes
+    )
+)
+if "%DO_CLEAN%" == "yes" (
+    devenv %~dp0%MAIN_DIR%\%MAIN_SOLUTION% /Project %MAIN_PROJECT% /Clean "%CONFIGURATION%|%PLATFORM%"
+    if errorlevel 1 (
+        goto exitfailure
+    )
+)
+
+rem -- Execute command body
+goto %COMMAND%
+
+rem -- Command body: clean (already took care of it above)
 :clean
-if /I "%1" == "build" goto build
-devenv %~dp0%SOLUTION% /Project %PROJECT% /Clean "%2|%3"
-if errorlevel 1 goto exitfailure
-if /I "%1" == "clean" goto exitsuccess
-goto build
-
-:build
-devenv %~dp0%SOLUTION% /Project %PROJECT% /Build "%2|%3"
-if errorlevel 1 goto exitfailure
 goto exitsuccess
 
-:usage
-echo Usage: %~n0 build^|clean^|rebuild debug^|release win32^|x64
-goto exitfailure
+rem -- Command body: build
+:build
+:rebuild
+devenv %~dp0%MAIN_DIR%\%MAIN_SOLUTION% /Project %MAIN_PROJECT% /Build "%CONFIGURATION%|%PLATFORM%"
+if errorlevel 1 (
+    goto exitfailure
+)
+goto exitsuccess
 
-:exitfailure
-echo * Command failed *
+rem -- Exit: with usage message
+:exitusage
+echo Usage: %~n0 COMMAND CONFIGURATION PLATFORM
+echo          COMMAND: %COMMANDS%
+echo    CONFIGURATION: %CONFIGURATIONS%
+echo         PLATFORM: %PLATFORMS%
 endlocal
 exit /b 1
 
+rem -- Exit: with failure
+:exitfailure
+echo ** Command failed: %COMMAND% **
+endlocal
+exit /b 1
+
+rem -- Exit: with success
 :exitsuccess
+echo :: Command succeeded: %COMMAND% ::
 endlocal
