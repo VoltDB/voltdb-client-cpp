@@ -1,6 +1,6 @@
 @echo off
 
-setlocal
+setlocal ENABLEEXTENSIONS
 
 rem -- Data
 set MAIN_DIR=..\windows
@@ -11,6 +11,17 @@ set CLEAN_COMMANDS=clean rebuild
 set CONFIGURATIONS=release debug
 set PLATFORMS=win32 x64
 
+rem -- Initialize Visual Studio environment
+set VS_LOCATION=
+if defined VS110COMNTOOLS set VS_LOCATION=%VS110COMNTOOLS%\..\..\VC
+if defined VS120COMNTOOLS set VS_LOCATION=%VS120COMNTOOLS%\..\..\VC
+if defined VS130COMNTOOLS set VS_LOCATION=%VS130COMNTOOLS%\..\..\VC
+if not defined VS_LOCATION (
+    echo ** Visual Studio not found **
+    goto exitfailure
+)
+call "%VS_LOCATION%\vcvarsall.bat"
+
 rem -- Check the command
 set COMMAND=
 for %%C in (%COMMANDS%) do (
@@ -18,7 +29,7 @@ for %%C in (%COMMANDS%) do (
         set COMMAND=%%C
     )
 )
-if "%COMMAND%" == "" goto exitusage
+if not defined COMMAND goto exitusage
 
 rem -- Check the configuration
 set CONFIGURATION=
@@ -27,7 +38,7 @@ for %%C in (%CONFIGURATIONS%) do (
         set CONFIGURATION=%%C
     )
 )
-if "%CONFIGURATION%" == "" goto exitusage
+if not defined CONFIGURATION goto exitusage
 
 rem -- Check the platform
 set PLATFORM=
@@ -36,7 +47,7 @@ for %%P in (%PLATFORMS%) do (
         set PLATFORM=%%P
     )
 )
-if "%PLATFORM%" == "" goto exitusage
+if not defined PLATFORM goto exitusage
 
 rem -- Clean?
 set DO_CLEAN=no
