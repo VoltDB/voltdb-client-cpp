@@ -145,6 +145,7 @@ public:
             if (retval == INT8_MIN) m_wasNull = true;
             break;
         default:
+            retval = -1;    // not used
             assert(false);
         }
         return retval;
@@ -177,6 +178,7 @@ public:
             if (retval == INT8_MIN) m_wasNull = true;
             break;
         default:
+            retval = -1;    // not used
             assert(false);
         }
         return retval;
@@ -205,6 +207,7 @@ public:
             if (retval == INT8_MIN) m_wasNull = true;
             break;
         default:
+            retval = 0; // not used
             assert(false);
         }
         return retval;
