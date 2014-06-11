@@ -57,7 +57,7 @@ for %%C in (%CLEAN_COMMANDS%) do (
     )
 )
 if "%DO_CLEAN%" == "yes" (
-    devenv %~dp0%MAIN_DIR%\%MAIN_SOLUTION% /Project %MAIN_PROJECT% /Clean "%CONFIGURATION%|%PLATFORM%"
+    msbuild %~dp0%MAIN_DIR%\%MAIN_SOLUTION% /t:clean /p:Configuration=%CONFIGURATION%;Platform=%PLATFORM%
     if errorlevel 1 (
         goto exitfailure
     )
@@ -73,7 +73,7 @@ goto exitsuccess
 rem -- Command body: build
 :build
 :rebuild
-devenv %~dp0%MAIN_DIR%\%MAIN_SOLUTION% /Project %MAIN_PROJECT% /Build "%CONFIGURATION%|%PLATFORM%"
+msbuild %~dp0%MAIN_DIR%\%MAIN_SOLUTION% /t:%MAIN_PROJECT% /p:Configuration=%CONFIGURATION%;Platform=%PLATFORM%
 if errorlevel 1 (
     goto exitfailure
 )
