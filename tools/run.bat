@@ -3,8 +3,11 @@
 setlocal ENABLEEXTENSIONS
 
 rem -- Data
-set MAIN_DIR=..\windows
-set MAIN_SOLUTION=voltdbclientcpp.sln
+pushd %~dp0
+cd ..
+set MAIN_DIR=%CD%
+popd
+set MAIN_SOLUTION=windows\voltdbclientcpp.sln
 set MAIN_PROJECT=voltdbcpp
 set COMMANDS=build clean rebuild
 set CLEAN_COMMANDS=clean rebuild
@@ -30,11 +33,16 @@ for %%C in (%COMMANDS%) do (
     )
 )
 if not defined COMMAND goto exitusage
+shift
 
 rem -- Check the configuration
 set CONFIGURATION=
+if not defined VOLTDB_VS_CONFIGURATION (
+    set VOLTDB_VS_CONFIGURATION=%1
+    shift
+)
 for %%C in (%CONFIGURATIONS%) do (
-    if /I "%2" == "%%C" (
+    if /I "%VOLTDB_VS_CONFIGURATION%" == "%%C" (
         set CONFIGURATION=%%C
     )
 )
@@ -42,8 +50,12 @@ if not defined CONFIGURATION goto exitusage
 
 rem -- Check the platform
 set PLATFORM=
+if not defined VOLTDB_VS_PLATFORM (
+    set VOLTDB_VS_PLATFORM=%1
+    shift
+)
 for %%P in (%PLATFORMS%) do (
-    if /I "%3" == "%%P" (
+    if /I "%VOLTDB_VS_PLATFORM%" == "%%P" (
         set PLATFORM=%%P
     )
 )
@@ -57,7 +69,7 @@ for %%C in (%CLEAN_COMMANDS%) do (
     )
 )
 if "%DO_CLEAN%" == "yes" (
-    msbuild %~dp0%MAIN_DIR%\%MAIN_SOLUTION% /t:clean /p:Configuration=%CONFIGURATION%;Platform=%PLATFORM%
+    msbuild %MAIN_DIR%\%MAIN_SOLUTION% /t:clean /p:Configuration=%CONFIGURATION%;Platform=%PLATFORM%
     if errorlevel 1 (
         goto exitfailure
     )
@@ -73,7 +85,7 @@ goto exitsuccess
 rem -- Command body: build
 :build
 :rebuild
-msbuild %~dp0%MAIN_DIR%\%MAIN_SOLUTION% /t:%MAIN_PROJECT% /p:Configuration=%CONFIGURATION%;Platform=%PLATFORM%
+msbuild %MAIN_DIR%\%MAIN_SOLUTION% /t:%MAIN_PROJECT% /p:Configuration=%CONFIGURATION%;Platform=%PLATFORM%
 if errorlevel 1 (
     goto exitfailure
 )
