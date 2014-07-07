@@ -67,7 +67,7 @@ $(LIB_NAME).a: $(OBJS)
 
 $(LIB_NAME).so: $(OBJS)
 	@echo 'Building libvoltdbcpp.so shared library'
-	$(CC) -shared -Wl -o $@ $? $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS)
+	$(CC) -shared -o $@ $? $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS)
 	@echo
 
 $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
