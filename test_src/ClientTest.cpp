@@ -57,6 +57,12 @@ public:
        }
        return false;
    }
+   virtual bool connectionActive(std::string hostname, int32_t connectionsActive) {
+       if (m_listener != NULL) {
+           return m_listener->connectionActive(hostname, connectionsActive);
+       }
+       return false;
+   }
    virtual bool backpressure(bool hasBackpressure) {
        if (m_listener != NULL) {
            return m_listener->backpressure(hasBackpressure);

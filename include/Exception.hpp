@@ -72,10 +72,10 @@ public:
         m_what = "Attempted to retrieve a column with an invalid name: " + name;
     }
 
-    explicit InvalidColumnException(const size_t type, const std::string& typeName) :
+    explicit InvalidColumnException(const std::string& columnName, const size_t type, const std::string& typeName, const std::string& expectedTypeName) :
         Exception() {
         char msg[256];
-        snprintf(msg, sizeof msg, "Attempted to retrieve a column with an invalid type: %s<%ld>", typeName.c_str(), type);
+        snprintf(msg, sizeof msg, "Attempted to retrieve a column: %s with an invalid type: %s<%ld> expected: %s", columnName.c_str(), typeName.c_str(), type, expectedTypeName.c_str());
         m_what = msg;
     }
 
@@ -156,6 +156,17 @@ public:
     virtual const char* what() const throw() {
         return m_what.c_str();
     }
+};
+
+/*
+ * Thrown by Distributer when detects server run in LEGACY mode
+ */
+class ElasticModeMismatchException : public voltdb::Exception {
+public:
+    ElasticModeMismatchException() : Exception() {}
+   virtual const char* what() const throw() {
+       return "LEGACY mode is not supported";
+   }
 };
 
 /*

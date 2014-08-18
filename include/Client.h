@@ -27,6 +27,7 @@
 #include <string>
 #include "Procedure.hpp"
 #include "StatusListener.h"
+#include "ClientLogger.h"
 #include <boost/shared_ptr.hpp>
 #include "ClientConfig.h"
 
@@ -54,14 +55,15 @@ public:
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(const std::string &hostname, const short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
+    void createConnection(const std::string &hostname, const unsigned short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
 
     /*
-     * Reconnects to the node when connection was lost
+     * Creates a pending connection that is handled in the reconnect callback 
      * @param hostname Hostname or IP address to connect to
      * @param port Port to connect to
+     * @param time since when connection is down
      */
-    void initiateReconnect(const std::string &hostname, const short port);
+    void createPendingConnection(const std::string &hostname, const unsigned short port, const int64_t time=0);
 
     /*
      * Synchronously invoke a stored procedure and return a the response. Callbacks for asynchronous requests
@@ -134,6 +136,16 @@ public:
     void interrupt();
 
     /*
+     * If one of the run family of methods is running on another thread, this
+     * method will instruct it to exit as soon as it finishes it's current 
+     * immediate task. If the thread in the run method is blocked/idle, then
+     * it will return immediately.
+     * The difference from the interrupt is it stops only currently running loop,
+     * and has no effect if the loop isn,t running
+     */ 
+     void wakeup();
+
+    /*
      * Return true if the two Clients being compared points to the same ClientImpl
      */
     bool operator==(const Client &other);
@@ -149,6 +161,12 @@ public:
     void setClientAffinity(bool enable);
     bool getClientAffinity();
 
+    /*
+     * API to set Logger callback. Must be called while Client is not running
+     */
+    void setLoggerCallback(ClientLogger *pLogger);
+
+    int32_t outstandingRequests() const; 
     ~Client();
 private:
     /*

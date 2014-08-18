@@ -56,6 +56,14 @@ public:
     virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) = 0;
 
     /*
+     * Notify the client application that a connection to the database was established
+     * @param hostname Name of the host that the connection was established to
+     * @param connectionsActive Number of connections to the database remaining
+     * @return true if the event loop should terminate and false otherwise
+     */
+    virtual bool connectionActive(std::string hostname, int32_t connectionsActive) = 0;
+   
+    /*
      * Notify the client application that backpressure occured
      * @param hasBackpressure True if backpressure is beginning and false if it is ending
      * @return true if the client library should queue the invocation and return from invoke()
