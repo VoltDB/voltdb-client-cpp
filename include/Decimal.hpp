@@ -56,7 +56,7 @@ public:
     /*
      * Construct a decimal value from a string.
      */
-    Decimal(std::string txt) {
+    Decimal(const std::string& txt) {
         const TTInt kMaxScaleFactor("1000000000000");
         if (txt.length() == 0) {
             throw StringToDecimalException();
@@ -153,7 +153,7 @@ public:
 #ifdef SWIG
 %ignore serializeTo;
 #endif
-    void serializeTo(ByteBuffer *buffer) {
+    void serializeTo(ByteBuffer *buffer) const {
         TTInt val = getDecimal();
         buffer->putInt64(*reinterpret_cast<int64_t*>(&val.table[1]));
         buffer->putInt64(*reinterpret_cast<int64_t*>(&val.table[0]));

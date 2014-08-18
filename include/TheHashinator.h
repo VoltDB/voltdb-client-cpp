@@ -21,27 +21,63 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef VOLTDB_COLUMN_HPP_
-#define VOLTDB_COLUMN_HPP_
-#include "Column.hpp"
-#include "WireType.h"
-#include <string>
-namespace voltdb {
-class Column {
-public:
-    Column() {}
-    Column(std::string name, WireType type) : m_name(name), m_type(type) {}
-    Column(WireType type) : m_name(""), m_type(type) {}
-    std::string m_name;
-    WireType m_type;
+#ifndef THEHASHINATOR_H_
+#define THEHASHINATOR_H_
 
-    const std::string& name() const {
-        return m_name;
-    }
+//DEBUG ONLY
+//#define __DEBUG
 
-    WireType type() const {
-        return m_type;
-    }
-};
+#ifdef __DEBUG
+#include <iostream>
+#include <fstream>
+
+#define debug_msg(text)\
+{\
+    std::fstream fs;\
+    fs.open ("/tmp/hashinator.log", std::fstream::out | std::fstream::app);\
+    fs << __FILE__ << ":" << __LINE__ << " " << text << std::endl;\
+    fs.close();\
 }
-#endif /* COLUMN_HPP_ */
+
+#else
+
+#define debug_msg(text)
+
+#endif
+
+
+#include <stdint.h>
+namespace voltdb {
+
+
+/**
+ *  Abstract base class for hashing SQL values to partition ids
+ */
+class TheHashinator {
+  public:
+
+    virtual ~TheHashinator() {}
+
+    TheHashinator() {}
+
+  public:
+
+    /**
+     * Given a long value, pick a partition to store the data.
+     *
+     * @param value The value to hash.
+     * @return A value between 0 and partitionCount-1, hopefully pretty evenly
+     * distributed.
+     */
+    virtual int32_t hashinate(int64_t value) const = 0;
+
+    /*
+     * Given a piece of UTF-8 encoded character data OR binary data
+     * pick a partition to store the data
+     */
+    virtual int32_t hashinate(const char *string, int32_t length) const = 0;
+};
+
+} // namespace voltdb
+
+#endif // THEHASHINATOR_H_

@@ -113,7 +113,7 @@ public:
             assert(false);
         }
     }
-    void addString(std::string val) {
+    void addString(const std::string& val) {
         validateType(WIRE_TYPE_STRING);
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(val.size()));
         m_buffer.putString(val);

@@ -38,10 +38,18 @@ Client::~Client() {
 
 void
 Client::createConnection(
-        std::string hostname,
-        short port)
+        const std::string &hostname,
+        const unsigned short port)
 throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     m_impl->createConnection(hostname, port);
+}
+
+void 
+Client::createPendingConnection(
+        const std::string &hostname, 
+        const unsigned short port,
+        const int64_t time) {
+    m_impl->createPendingConnection(hostname, port, time);
 }
 
 /*
@@ -91,8 +99,32 @@ void Client::interrupt() {
     return m_impl->interrupt();
 }
 
+void Client::wakeup() {
+    return m_impl->wakeup();
+}
+
 bool
 Client::operator==(const Client &other) {
     return m_impl == other.m_impl;
 }
+
+/*
+ * API to be called to enable client affinity (transaction homing)
+ */
+void Client::setClientAffinity(bool enable) {
+    m_impl->setClientAffinity(enable);
+}
+
+bool Client::getClientAffinity() {
+    return m_impl->getClientAffinity();
+}
+
+int32_t Client::outstandingRequests() const {
+    return m_impl->outstandingRequests();
+}
+
+void Client::setLoggerCallback(ClientLogger *pLogger) {
+    m_impl->setLoggerCallback(pLogger);
+}
+
 }

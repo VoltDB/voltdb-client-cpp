@@ -48,6 +48,14 @@ public:
             return false;
         }
     }
+    bool connectionActive(std::string hostname, int32_t connectionsActive) {
+        if (m_listener != NULL) {
+            bool retval = m_listener->connectionActive(hostname, connectionsActive);
+            return retval;
+        } else {
+            return false;
+        }
+    }
     bool backpressure(bool hasBackpressure) {
         if (m_listener != NULL) {
             return m_listener->backpressure(hasBackpressure);

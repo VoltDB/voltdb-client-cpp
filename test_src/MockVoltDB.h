@@ -33,7 +33,12 @@
 #include "Client.h"
 
 namespace voltdb {
+SharedByteBuffer fileAsByteBuffer(std::string filename);
+
 class CxnContext;
+
+SharedByteBuffer fileAsByteBuffer(std::string filename);
+
 class MockVoltDB {
     friend class ClientTest;
 public:
@@ -46,6 +51,11 @@ public:
     void mimicLargeReply(int64_t, struct bufferevent *bev);
     ~MockVoltDB();
 
+    void eventBaseLoopBreak();
+
+    void interrupt();
+
+    void run() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
     void filenameForNextResponse(std::string filename) {
         m_filenameForNextResponse = filename;
     }
@@ -58,6 +68,22 @@ public:
         m_dontRead = true;
     }
 
+    /**
+     * Forces a timeout after N transactions, to allow for testing execute multi.
+     * @param the number of transactions to allow before forcing a timeout
+     */
+    void forceTimeoutAfter(int count) {
+    	m_timeoutCount = count;
+    }
+
+    /**
+     * Forces an error response after N transactions, to allow for testing execute multi.
+     * @param the number of transactions to allow before forcing an error
+     */
+    void forceErrorAfter(int count) {
+    	m_errorCount = count;
+    }
+
     Client* client() { return &m_client; }
 private:
     struct event_base *m_base;
@@ -67,6 +93,8 @@ private:
     std::string m_filenameForNextResponse;
     int32_t m_hangupOnRequestCounter;
     bool m_dontRead;
+    int m_timeoutCount;
+    int m_errorCount;
     Client m_client;
 };
 }

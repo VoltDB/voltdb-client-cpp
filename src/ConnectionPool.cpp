@@ -65,6 +65,15 @@ public:
         }
         return false;
     }
+    bool connectionActive(std::string hostname, int32_t connectionsActive) {
+        if (m_listener != NULL) {
+            bool retval = m_listener->connectionActive(hostname, connectionsActive);
+            return retval;
+        } else {
+            return false;
+        }
+    }
+
     bool backpressure(bool hasBackpressure) {
         if (m_listener != NULL) {
             return m_listener->backpressure(hasBackpressure);
@@ -150,7 +159,7 @@ ConnectionPool::acquireClient(
         std::string username,
         std::string password,
         StatusListener *listener,
-        short port)
+        unsigned short port)
 throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     LockGuard guard(m_lock);
     ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
@@ -159,7 +168,7 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
         pthread_setspecific( m_borrowedClients, static_cast<const void *>(clients));
     }
     char portBytes[16];
-    int portInt = port;
+    unsigned int portInt = port;
     snprintf(portBytes, 16, "%d", portInt);
     std::string identifier = hostname + "," + std::string(portBytes) + "," + username + "," + password;
 
@@ -205,7 +214,7 @@ ConnectionPool::acquireClient(
         std::string hostname,
         std::string username,
         std::string password,
-        short port)
+        unsigned short port)
 throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     return acquireClient(hostname, username, password, NULL, port);
 }
