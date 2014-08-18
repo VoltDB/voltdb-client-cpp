@@ -21,6 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <iostream>
 #include "MockVoltDB.h"
 #include "Client.h"
 #include "ClientImpl.h"
@@ -130,7 +131,7 @@ static void acceptCallback(struct evconnlistener *listener,
 
 
 MockVoltDB::MockVoltDB(Client client) : m_base(client.m_impl->m_base), m_listener(NULL),
-        m_hangupOnRequestCounter(-1), m_dontRead(false), m_timeoutCount(0), m_errorCount(0), m_client(client), m_filenameForFirstResponse(""),m_filenameForNextResponse("")  {
+        m_hangupOnRequestCounter(-1), m_dontRead(false), m_timeoutCount(-1), m_errorCount(-1), m_client(client) {
     struct sockaddr_in sin;
     ::memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
@@ -148,6 +149,26 @@ MockVoltDB::MockVoltDB(Client client) : m_base(client.m_impl->m_base), m_listene
                     sizeof(sin));
     if (!m_listener) {
         throw LibEventException();
+    }
+}
+
+static void interrupt_callback(evutil_socket_t fd, short events, void *clientData) {
+    MockVoltDB *self = reinterpret_cast<MockVoltDB*>(clientData);
+    self->eventBaseLoopBreak();
+}
+
+void MockVoltDB::eventBaseLoopBreak() {
+    event_base_loopbreak(m_base);
+}
+
+void MockVoltDB::interrupt() {
+    event_base_once(m_base, -1, EV_TIMEOUT, interrupt_callback, this, NULL);
+}
+
+void MockVoltDB::run() 
+throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException) {
+    if (event_base_dispatch(m_base) == -1) {
+        throw voltdb::LibEventException();
     }
 }
 
@@ -268,41 +289,33 @@ void MockVoltDB::readCallback(struct bufferevent *bev) {
             this->mimicLargeReply(clientData, bev);
         }
         else {
-        	SharedByteBuffer response;
-        	//some blunt changes to allow a mix of responses to be sent, to test multi procedure invocations.
-        	if (m_filenameForFirstResponse != ""){
-        		response = fileAsByteBuffer(m_filenameForFirstResponse);
-        		m_filenameForFirstResponse = "";
-        	} else {
-        		response = fileAsByteBuffer(m_filenameForNextResponse);
-        	}
-        	//some more blunt changes to allow a single transaction in a multi procedure invocation to fail.
-			if (m_errorCount == 1) {
-				std::cout << "------> MockVoltDB failure response being sent" << std::endl;
-				response = fileAsByteBuffer("invocation_response_fail_cv.msg");
-				m_errorCount=0;
-			} else {
-				if (m_errorCount > 1) {
-					m_errorCount--;
-					std::cout << "------> MockVoltDB failure response after " << m_errorCount << " messages" << std::endl;
-				}
-			}
+            SharedByteBuffer response;
+            response = fileAsByteBuffer(m_filenameForNextResponse);
+            //some blunt changes to allow a mix of responses to be sent, to test multi procedure invocations.
+            if (m_errorCount == 0) {
+                std::cout << "------> MockVoltDB failure response being sent" << std::endl;
+                response = fileAsByteBuffer("invocation_response_fail_cv.msg");
+                m_errorCount=-1;
+            } else if (m_errorCount > 0) {
+                std::cout << "------> MockVoltDB failure response after " << m_errorCount << " messages" << std::endl;
+                m_errorCount--;
+            }
         	//some more blunt changes to allow a single transaction in a multi procedure invocation to timeout.
-            if (m_timeoutCount == 1) {
-            	std::cout << "------> MockVoltDB is timing out this request!!!!!!!!" << std::endl;
-                m_timeoutCount=0;
+            if (m_timeoutCount == 0) {
+                std::cout << "------> MockVoltDB is timing out this request!!!!!!!!" << std::endl;
+                m_timeoutCount=-1;
                 bufferevent_flush(bev, EV_WRITE, BEV_FINISHED);
-				bufferevent_disable(bev, EV_READ);
-				bufferevent_enable(bev, EV_WRITE);
-				bufferevent_setwatermark( bev, EV_WRITE, 0, 262144);
-				return;
+                bufferevent_disable(bev, EV_READ);
+                bufferevent_enable(bev, EV_WRITE);
+                bufferevent_setwatermark( bev, EV_WRITE, 0, 262144);
+                return;
             } else {
-                if (m_timeoutCount > 1) {
-                	m_timeoutCount--;
-                	std::cout << "------> MockVoltDB timeout response after " << m_timeoutCount << " messages" << std::endl;
+                if (m_timeoutCount > 0) {
+                    std::cout << "------> MockVoltDB timeout response after " << m_timeoutCount << " messages" << std::endl;
+                    m_timeoutCount--;
                 }
             }
-
+            
             response.putInt64( 5, clientData);
             evbuf = bufferevent_get_output(bev);
             if (evbuffer_add(evbuf, response.bytes(), static_cast<size_t>(response.remaining()))) {

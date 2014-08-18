@@ -51,12 +51,13 @@ public:
     void mimicLargeReply(int64_t, struct bufferevent *bev);
     ~MockVoltDB();
 
+    void eventBaseLoopBreak();
+
+    void interrupt();
+
+    void run() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
     void filenameForNextResponse(std::string filename) {
         m_filenameForNextResponse = filename;
-    }
-
-    void filenameForFirstResponse(std::string filename) {
-        m_filenameForFirstResponse = filename;
     }
 
     void hangupOnRequestCount(int32_t count) {
@@ -90,7 +91,6 @@ private:
     std::set<struct bufferevent*> m_connections;
     std::map<struct bufferevent*, boost::shared_ptr<CxnContext> > m_contexts;
     std::string m_filenameForNextResponse;
-    std::string m_filenameForFirstResponse;
     int32_t m_hangupOnRequestCounter;
     bool m_dontRead;
     int m_timeoutCount;

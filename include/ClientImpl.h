@@ -28,12 +28,16 @@
 #include <map>
 #include <set>
 #include <list>
+#include <string>
 #include "ProcedureCallback.hpp"
-#include "StatusListener.h"
+//#include "StatusListener.h"
+#include "Client.h"
 #include "Procedure.hpp"
+#include <boost/atomic.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/mutex.hpp>
 #include "ClientConfig.h"
-#include "Hashinator.h"
+#include "Distributer.h"
 namespace voltdb {
 
 class CxnContext;
@@ -44,8 +48,9 @@ class PendingConnection;
 class ClientImpl {
     friend class MockVoltDB;
     friend class PendingConnection;
-public:
     friend class Client;
+
+public:
 
     /*
      * Map from client data to the appropriate callback for a specific connection
@@ -57,8 +62,6 @@ public:
      */
     typedef std::map< struct bufferevent*, boost::shared_ptr<CallbackMap> > BEVToCallbackMap;
 
-    class Client;
-
 
     /*
      * Create a connection to the VoltDB process running at the specified host authenticating
@@ -68,21 +71,22 @@ public:
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(const std::string &hostname, const short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
+    void createConnection(const std::string &hostname, const unsigned short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
 
     /*
-     * Reconnects to the node when connection was lost
+     * Creates a pending connection that is handled in the reconnect callback
      * @param hostname Hostname or IP address to connect to
      * @param port Port to connect to
+     * @param time since when connection is down
      */
-    void initiateReconnect(const std::string &hostname, const short port);
+    void createPendingConnection(const std::string &hostname, const unsigned short port, const int64_t time=0);
 
     /*
      * Synchronously invoke a stored procedure and return a the response.
      */
     InvocationResponse invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
-    void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
-    void invoke(Procedure &proc, ProcedureCallback *callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
+    void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::ElasticModeMismatchException);
+    void invoke(Procedure &proc, ProcedureCallback *callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::ElasticModeMismatchException);
     void runOnce() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
     void run() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
 
@@ -101,6 +105,17 @@ public:
     void regularEventCallback(struct bufferevent *bev, short events);
     void regularWriteCallback(struct bufferevent *bev);
     void eventBaseLoopBreak();
+    void reconnectEventCallback();
+
+    /*
+     * If one of the run family of methods is running on another thread, this
+     * method will instruct it to exit as soon as it finishes it's current 
+     * immediate task. If the thread in the run method is blocked/idle, then
+     * it will return immediately.
+     * The difference from the interrupt is it stops only currently running loop,
+     * and has no effect if the loop isn,t running
+     */
+    void wakeup();
 
     /*
      * If one of the run family of methods is running on another thread, this
@@ -115,11 +130,16 @@ public:
      */
     void setClientAffinity(bool enable);
     bool getClientAffinity(){return m_useClientAffinity;}
+
+    int32_t outstandingRequests() const {return m_outstandingRequests;}
+    
+    void setLoggerCallback(ClientLogger *pLogger) { m_pLogger = pLogger;}
+
 private:
     ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException);
 
-    void initiateAuthentication(PendingConnection* pc) throw (voltdb::LibEventException);
-    void finalizeAuthentication(PendingConnection* pc) throw (voltdb::Exception, voltdb::ConnectException);
+    void initiateAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::LibEventException);
+    void finalizeAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::Exception, voltdb::ConnectException);
 
     /*
      * Updates procedures and topology information for transaction routing algorithm
@@ -136,7 +156,13 @@ private:
      */
     void initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException, voltdb::LibEventException);
 
-    Hashinator  m_hash;
+    /*
+     * Method for sinking messages.
+     * If a logger callback is not set then skip all messages
+     */
+    void logMessage(ClientLogger::CLIENT_LOG_LEVEL severity, const std::string& msg);
+
+    Distributer  m_distributer;
     struct event_base *m_base;
     int64_t m_nextRequestId;
     size_t m_nextConnectionIndex;
@@ -161,10 +187,17 @@ private:
 
     bool m_ignoreBackpressure;
     bool m_useClientAffinity;
-    //Flag to be set if topology is changed: node disconnected/rejoied
+    //Flag to be set if topology is changed: node disconnected/rejoined
     bool m_updateHashinator;
-    std::list<boost::shared_ptr<PendingConnection> > m_pendingConnectionList;
 
+    std::list<boost::shared_ptr<PendingConnection> > m_pendingConnectionList;
+    boost::atomic<size_t> m_pendingConnectionSize;
+    boost::mutex m_pendingConnectionLock;
+
+    int m_wakeupPipe[2];
+    boost::mutex m_wakeupPipeLock;
+
+    ClientLogger* m_pLogger;
 };
 }
 #endif /* VOLTDB_CLIENTIMPL_H_ */

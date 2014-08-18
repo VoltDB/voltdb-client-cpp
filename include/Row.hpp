@@ -444,36 +444,45 @@ private:
         WireType columnType = m_columns->at(static_cast<size_t>(index)).m_type;
         switch (columnType) {
         case WIRE_TYPE_DECIMAL:
-            if (type != WIRE_TYPE_DECIMAL) throw InvalidColumnException(columnType, wireTypeToString(columnType));
+            if (type != WIRE_TYPE_DECIMAL) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_DECIMAL));
             break;
         case WIRE_TYPE_TIMESTAMP:
-            if (type != WIRE_TYPE_TIMESTAMP) throw InvalidColumnException(columnType, wireTypeToString(columnType));
+            if (type != WIRE_TYPE_TIMESTAMP) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_TIMESTAMP));
             break;
         case WIRE_TYPE_BIGINT:
-            if (type != WIRE_TYPE_BIGINT) throw InvalidColumnException(columnType, wireTypeToString(columnType));
+            if (type != WIRE_TYPE_BIGINT) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_BIGINT));
             break;
         case WIRE_TYPE_INTEGER:
-            if (type != WIRE_TYPE_BIGINT && type != WIRE_TYPE_INTEGER) throw InvalidColumnException(columnType, wireTypeToString(columnType));
+            if (type != WIRE_TYPE_BIGINT && type != WIRE_TYPE_INTEGER) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_INTEGER));
             break;
         case WIRE_TYPE_SMALLINT:
             if (type != WIRE_TYPE_BIGINT &&
                     type != WIRE_TYPE_INTEGER &&
-                    type != WIRE_TYPE_SMALLINT) throw InvalidColumnException(columnType, wireTypeToString(columnType));
+                    type != WIRE_TYPE_SMALLINT) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_SMALLINT));
             break;
         case WIRE_TYPE_TINYINT:
             if (type != WIRE_TYPE_BIGINT &&
                     type != WIRE_TYPE_INTEGER &&
                     type != WIRE_TYPE_SMALLINT &&
-                    type != WIRE_TYPE_TINYINT) throw InvalidColumnException(columnType, wireTypeToString(columnType));
+                    type != WIRE_TYPE_TINYINT) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_TINYINT));
             break;
         case WIRE_TYPE_FLOAT:
-            if (type != WIRE_TYPE_FLOAT) throw InvalidColumnException(columnType, wireTypeToString(columnType));
+            if (type != WIRE_TYPE_FLOAT) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_FLOAT));
             break;
         case WIRE_TYPE_STRING:
-            if (type != WIRE_TYPE_STRING) throw InvalidColumnException(columnType, wireTypeToString(columnType));
+            if (type != WIRE_TYPE_STRING) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_STRING));
             break;
         case WIRE_TYPE_VARBINARY:
-            if (type != WIRE_TYPE_VARBINARY) throw InvalidColumnException(columnType, wireTypeToString(columnType));
+            if (type != WIRE_TYPE_VARBINARY) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_VARBINARY));
             break;
         default:
             assert(false);
@@ -489,6 +498,10 @@ private:
             }
         }
         throw InvalidColumnException(name);
+    }
+
+    const std::string& getColumnNameByIndex(int32_t index){
+        return m_columns->at(index).m_name;
     }
 
     void ensureCalculatedOffsets() {

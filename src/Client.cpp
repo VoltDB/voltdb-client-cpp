@@ -39,16 +39,17 @@ Client::~Client() {
 void
 Client::createConnection(
         const std::string &hostname,
-        const short port)
+        const unsigned short port)
 throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     m_impl->createConnection(hostname, port);
 }
 
 void 
-Client::initiateReconnect(
+Client::createPendingConnection(
         const std::string &hostname, 
-        const short port) {
-    m_impl->initiateReconnect(hostname, port);
+        const unsigned short port,
+        const int64_t time) {
+    m_impl->createPendingConnection(hostname, port, time);
 }
 
 /*
@@ -98,6 +99,10 @@ void Client::interrupt() {
     return m_impl->interrupt();
 }
 
+void Client::wakeup() {
+    return m_impl->wakeup();
+}
+
 bool
 Client::operator==(const Client &other) {
     return m_impl == other.m_impl;
@@ -112,6 +117,14 @@ void Client::setClientAffinity(bool enable) {
 
 bool Client::getClientAffinity() {
     return m_impl->getClientAffinity();
+}
+
+int32_t Client::outstandingRequests() const {
+    return m_impl->outstandingRequests();
+}
+
+void Client::setLoggerCallback(ClientLogger *pLogger) {
+    m_impl->setLoggerCallback(pLogger);
 }
 
 }
