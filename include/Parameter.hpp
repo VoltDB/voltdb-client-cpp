@@ -51,6 +51,15 @@ public:
      */
     Parameter(const Parameter &other) : m_type(other.m_type), m_array(other.m_array) {}
 
+    /*
+     * Copy constructor for compatablity with std::vector
+     */
+    void operator=(const Parameter &other) {
+        m_type = other.m_type;
+        m_array = other.m_array;
+        return;
+    }
+
     WireType m_type;
     bool m_array;
 };

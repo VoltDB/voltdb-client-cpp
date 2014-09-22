@@ -66,6 +66,15 @@ public:
     voltdb::InvocationResponse invoke(voltdb::Procedure &proc) throw (voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::Exception);
 
     /*
+     * Synchronously invoke a stored procedure and return a the response. Callbacks for asynchronous requests
+     * submitted earlier may be invoked before this method returns.
+     * @throws NoConnectionsException No connections to submit the request on
+     * @throws UninitializedParamsException Some or all of the parameters for the stored procedure were not set
+     * @throws LibEventException An unknown error occured in libevent
+     */
+    voltdb::InvocationResponse invoke(voltdb::Procedure &proc, voltdb::ParameterSet *params) throw (voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::Exception);
+
+    /*
      * Asynchronously invoke a stored procedure. Returns immediately if there is no backpressure, but if there is
      * backpressure this method will block until there is none. If a status listener is registered it will notified
      * of the backpressure and will have an opportunity to prevent this method from blocking. Callbacks
@@ -120,7 +129,7 @@ public:
 
     /*
      * If one of the run family of methods is running on another thread, this
-     * method will instruct it to exit as soon as it finishes it's current 
+     * method will instruct it to exit as soon as it finishes it's current
      * immediate task. If the thread in the run method is blocked/idle, then
      * it will return immediately.
      */

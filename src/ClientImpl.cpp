@@ -309,10 +309,18 @@ InvocationResponse ClientImpl::invoke(Procedure &proc) throw (voltdb::Exception,
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
-    int32_t messageSize = proc.getSerializedSize();
+    return invoke(proc, proc.params());
+
+}
+
+InvocationResponse ClientImpl::invoke(Procedure &proc, ParameterSet *params) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
+    if (m_bevs.empty()) {
+        throw voltdb::NoConnectionsException();
+    }
+    int32_t messageSize = proc.getSerializedSize(params);
     ScopedByteBuffer sbb(messageSize);
     int64_t clientData = m_nextRequestId++;
-    proc.serializeTo(&sbb, clientData);
+    proc.serializeTo(&sbb, clientData, params);
     struct bufferevent *bev = m_bevs[m_nextConnectionIndex++ % m_bevs.size()];
     InvocationResponse response;
     boost::shared_ptr<ProcedureCallback> callback(new SyncCallback(&response));
@@ -601,7 +609,7 @@ void ClientImpl::regularWriteCallback(struct bufferevent *bev) {
 static void interrupt_callback(evutil_socket_t fd, short events, void *clientData) {
     ClientImpl *self = reinterpret_cast<ClientImpl*>(clientData);
     self->eventBaseLoopBreak();
-} 
+}
 
 void ClientImpl::eventBaseLoopBreak() {
     event_base_loopbreak(m_base);

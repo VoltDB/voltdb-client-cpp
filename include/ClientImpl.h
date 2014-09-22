@@ -69,6 +69,7 @@ public:
      * Synchronously invoke a stored procedure and return a the response.
      */
     InvocationResponse invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
+    InvocationResponse invoke(Procedure &proc, ParameterSet *params) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
     void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
     void invoke(Procedure &proc, ProcedureCallback *callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
     void runOnce() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
@@ -92,7 +93,7 @@ public:
 
     /*
      * If one of the run family of methods is running on another thread, this
-     * method will instruct it to exit as soon as it finishes it's current 
+     * method will instruct it to exit as soon as it finishes it's current
      * immediate task. If the thread in the run method is blocked/idle, then
      * it will return immediately.
      */

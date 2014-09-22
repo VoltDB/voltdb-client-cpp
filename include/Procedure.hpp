@@ -58,6 +58,13 @@ public:
                 + 8; //client data
     }
 
+    int32_t getSerializedSize(ParameterSet *params) {
+        return 5 + //length prefix
+               4 + static_cast<int32_t>(m_name.size()) + // proc name
+                params->getSerializedSize() + //parameters
+                + 8; //client data
+    }
+
 #ifdef SWIG
 %ignore serializeTo;
 #endif
@@ -67,6 +74,16 @@ public:
         buffer->putString(m_name);
         buffer->putInt64(clientData);
         m_params.serializeTo(buffer);
+        buffer->flip();
+        buffer->putInt32( 0, buffer->limit() - 4);
+    }
+
+    void serializeTo(ByteBuffer *buffer, int64_t clientData, ParameterSet *params) {
+        buffer->position(4);
+        buffer->putInt8(0);
+        buffer->putString(m_name);
+        buffer->putInt64(clientData);
+        params->serializeTo(buffer);
         buffer->flip();
         buffer->putInt32( 0, buffer->limit() - 4);
     }

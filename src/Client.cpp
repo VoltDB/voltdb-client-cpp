@@ -53,6 +53,12 @@ throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedP
     return m_impl->invoke(proc);
 }
 
+InvocationResponse
+Client::invoke(Procedure &proc, ParameterSet *param)
+throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
+    return m_impl->invoke(proc, param);
+}
+
 void
 Client::invoke(
         Procedure &proc,
