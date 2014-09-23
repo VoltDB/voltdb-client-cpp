@@ -309,7 +309,7 @@ InvocationResponse ClientImpl::invoke(Procedure &proc) throw (voltdb::Exception,
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
-    return invoke(proc, proc.params());
+    return invoke(proc, proc.getSetParameters());
 
 }
 

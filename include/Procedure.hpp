@@ -51,6 +51,14 @@ public:
         return &m_params;
     }
 
+    /**
+     * Retrieve the parameter set associated with the procedure. Assumes that ParameterSet is
+     * set with actual values.
+     */
+    ParameterSet* getSetParameters() {
+        return &m_params;
+    }
+
     int32_t getSerializedSize() {
         return 5 + //length prefix
                4 + static_cast<int32_t>(m_name.size()) + // proc name
