@@ -81,13 +81,13 @@ CPPUNIT_TEST_EXCEPTION( testInvokeAsyncNoConnections, voltdb::NoConnectionsExcep
 CPPUNIT_TEST_EXCEPTION( testRunNoConnections, voltdb::NoConnectionsException );
 CPPUNIT_TEST_EXCEPTION( testRunOnceNoConnections, voltdb::NoConnectionsException );
 CPPUNIT_TEST_EXCEPTION( testNullCallback, voltdb::NullPointerException );
-CPPUNIT_TEST_EXCEPTION( testLostConnection, voltdb::NoConnectionsException );
 CPPUNIT_TEST( testLostConnectionBreaksEventLoop );
 CPPUNIT_TEST( testBreakEventLoopViaCallback );
 CPPUNIT_TEST( testCallbackThrows );
 CPPUNIT_TEST( testBackpressure );
 CPPUNIT_TEST( testDrain );
 CPPUNIT_TEST( testLostConnectionDuringDrain );
+CPPUNIT_TEST_EXCEPTION( testLostConnection, voltdb::NoConnectionsException );
 CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -210,8 +210,9 @@ public:
     void testLostConnection() {
         class Listener : public StatusListener {
         public:
-            bool reported;
-           Listener() : reported(false) {}
+            bool lostReported;
+            bool activeReported;
+           Listener() : lostReported(false), activeReported(false) {}
             virtual bool uncaughtException(
                     std::exception exception,
                     boost::shared_ptr<voltdb::ProcedureCallback> callback,
@@ -220,9 +221,13 @@ public:
                 return false;
             }
             virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
-                reported = true;
+                lostReported = true;
                 CPPUNIT_ASSERT(connectionsLeft == 0);
                 return false;
+            }
+            virtual bool connectionActive(std::string hostname, int32_t connectionsLeft) {
+                activeReported = true;
+                return true;
             }
             virtual bool backpressure(bool hasBackpressure) {
                 CPPUNIT_ASSERT(false);
@@ -251,8 +256,9 @@ public:
         CPPUNIT_ASSERT(response.failure());
         CPPUNIT_ASSERT(response.statusCode() == voltdb::STATUS_CODE_CONNECTION_LOST);
         CPPUNIT_ASSERT(response.results().size() == 0);
-        CPPUNIT_ASSERT(listener.reported);
-        (m_client)->runOnce();
+        CPPUNIT_ASSERT(listener.lostReported);
+        //Invoke should throw exception.
+        syncResponse = (m_client)->invoke(proc);
     }
 
     void testLostConnectionBreaksEventLoop() {
@@ -267,6 +273,9 @@ public:
             }
             virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
                 CPPUNIT_ASSERT(connectionsLeft == 1);
+                return true;
+            }
+            virtual bool connectionActive(std::string hostname, int32_t connectionsLeft) {
                 return true;
             }
             virtual bool backpressure(bool hasBackpressure) {
@@ -328,24 +337,31 @@ public:
     void testCallbackThrows() {
         class Listener : public StatusListener {
         public:
-            bool reported;
-           Listener() : reported(false) {}
+            bool lostReported;
+            bool activeReported;
+           Listener() : lostReported(false), activeReported(false) {}
             virtual bool uncaughtException(
                     std::exception exception,
                     boost::shared_ptr<voltdb::ProcedureCallback> callback,
                     InvocationResponse response) {
-                reported = true;
+                lostReported = true;
                 return true;
             }
             virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
-                CPPUNIT_ASSERT(false);
+                lostReported = true;
+                CPPUNIT_ASSERT(connectionsLeft == 0);
                 return false;
+            }
+            virtual bool connectionActive(std::string hostname, int32_t connectionsLeft) {
+                activeReported = true;
+                return true;
             }
             virtual bool backpressure(bool hasBackpressure) {
                 CPPUNIT_ASSERT(false);
                 return false;
             }
         }  listener;
+
         (*m_dlistener)->m_listener = &listener;
 
         (m_client)->createConnection("localhost");
@@ -380,6 +396,9 @@ public:
             virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
                 CPPUNIT_ASSERT(false);
                 return false;
+            }
+            virtual bool connectionActive(std::string hostname, int32_t connectionsLeft) {
+                return true;
             }
             virtual bool backpressure(bool hasBackpressure) {
                 CPPUNIT_ASSERT(hasBackpressure);

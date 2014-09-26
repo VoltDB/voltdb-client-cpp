@@ -80,6 +80,7 @@ public:
      * @param time since when connection is down
      */
     void createPendingConnection(const std::string &hostname, const unsigned short port, const int64_t time=0);
+    void erasePendingConnection(PendingConnection *);
 
     /*
      * Synchronously invoke a stored procedure and return a the response.

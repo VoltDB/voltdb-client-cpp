@@ -260,9 +260,9 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0), m_listener(config.m_listener),
         m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false), m_isDraining(false),
         m_instanceIdIsSet(false), m_outstandingRequests(0), m_username(config.m_username),
-        m_maxOutstandingRequests(config.m_maxOutstandingRequests), m_ignoreBackpressure(false), 
+        m_maxOutstandingRequests(config.m_maxOutstandingRequests), m_ignoreBackpressure(false),
         m_useClientAffinity(false),m_updateHashinator(false), m_pendingConnectionSize(0) ,
-        m_pLogger(0) 
+        m_pLogger(0)
 {
 
     pthread_once(&once_initLibevent, initLibevent);
@@ -288,7 +288,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         struct event *ev = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
         event_add(ev, NULL);
     } else {
-        m_wakeupPipe[-1] = -1;
+        m_wakeupPipe[1] = -1;
     }
 }
 
@@ -311,7 +311,7 @@ private:
 
 void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException, voltdb::LibEventException){
 
-    
+
     std::stringstream ss;
     ss << "ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port;
     logMessage(ClientLogger::INFO, ss.str());
@@ -347,7 +347,7 @@ void ClientImpl::initiateAuthentication(PendingConnection* pc, struct buffereven
     AuthenticationRequest authRequest( m_username, "database", m_passwordHash );
     ScopedByteBuffer bb(authRequest.getSerializedSize());
     authRequest.serializeTo(&bb);
-        
+
     struct evbuffer *evbuf = bufferevent_get_output(bev);
     if (evbuffer_add( evbuf, bb.bytes(), static_cast<size_t>(bb.remaining()))) {
         throw voltdb::LibEventException();
@@ -356,7 +356,7 @@ void ClientImpl::initiateAuthentication(PendingConnection* pc, struct buffereven
         }
 
 void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::Exception, voltdb::ConnectException){
-    
+
     logMessage(ClientLogger::DEBUG, "ClientImpl::finalizeAuthentication");
 
     FreeBEVOnFailure protector(bev);
@@ -389,7 +389,7 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
                voltdb::regularReadCallback,
                voltdb::regularWriteCallback,
                voltdb::regularEventCallback, this);
-        
+
         {
             boost::mutex::scoped_lock lock(m_pendingConnectionLock);
             for (std::list<PendingConnectionSPtr>::iterator i = m_pendingConnectionList.begin(); i != m_pendingConnectionList.end(); ++i) {
@@ -418,7 +418,7 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
                 std::cerr << "Status listener threw exception on connection active: " << e.what() << std::endl;
             }
         }
-    
+
     }
     else {
 
@@ -434,9 +434,8 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
             protector.success();
 }
 
-
 void ClientImpl::createConnection(const std::string& hostname, const unsigned short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
-    
+
     std::stringstream ss;
     ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
     logMessage(ClientLogger::INFO, ss.str());
@@ -472,7 +471,7 @@ void ClientImpl::reconnectEventCallback() {
     const int64_t now = get_sec_time();
     BOOST_FOREACH( PendingConnectionSPtr& pc, m_pendingConnectionList ) {
         if ((now - pc->m_startPending) > RECONNECT_INTERVAL){
-            pc->m_startPending = now;
+            //pc->m_startPending = now;
             initiateConnection(pc);
         }
     }
@@ -570,7 +569,7 @@ struct bufferevent *ClientImpl::routeProcedure(Procedure &proc, ScopedByteBuffer
             hostId = m_distributer.getHostIdByPartitionId(hashedPartition);
         }
     }
-    else 
+    else
     {
         //use MIP partition instead
         hostId = m_distributer.getHostIdByPartitionId(Distributer::MP_INIT_PID);
@@ -694,7 +693,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
 void ClientImpl::runOnce() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException) {
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::runOnce");
-    
+
     if (m_bevs.empty() && m_pendingConnectionSize.load(boost::memory_order_consume) <= 0) {
         throw voltdb::NoConnectionsException();
     }
@@ -878,7 +877,7 @@ void ClientImpl::regularWriteCallback(struct bufferevent *bev) {
 static void interrupt_callback(evutil_socket_t fd, short events, void *clientData) {
     ClientImpl *self = reinterpret_cast<ClientImpl*>(clientData);
     self->eventBaseLoopBreak();
-} 
+}
 
 void ClientImpl::eventBaseLoopBreak() {
     event_base_loopbreak(m_base);
@@ -973,6 +972,16 @@ void ClientImpl::setClientAffinity(bool enable){
     if(enable && !m_useClientAffinity && !m_bevs.empty())
         updateHashinator();
     m_useClientAffinity = enable;
+}
+
+void ClientImpl::wakeup() {
+   if (m_wakeupPipe[1] != -1) {
+        static unsigned char c = 'w';
+        boost::mutex::scoped_lock lock(m_wakeupPipeLock, boost::try_to_lock);
+        if (lock) write(m_wakeupPipe[1], &c, 1);
+    } else {
+      event_base_loopbreak(m_base);
+    }
 }
 
 void ClientImpl::logMessage(ClientLogger::CLIENT_LOG_LEVEL severity, const std::string& msg){
