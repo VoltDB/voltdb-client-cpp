@@ -21,13 +21,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/*
- * Hashinator.cpp
- *
- *  Created on: Jan 28, 2014
- *      Author: isolomka
- */
-
 #include <boost/shared_ptr.hpp>
 #include "Distributer.h"
 #include "InvocationResponse.hpp"
