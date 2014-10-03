@@ -52,11 +52,13 @@ Note that -lrt and -pthread must appear after the object files being compiled/li
 in more recent Linux distributions.
 
 Directory structure for this example:
-
+```
 ./clientvoter.cpp        # Example client
 ./include                # Directory containing client library headers
 ./                       # Directory containing client library archive
+```
 
+```bash
 g++ -I./include/                 \
 clientvoter.cpp                  \
 ./libvoltdbcpp.a                 \
@@ -67,6 +69,7 @@ clientvoter.cpp                  \
 -lboost_system                   \
 -lboost_thread                   \
 -o voter
+```
 
 Note that -lrt should not be included for the mac edition. See the example makefile
 for more detail.
