@@ -39,7 +39,8 @@ public:
     /*
      * Construct a Procedure with the specified name and specified signature (parameters)
      */
-    Procedure(std::string name, std::vector<Parameter> parameters) : m_name(name), m_params(parameters) {}
+    Procedure(const std::string& name, std::vector<Parameter> parameters) : m_name(name), m_params(parameters) {}
+    Procedure(const std::string& name) : m_name(name) {}
 
     /**
      * Retrieve the parameter set associated with the procedure so that the parameters can be set
@@ -58,6 +59,8 @@ public:
                 + 8; //client data
     }
 
+    const std::string& getName()const {return m_name;}
+
 #ifdef SWIG
 %ignore serializeTo;
 #endif
@@ -71,7 +74,7 @@ public:
         buffer->putInt32( 0, buffer->limit() - 4);
     }
 private:
-    std::string m_name;
+    const std::string m_name;
     ParameterSet m_params;
 };
 }

@@ -54,44 +54,44 @@ public:
     /*
      * Returns an iterator for iterating over the rows of this table
      */
-    TableIterator iterator();
+    TableIterator iterator() const;
 
     /*
      * Returns the status code associated with this table that was set by the stored procedure.
      * Default value if not set is -128
      */
-    int8_t getStatusCode();
+    int8_t getStatusCode() const;
 
     /*
      * Retrieve the number of rows contained in this table
      */
-    int32_t rowCount();
+    int32_t rowCount() const;
 
     /*
      * Retrieve a copy of the column metadata.
      */
-    std::vector<voltdb::Column> columns();
+    std::vector<voltdb::Column> columns() const;
 
     /*
      * Retrieve the number of columns in this table's schema.
      */
-    int32_t columnCount();
+    int32_t columnCount() const;
 
     /*
      * Returns a string representation of this table and all of its rows.
      */
-    std::string toString();
+    std::string toString() const;
 
     /*
      * Returns a string representation of this table and all of its rows with
      * the specified level of indentation before each line.
      */
-    void toString(std::ostringstream &ostream, std::string indent);
+    void toString(std::ostringstream &ostream, std::string indent) const;
 private:
     boost::shared_ptr<std::vector<voltdb::Column> > m_columns;
     int32_t m_rowStart;
     int32_t m_rowCount;
-    voltdb::SharedByteBuffer m_buffer;
+    mutable voltdb::SharedByteBuffer m_buffer;
 };
 }
 

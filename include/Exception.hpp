@@ -23,6 +23,7 @@
 
 #ifndef VOLTDB_EXCEPTION_HPP_
 #define VOLTDB_EXCEPTION_HPP_
+#include <cstdio>
 #include <exception>
 
 namespace voltdb {
@@ -52,11 +53,36 @@ public:
  * index that is < 0, > num columns, or when using a getter with an inappropriate data type
  */
 class InvalidColumnException : public voltdb::Exception {
+    std::string m_what;
 public:
-    InvalidColumnException() :
-        Exception() {}
+    explicit InvalidColumnException() :
+        Exception() {
+        m_what = "Attempted to retrieve a column with an invalid index or name, or an invalid type for the specified column";
+    }
+
+    explicit InvalidColumnException(const size_t index) :
+        Exception() {
+        char msg[256];
+        snprintf(msg, sizeof msg, "Attempted to retrieve a column with an invalid index: %ld", index);
+        m_what = msg;
+    }
+
+    explicit InvalidColumnException(const std::string& name) :
+        Exception() {
+        m_what = "Attempted to retrieve a column with an invalid name: " + name;
+    }
+
+    explicit InvalidColumnException(const std::string& columnName, const size_t type, const std::string& typeName, const std::string& expectedTypeName) :
+        Exception() {
+        char msg[256];
+        snprintf(msg, sizeof msg, "Attempted to retrieve a column: %s with an invalid type: %s<%ld> expected: %s", columnName.c_str(), typeName.c_str(), type, expectedTypeName.c_str());
+        m_what = msg;
+    }
+
+    virtual ~InvalidColumnException() throw() {}
+
     virtual const char* what() const throw() {
-        return "Attempted to retrieve a column with an invalid index or name, or an invalid type for the specified column";
+        return m_what.c_str();
     }
 };
 
@@ -115,11 +141,32 @@ public:
  * or an extra argument. Users may see this exception.
  */
 class ParamMismatchException : public voltdb::Exception {
+    std::string m_what;
 public:
-    ParamMismatchException() : Exception() {}
-    virtual const char* what() const throw() {
-        return "Attempted to set a parameter using the wrong type";
+    explicit ParamMismatchException() : Exception() {
+        m_what = "Attempted to set a parameter using the wrong type";
     }
+    explicit ParamMismatchException(const size_t type, const std::string& typeName) :
+        Exception() {
+        char msg[256];
+        snprintf(msg, sizeof msg, "Attempted to set a parameter using the wrong type: %s<%ld>", typeName.c_str(), type);
+        m_what = msg;
+    }
+    virtual ~ParamMismatchException() throw() {}
+    virtual const char* what() const throw() {
+        return m_what.c_str();
+    }
+};
+
+/*
+ * Thrown by Distributer when detects server run in LEGACY mode
+ */
+class ElasticModeMismatchException : public voltdb::Exception {
+public:
+    ElasticModeMismatchException() : Exception() {}
+   virtual const char* what() const throw() {
+       return "LEGACY mode is not supported";
+   }
 };
 
 /*
@@ -198,6 +245,21 @@ public:
     ClusterInstanceMismatchException() : Exception() {}
     virtual const char* what() const throw() {
         return "Attempted to connect a client to two separate VoltDB clusters";
+    }
+};
+
+class UnknownProcedureException : public voltdb::Exception {
+    std::string m_what;
+public:
+    explicit UnknownProcedureException() : Exception() {
+        m_what = "Unknown procedure invoked";
+    }
+    explicit UnknownProcedureException(const std::string& name) : Exception() {
+        m_what = "Unknown procedure invoked: " + name;
+    }
+    virtual ~UnknownProcedureException() throw() {}
+    virtual const char* what() const throw() {
+        return m_what.c_str();
     }
 };
 }

@@ -49,7 +49,7 @@ public:
 #ifdef SWIG
     %ignore Row(SharedByteBuffer rowData, boost::shared_ptr<std::vector<voltdb::Column> > columns);
 #endif
-    Row(SharedByteBuffer rowData, boost::shared_ptr<std::vector<voltdb::Column> > columns) :
+    Row(SharedByteBuffer& rowData, boost::shared_ptr<std::vector<voltdb::Column> >& columns) :
         m_data(rowData), m_columns(columns), m_wasNull(false), m_offsets(columns->size()), m_hasCalculatedOffsets(false) {
     }
 
@@ -233,7 +233,7 @@ public:
      */
     bool isNull(int32_t column) throw(voltdb::InvalidColumnException) {
         if (column < 0 || column >= static_cast<ssize_t>(m_columns->size())) {
-            throw InvalidColumnException();
+            throw InvalidColumnException(column);
         }
         WireType columnType = m_columns->at(static_cast<size_t>(column)).m_type;
         switch (columnType) {
@@ -269,7 +269,7 @@ public:
      * not match the type of the get method.
      * @return Whether the buffer provided was large enough.
      */
-    bool getVarbinary(std::string cname, int32_t bufsize, uint8_t *out_value, int32_t *out_len) 
+    bool getVarbinary(const std::string& cname, int32_t bufsize, uint8_t *out_value, int32_t *out_len) 
     throw(voltdb::InvalidColumnException) {
         return getVarbinary(getColumnIndexByName(cname), bufsize, out_value, out_len);
     }
@@ -281,7 +281,7 @@ public:
      * does not match the column type.
      * @return Decimal value at the specified column
      */
-    Decimal getDecimal(std::string cname) throw(voltdb::InvalidColumnException) {
+    Decimal getDecimal(const std::string& cname) throw(voltdb::InvalidColumnException) {
         return getDecimal(getColumnIndexByName(cname));
     }
 
@@ -292,7 +292,7 @@ public:
      * does not match the column type.
      * @return Timestamp value at the specified column
      */
-    int64_t getTimestamp(std::string cname) throw(voltdb::InvalidColumnException) {
+    int64_t getTimestamp(const std::string& cname) throw(voltdb::InvalidColumnException) {
         return getTimestamp(getColumnIndexByName(cname));
     }
 
@@ -303,7 +303,7 @@ public:
      * does not match the column type.
      * @return int64 value at the specified column
      */
-    int64_t getInt64(std::string cname) throw(voltdb::InvalidColumnException) {
+    int64_t getInt64(const std::string& cname) throw(voltdb::InvalidColumnException) {
         return getInt64(getColumnIndexByName(cname));
     }
 
@@ -314,7 +314,7 @@ public:
      * does not match the column type.
      * @return int32 value at the specified column
      */
-    int32_t getInt32(std::string cname) throw(voltdb::InvalidColumnException) {
+    int32_t getInt32(const std::string& cname) throw(voltdb::InvalidColumnException) {
         return getInt32(getColumnIndexByName(cname));
     }
 
@@ -325,7 +325,7 @@ public:
      * does not match the column type.
      * @return int16 value at the specified column
      */
-    int16_t getInt16(std::string cname) throw(voltdb::InvalidColumnException) {
+    int16_t getInt16(const std::string& cname) throw(voltdb::InvalidColumnException) {
         return getInt16(getColumnIndexByName(cname));
     }
 
@@ -336,7 +336,7 @@ public:
      * does not match the column type.
      * @return int8 value at the specified column
      */
-    int8_t getInt8(std::string cname) throw(voltdb::InvalidColumnException) {
+    int8_t getInt8(const std::string& cname) throw(voltdb::InvalidColumnException) {
         return getInt8(getColumnIndexByName(cname));
     }
 
@@ -347,7 +347,7 @@ public:
      * does not match the column type.
      * @return double value at the specified column
      */
-    double getDouble(std::string cname) throw(voltdb::InvalidColumnException) {
+    double getDouble(const std::string& cname) throw(voltdb::InvalidColumnException) {
         return getDouble(getColumnIndexByName(cname));
     }
 
@@ -358,7 +358,7 @@ public:
      * does not match the column type.
      * @return string value at the specified column
      */
-    std::string getString(std::string cname) throw(voltdb::InvalidColumnException) {
+    std::string getString(const std::string& cname) throw(voltdb::InvalidColumnException) {
         return getString(getColumnIndexByName(cname));
     }
 
@@ -367,7 +367,7 @@ public:
      * @throws InvalidColumnException The name of the column was invalid.
      * @return true if the value is NULL and false otherwise
      */
-    bool isNull(std::string cname) throw(voltdb::InvalidColumnException) {
+    bool isNull(const std::string& cname) throw(voltdb::InvalidColumnException) {
         int32_t column = getColumnIndexByName(cname);
         return isNull(column);
     }
@@ -392,7 +392,7 @@ public:
      * Returns a string reprentation of this row with the specified level of indentation
      * before each line
      */
-    void toString(std::ostringstream &ostream, std::string indent) {
+    void toString(std::ostringstream &ostream, const std::string& indent) {
         ostream << indent;
         const int32_t size = static_cast<int32_t>(m_columns->size());
         for (int32_t ii = 0; ii < size; ii++) {
@@ -439,41 +439,50 @@ private:
     WireType validateType(WireType type, int32_t index)  throw (InvalidColumnException) {
         if (index < 0 ||
                 index >= static_cast<ssize_t>(m_columns->size())) {
-            throw InvalidColumnException();
+            throw InvalidColumnException(index);
         }
         WireType columnType = m_columns->at(static_cast<size_t>(index)).m_type;
         switch (columnType) {
         case WIRE_TYPE_DECIMAL:
-            if (type != WIRE_TYPE_DECIMAL) throw InvalidColumnException();
+            if (type != WIRE_TYPE_DECIMAL) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_DECIMAL));
             break;
         case WIRE_TYPE_TIMESTAMP:
-            if (type != WIRE_TYPE_TIMESTAMP) throw InvalidColumnException();
+            if (type != WIRE_TYPE_TIMESTAMP) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_TIMESTAMP));
             break;
         case WIRE_TYPE_BIGINT:
-            if (type != WIRE_TYPE_BIGINT) throw InvalidColumnException();
+            if (type != WIRE_TYPE_BIGINT) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_BIGINT));
             break;
         case WIRE_TYPE_INTEGER:
-            if (type != WIRE_TYPE_BIGINT && type != WIRE_TYPE_INTEGER) throw InvalidColumnException();
+            if (type != WIRE_TYPE_BIGINT && type != WIRE_TYPE_INTEGER) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_INTEGER));
             break;
         case WIRE_TYPE_SMALLINT:
             if (type != WIRE_TYPE_BIGINT &&
                     type != WIRE_TYPE_INTEGER &&
-                    type != WIRE_TYPE_SMALLINT) throw InvalidColumnException();
+                    type != WIRE_TYPE_SMALLINT) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_SMALLINT));
             break;
         case WIRE_TYPE_TINYINT:
             if (type != WIRE_TYPE_BIGINT &&
                     type != WIRE_TYPE_INTEGER &&
                     type != WIRE_TYPE_SMALLINT &&
-                    type != WIRE_TYPE_TINYINT) throw InvalidColumnException();
+                    type != WIRE_TYPE_TINYINT) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_TINYINT));
             break;
         case WIRE_TYPE_FLOAT:
-            if (type != WIRE_TYPE_FLOAT) throw InvalidColumnException();
+            if (type != WIRE_TYPE_FLOAT) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_FLOAT));
             break;
         case WIRE_TYPE_STRING:
-            if (type != WIRE_TYPE_STRING) throw InvalidColumnException();
+            if (type != WIRE_TYPE_STRING) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_STRING));
             break;
         case WIRE_TYPE_VARBINARY:
-            if (type != WIRE_TYPE_VARBINARY) throw InvalidColumnException();
+            if (type != WIRE_TYPE_VARBINARY) 
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_VARBINARY));
             break;
         default:
             assert(false);
@@ -482,13 +491,17 @@ private:
         return columnType;
     }
 
-    int32_t getColumnIndexByName(std::string name) {
+    int32_t getColumnIndexByName(const std::string& name) {
         for (int32_t ii = 0; ii < static_cast<ssize_t>(m_columns->size()); ii++) {
             if (m_columns->at(static_cast<size_t>(ii)).m_name == name) {
                 return ii;
             }
         }
-        throw InvalidColumnException();
+        throw InvalidColumnException(name);
+    }
+
+    const std::string& getColumnNameByIndex(int32_t index){
+        return m_columns->at(index).m_name;
     }
 
     void ensureCalculatedOffsets() {

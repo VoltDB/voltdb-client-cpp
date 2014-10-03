@@ -48,35 +48,35 @@ namespace voltdb {
         m_buffer.position(m_buffer.limit());
     }
 
-    int8_t Table::getStatusCode() {
+    int8_t Table::getStatusCode() const{
         return m_buffer.getInt8(4);
     }
 
-    TableIterator Table::iterator() {
+    TableIterator Table::iterator() const{
         m_buffer.position(m_rowStart + 4);//skip row count
         return TableIterator(m_buffer.slice(), m_columns, m_rowCount);
     }
 
-    int32_t Table::rowCount() {
+    int32_t Table::rowCount() const{
         return m_rowCount;
     }
 
-    int32_t Table::columnCount() {
+    int32_t Table::columnCount() const{
         return static_cast<int32_t>(m_columns->size());
     }
 
-    std::vector<voltdb::Column> Table::columns() {
+    std::vector<voltdb::Column> Table::columns() const {
         return *m_columns;
     }
 
 
-    std::string Table::toString() {
+    std::string Table::toString() const {
         std::ostringstream ostream;
         toString(ostream, std::string(""));
         return ostream.str();
     }
 
-    void Table::toString(std::ostringstream &ostream, std::string indent) {
+    void Table::toString(std::ostringstream &ostream, std::string indent) const {
         ostream << indent << "Table size: " << m_buffer.capacity() << std::endl;
         ostream << indent << "Status code: " << static_cast<int32_t>(getStatusCode()) << std::endl;
         ostream << indent << "Column names: ";

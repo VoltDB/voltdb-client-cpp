@@ -21,27 +21,40 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef VOLTDB_COLUMN_HPP_
-#define VOLTDB_COLUMN_HPP_
-#include "Column.hpp"
-#include "WireType.h"
+#ifndef VOLT_CLIENTLOGGER_H_
+#define VOLT_CLIENTLOGGER_H_
 #include <string>
+
+
 namespace voltdb {
-class Column {
+/*
+ * A Client logger is the callback interface for recieving log messages from VoltClient component
+ */
+
+class ClientLogger {
 public:
-    Column() {}
-    Column(std::string name, WireType type) : m_name(name), m_type(type) {}
-    Column(WireType type) : m_name(""), m_type(type) {}
-    std::string m_name;
-    WireType m_type;
+/*
+* @brief   Values that represent logging levels.
+*/
+    enum CLIENT_LOG_LEVEL {
+        ERROR    = 1,
+        WARNING  = 2, 
+        INFO     = 4,
+        DEBUG    = 8,
+   };
 
-    const std::string& name() const {
-        return m_name;
-    }
+    /*
+    * Log a message with it's severity level. No Client API must called from that callback callback
+    *
+    * @param severity Logging level. See ::CLIENT_LOG_LEVEL for possible values
+    * @param message A message to be logged
+    */
+    virtual void log(const CLIENT_LOG_LEVEL severity, const std::string &message) = 0;
 
-    WireType type() const {
-        return m_type;
-    }
+    virtual ~ClientLogger() {}
 };
+
 }
-#endif /* COLUMN_HPP_ */
+
+#endif /* VOLT_CLIENTLOGGER_H_ */
+
