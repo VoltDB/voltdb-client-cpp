@@ -26,7 +26,7 @@ OBJS := obj/Client.o \
 		obj/Table.o \
 		obj/WireType.o \
                 obj/Distributer.o \
-                obj/MurmurHash3.o 
+                obj/MurmurHash3.o
 
 TEST_OBJS := test_obj/ByteBufferTest.o \
 			 test_obj/MockVoltDB.o \
@@ -90,7 +90,7 @@ $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 	#cp -R include/boost $(KIT_NAME)/include/
 
 	cp -R examples $(KIT_NAME)/
-	cp README $(KIT_NAME)/
+	cp README.md $(KIT_NAME)/
 	cp README.thirdparty $(KIT_NAME)/
 	cp $(LIB_NAME).so $(KIT_NAME)/
 	cp $(LIB_NAME).a $(KIT_NAME)/
