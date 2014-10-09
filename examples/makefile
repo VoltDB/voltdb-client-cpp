@@ -1,5 +1,6 @@
 CC=g++
-CFLAGS=-I../include -g3 -O3
+BOOST_INCLUDES=/usr/local/boost
+CFLAGS=-I$(BOOST_INCLUDES) -I../include -g3 -O3
 
 PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
@@ -14,13 +15,13 @@ endif
 all: helloworld asynchelloworld voter
 
 asynchelloworld: AsyncHelloWorld.cpp ../libvoltdbcpp.a
-    $(CC) $(CFLAGS) AsyncHelloWorld.cpp ../libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o asynchelloworld
+	$(CC) $(CFLAGS) AsyncHelloWorld.cpp ../libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o asynchelloworld
 
 helloworld: HelloWorld.cpp ../libvoltdbcpp.a
-    $(CC) $(CFLAGS) HelloWorld.cpp ../libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o helloworld
+	$(CC) $(CFLAGS) HelloWorld.cpp ../libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o helloworld
 
 voter: Voter.cpp ../libvoltdbcpp.a
-    $(CC) $(CFLAGS) Voter.cpp ../libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o voter
+	$(CC) $(CFLAGS) Voter.cpp ../libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o voter
 
 clean:
-    rm asynchelloworld helloworld voter
+	rm asynchelloworld helloworld voter
