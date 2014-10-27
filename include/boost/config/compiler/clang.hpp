@@ -10,7 +10,9 @@
 
 #if __has_feature(cxx_exceptions) && !defined(BOOST_NO_EXCEPTIONS)
 #else
-#  define BOOST_NO_EXCEPTIONS
+#ifndef BOOST_NO_EXCEPTIONS
+#define BOOST_NO_EXCEPTIONS
+#endif
 #endif
 
 #if !__has_feature(cxx_rtti)
