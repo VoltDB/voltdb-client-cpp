@@ -1,10 +1,17 @@
-Prerequsites
+Prerequisites
 
-Building the VoltDB CPP client from source requires the boost c++ development libraries. Version 1.54+ or
-better is recommended.
+Building the VoltDB CPP client from source requires the boost c++ development libraries. 
+Version 1.54+ or better is recommended.
 
-Note: If your platform's package manager does not provide the required version of boost you can build it from source
-using these commands:
+Notes:
+
+    On some platforms boost libraries are "tagged" with the feature support (such as -mt for multithreading)
+    in the file name. If the libraries on your platform are not tagged, you will need to edit the makefile
+    and remove the -mt tag. Alternatively you can create a soft link to the to the needed libraries using
+    the tagged name referenced by the makefile.
+    
+    If your platform's package manager does not provide the required version of boost you can build it from source
+    using these commands:
 
     wget http://sourceforge.net/projects/boost/files/boost/1.56.0/boost_1_56_0.tar.gz/download
     tar -C /usr/local -xf boost_x_y_z.tar.gz
