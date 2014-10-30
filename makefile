@@ -2,15 +2,15 @@ CC=g++
 BOOST_INCLUDES=/usr/local/boost
 CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 -O3 -Wall
 LIB_NAME=libvoltdbcpp
-KIT_NAME=voltdb-client-cpp-x86_64-3.0
+KIT_NAME=voltdb-client-cpp-x86_64-4.0
 
 PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
-	THIRD_PARTY_LIBS := third_party_libs/osx/libevent.a third_party_libs/osx/libevent_pthreads.a
+	THIRD_PARTY_DIR := third_party_libs/osx
 	SYSTEM_LIBS := -lc -lpthread -lboost_system -lboost_thread-mt
 endif
 ifeq ($(PLATFORM),Linux)
-	THIRD_PARTY_LIBS := third_party_libs/linux/libevent.a third_party_libs/linux/libevent_pthreads.a
+	THIRD_PARTY_DIR := third_party_libs/linux
 	SYSTEM_LIBS := -lc -lpthread -lrt -lboost_system -lboost_thread-mt
 	CFLAGS += -fPIC
 endif
@@ -36,6 +36,9 @@ TEST_OBJS := test_obj/ByteBufferTest.o \
 
 CPTEST_OBJS := test_obj/ConnectionPoolTest.o \
 			 test_obj/Tests.o
+
+
+THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a $(THIRD_PARTY_DIR)/libevent_pthreads.a
 
 RM := rm -rf
 
@@ -77,6 +80,7 @@ $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 	@echo 'Building distribution kit'
 	rm -rf $(KIT_NAME)
 	mkdir -p $(KIT_NAME)/include/ttmath
+	mkdir -p $(KIT_NAME)/$(THIRD_PARTY_DIR)
 
 	cp -R include/ByteBuffer.hpp include/Client.h include/ClientConfig.h \
 		  include/Column.hpp include/ConnectionPool.h include/Decimal.hpp \
@@ -94,7 +98,7 @@ $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 	cp README.thirdparty $(KIT_NAME)/
 	cp $(LIB_NAME).so $(KIT_NAME)/
 	cp $(LIB_NAME).a $(KIT_NAME)/
-	cp -R $(THIRD_PARTY_LIBS) $(KIT_NAME)/
+	cp -pR $(THIRD_PARTY_LIBS) $(KIT_NAME)/$(THIRD_PARTY_DIR)
 
 	tar -czf $(KIT_NAME).tar.gz $(KIT_NAME)
 
