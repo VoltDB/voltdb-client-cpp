@@ -5,14 +5,18 @@ The VoltDB client library implements the native VoltDB wire protocol. You can
 use the library to connect to a VoltDB cluster, invoke stored procedures and
 read responses.
 
-When connected to multiple nodes in the cluster, the client library will enable
-client affinity and auto-reconnect to restarted nodes.
-
-The Using VoltDB Guide explains how to use the CPP library in the
-chapter 14.1.1: Writing VoltDB Client Applications in C++.
+The Using VoltDB Guide explains how to use the CPP library in
+[Chapter 15.1: C++ Client Interface.]
+(http://docs.voltdb.com/UsingVoltDB/ChapOtherClientAPI.php)
 
 Binaries for 64-bit Linux and 64-bit OSX 10.5+ are provided. The linking
 instructions below apply to the Linux binaries.
+
+New Features in V4
+==================
+
+When connected to multiple nodes in the cluster, the client library will enable
+client affinity and can auto-reconnect to restarted nodes.
 
 Prerequisites
 =============
@@ -21,6 +25,7 @@ Prerequisites
 
 Building
 ========
+*This does not apply if you have downloaded the kit from voltdb.com*
 
 Simply type `make` in the unpacked directory to build the client library. It
 will generate a shared library and a static library for linking your program
@@ -44,6 +49,7 @@ examples online at:
 
 Linking against libvoltdbcpp.a
 ==============================
+*Only applies for linux distribution*
 
 The following command will compile and link an example client
 (clientvoter.cpp) libvoltdb.a.
