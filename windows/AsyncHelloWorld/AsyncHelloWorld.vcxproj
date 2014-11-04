@@ -99,8 +99,9 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(ProjectDir)..\..\third_party_libs\windows\$(PlatformName)\libevent.lib;$(ProjectDir)..\..\third_party_libs\windows\$(PlatformName)\libevent_core.lib;$(ProjectDir)..\..\third_party_libs\windows\$(PlatformName)\libevent_extras.lib;crypt32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>libevent.lib;crypt32.lib;advapi32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\third_party_libs\windows\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -114,8 +115,9 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(ProjectDir)..\..\third_party_libs\windows\$(PlatformName)\libevent.lib;$(ProjectDir)..\..\third_party_libs\windows\$(PlatformName)\libevent_core.lib;$(ProjectDir)..\..\third_party_libs\windows\$(PlatformName)\libevent_extras.lib;crypt32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>libevent.lib;crypt32.lib;advapi32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\third_party_libs\windows\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -132,8 +134,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>$(ProjectDir)..\..\third_party_libs\windows\$(PlatformName)\libevent.lib;$(ProjectDir)..\..\third_party_libs\windows\$(PlatformName)\libevent_core.lib;$(ProjectDir)..\..\third_party_libs\windows\$(PlatformName)\libevent_extras.lib;crypt32.lib;advapi32.lib</AdditionalDependencies>
-      <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
+      <AdditionalDependencies>libevent.lib;crypt32.lib;advapi32.lib</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\third_party_libs\windows\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -151,8 +155,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>$(ProjectDir)..\..\third_party_libs\windows\$(PlatformName)\libevent.lib;$(ProjectDir)..\..\third_party_libs\windows\$(PlatformName)\libevent_core.lib;$(ProjectDir)..\..\third_party_libs\windows\$(PlatformName)\libevent_extras.lib;crypt32.lib;advapi32.lib</AdditionalDependencies>
-      <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
+      <AdditionalDependencies>libevent.lib;crypt32.lib;advapi32.lib</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\third_party_libs\windows\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

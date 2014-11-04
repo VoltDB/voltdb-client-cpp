@@ -24,6 +24,7 @@
 #ifndef VOLTDB_CLIENT_H_
 #define VOLTDB_CLIENT_H_
 
+#include "PlatformInterface.hpp"
 #include <string>
 #include "Procedure.hpp"
 #include "StatusListener.h"

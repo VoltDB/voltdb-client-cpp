@@ -1,3 +1,4 @@
+# Build output
 /libvoltdbcpp/
 /libvoltdbcpp.a
 /libvoltdbcpp.so
@@ -5,10 +6,18 @@
 /libeventinstall/
 /voltdb-client-cpp-*
 /*.tar.gz
+
+# Visual Studio cruft
 /windows/**/win32
 /windows/**/x64
-/windows/**/*.opensdf
-/windows/**/*.sdf
-/windows/**/*.suo
-/windows/**/*.user
+/third_party_libs/src/**/win32
+/third_party_libs/src/**/x64
+**/windows/**/*.opensdf
+**/windows/**/*.sdf
+**/windows/**/*.suo
+**/windows/**/*.user
+/odbc/
+
+# Vim backup files
 *~
+*.swp
