@@ -7,7 +7,7 @@ KIT_NAME=voltdb-client-cpp-x86_64-4.0
 PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
 	THIRD_PARTY_DIR := third_party_libs/osx
-	SYSTEM_LIBS := -lc -lpthread -lboost_system -lboost_thread-mt
+	SYSTEM_LIBS := -lc -lpthread -lboost_system-mt -lboost_thread-mt
 endif
 ifeq ($(PLATFORM),Linux)
 	THIRD_PARTY_DIR := third_party_libs/linux
