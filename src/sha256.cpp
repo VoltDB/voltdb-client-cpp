@@ -41,7 +41,7 @@
 #define SHA256_UNROLL 64    // This define determines how much loop unrolling is done when computing the hash; 
 
 // Uncomment this line of code if you want this snippet to compute the endian mode of your processor at run time; rather than at compile time.
-#define RUNTIME_ENDIAN
+//#define RUNTIME_ENDIAN
 
 // Uncomment this line of code if you want this routine to compile for a big-endian processor
 //#define WORDS_BIGENDIAN
