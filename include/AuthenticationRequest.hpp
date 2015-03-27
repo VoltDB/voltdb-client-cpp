@@ -26,32 +26,41 @@
 #include "ByteBuffer.hpp"
 
 namespace voltdb {
-class AuthenticationRequest {
-public:
-    AuthenticationRequest(std::string username, std::string service, unsigned char* passwordHash) :
-        m_username(username), m_service(service), m_passwordHash(passwordHash) {}
-    int32_t getSerializedSize() {
-        return 8 + //String length prefixes
-        20 + //SHA-1 hash of PW
-        static_cast<int32_t>(m_username.size()) +
-        static_cast<int32_t>(m_service.size())
-        + 4 //length prefix
-        + 1; //version number
-    }
-    void serializeTo(ByteBuffer *buffer) {
-        buffer->position(4);
-        buffer->putInt8(0);
-        buffer->putString(m_service);
-        buffer->putString(m_username);
-        buffer->put(reinterpret_cast<char*>(m_passwordHash), 20);
-        buffer->flip();
-        buffer->putInt32(0, buffer->limit() - 4);
-    }
-private:
-    std::string m_username;
-    std::string m_service;
-    unsigned char* m_passwordHash;
-};
+
+    class AuthenticationRequest {
+    public:
+
+        AuthenticationRequest(std::string username, std::string service, unsigned char* passwordHash) :
+        m_username(username), m_service(service), m_passwordHash(passwordHash) {
+        }
+
+        int32_t getSerializedSize(ClientAuthHashScheme scheme) {
+            int sz = 8 //String length prefixes
+                    + (scheme == HASH_SHA256 ? 32 : 20) //SHA-1 hash of PW
+                    + static_cast<int32_t> (m_username.size())
+                    + static_cast<int32_t> (m_service.size())
+                    + 4 //length prefix
+                    + 1 //version number
+                    + 1; //scheme
+
+            return sz;
+        }
+
+        void serializeTo(ByteBuffer *buffer, ClientAuthHashScheme scheme) {
+            buffer->position(4);
+            buffer->putInt8((int8_t)1); //version
+            buffer->putInt8(scheme); //scheme.
+            buffer->putString(m_service);
+            buffer->putString(m_username);
+            buffer->put(reinterpret_cast<char*> (m_passwordHash), (scheme == HASH_SHA256 ? 32 : 20));
+            buffer->flip();
+            buffer->putInt32(0, buffer->limit() - 4);
+        }
+    private:
+        std::string m_username;
+        std::string m_service;
+        unsigned char* m_passwordHash;
+    };
 }
 
 #endif /* VOLTDB_AUTHENTICATIONMESSAGE_HPP_ */

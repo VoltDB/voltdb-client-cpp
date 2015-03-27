@@ -110,7 +110,7 @@ public:
 
     /*
      * If one of the run family of methods is running on another thread, this
-     * method will instruct it to exit as soon as it finishes it's current 
+     * method will instruct it to exit as soon as it finishes it's current
      * immediate task. If the thread in the run method is blocked/idle, then
      * it will return immediately.
      * The difference from the interrupt is it stops only currently running loop,
@@ -120,7 +120,7 @@ public:
 
     /*
      * If one of the run family of methods is running on another thread, this
-     * method will instruct it to exit as soon as it finishes it's current 
+     * method will instruct it to exit as soon as it finishes it's current
      * immediate task. If the thread in the run method is blocked/idle, then
      * it will return immediately.
      */
@@ -133,7 +133,7 @@ public:
     bool getClientAffinity(){return m_useClientAffinity;}
 
     int32_t outstandingRequests() const {return m_outstandingRequests;}
-    
+
     void setLoggerCallback(ClientLogger *pLogger) { m_pLogger = pLogger;}
 
 private:
@@ -183,7 +183,7 @@ private:
     int32_t m_leaderAddress;
 
     std::string m_username;
-    unsigned char m_passwordHash[20];
+    unsigned char *m_passwordHash;
     const int32_t m_maxOutstandingRequests;
 
     bool m_ignoreBackpressure;
@@ -199,6 +199,7 @@ private:
     boost::mutex m_wakeupPipeLock;
 
     ClientLogger* m_pLogger;
+    ClientAuthHashScheme m_hashScheme;
 };
 }
 #endif /* VOLTDB_CLIENTIMPL_H_ */

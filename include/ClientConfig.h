@@ -28,23 +28,27 @@
 #include <boost/shared_ptr.hpp>
 
 namespace voltdb {
+
+enum ClientAuthHashScheme { HASH_SHA1, HASH_SHA256 };
+
 class ClientConfig {
 public:
     ClientConfig(
             std::string username = std::string(""),
-            std::string password = std::string(""));
+            std::string password = std::string(""), ClientAuthHashScheme scheme = HASH_SHA1);
     ClientConfig(
             std::string username,
             std::string password,
-            boost::shared_ptr<StatusListener> listener);
+            boost::shared_ptr<StatusListener> listener, ClientAuthHashScheme scheme = HASH_SHA1);
     ClientConfig(
             std::string username,
             std::string password,
-            StatusListener *listener);
+            StatusListener *listener, ClientAuthHashScheme scheme = HASH_SHA1);
     std::string m_username;
     std::string m_password;
     boost::shared_ptr<StatusListener> m_listener;
     int32_t m_maxOutstandingRequests;
+    ClientAuthHashScheme m_hashScheme;
 };
 }
 
