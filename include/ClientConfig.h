@@ -35,15 +35,18 @@ class ClientConfig {
 public:
     ClientConfig(
             std::string username = std::string(""),
-            std::string password = std::string(""), ClientAuthHashScheme scheme = HASH_SHA1);
+            std::string password = std::string(""),
+            ClientAuthHashScheme scheme = HASH_SHA1);
     ClientConfig(
             std::string username,
             std::string password,
-            boost::shared_ptr<StatusListener> listener, ClientAuthHashScheme scheme = HASH_SHA1);
+            boost::shared_ptr<StatusListener> listener,
+            ClientAuthHashScheme scheme = HASH_SHA1);
     ClientConfig(
             std::string username,
             std::string password,
-            StatusListener *listener, ClientAuthHashScheme scheme = HASH_SHA1);
+            StatusListener *listener,
+            ClientAuthHashScheme scheme = HASH_SHA1);
     std::string m_username;
     std::string m_password;
     boost::shared_ptr<StatusListener> m_listener;

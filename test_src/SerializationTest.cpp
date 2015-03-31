@@ -96,8 +96,8 @@ void testAuthenticationRequestSha1() {
     SHA1_Init(&context);
     SHA1_Update( &context, reinterpret_cast<const unsigned char*>(password.data()), password.size());
     SHA1_Final ( &context, hashedPassword);
-    AuthenticationRequest request( "hello", "database", hashedPassword );
-    request.serializeTo(&generated, HASH_SHA1);
+    AuthenticationRequest request( "hello", "database", hashedPassword, HASH_SHA1 );
+    request.serializeTo(&generated);
     CPPUNIT_ASSERT(original.remaining() == generated.remaining());
     CPPUNIT_ASSERT(::memcmp(original.bytes(), generated.bytes(), original.remaining()) == 0);
 }
@@ -108,8 +108,8 @@ void testAuthenticationRequestSha256() {
     unsigned char hashedPassword[32];
     std::string password("world");
     computeSHA256(password.c_str(), password.size(), hashedPassword);
-    AuthenticationRequest request( "hello", "database", hashedPassword);
-    request.serializeTo(&generated, HASH_SHA256);
+    AuthenticationRequest request( "hello", "database", hashedPassword, HASH_SHA256);
+    request.serializeTo(&generated);
     CPPUNIT_ASSERT(original.remaining() == generated.remaining());
     CPPUNIT_ASSERT(::memcmp(original.bytes(), generated.bytes(), original.remaining()) == 0);
 }

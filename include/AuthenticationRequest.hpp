@@ -30,13 +30,13 @@ namespace voltdb {
     class AuthenticationRequest {
     public:
 
-        AuthenticationRequest(std::string username, std::string service, unsigned char* passwordHash) :
-        m_username(username), m_service(service), m_passwordHash(passwordHash) {
+        AuthenticationRequest(std::string username, std::string service, unsigned char* passwordHash, ClientAuthHashScheme hashScheme) :
+        m_username(username), m_service(service), m_passwordHash(passwordHash), m_hashScheme(hashScheme)  {
         }
 
-        int32_t getSerializedSize(ClientAuthHashScheme scheme) {
+        int32_t getSerializedSize() {
             int sz = 8 //String length prefixes
-                    + (scheme == HASH_SHA256 ? 32 : 20) //SHA-1 hash of PW
+                    + (m_hashScheme == HASH_SHA256 ? 32 : 20) //SHA-1 hash of PW
                     + static_cast<int32_t> (m_username.size())
                     + static_cast<int32_t> (m_service.size())
                     + 4 //length prefix
@@ -46,13 +46,13 @@ namespace voltdb {
             return sz;
         }
 
-        void serializeTo(ByteBuffer *buffer, ClientAuthHashScheme scheme) {
+        void serializeTo(ByteBuffer *buffer) {
             buffer->position(4);
             buffer->putInt8((int8_t)1); //version
-            buffer->putInt8(scheme); //scheme.
+            buffer->putInt8(m_hashScheme); //scheme.
             buffer->putString(m_service);
             buffer->putString(m_username);
-            buffer->put(reinterpret_cast<char*> (m_passwordHash), (scheme == HASH_SHA256 ? 32 : 20));
+            buffer->put(reinterpret_cast<char*> (m_passwordHash), (m_hashScheme == HASH_SHA256 ? 32 : 20));
             buffer->flip();
             buffer->putInt32(0, buffer->limit() - 4);
         }
@@ -60,6 +60,7 @@ namespace voltdb {
         std::string m_username;
         std::string m_service;
         unsigned char* m_passwordHash;
+        ClientAuthHashScheme m_hashScheme;
     };
 }
 
