@@ -30,6 +30,7 @@
 #include <cstdio>
 #include "Exception.hpp"
 #include "ByteBuffer.hpp"
+#include "ClientConfig.h"
 #include "AuthenticationRequest.hpp"
 #include "AuthenticationResponse.hpp"
 #include "Parameter.hpp"
@@ -42,11 +43,13 @@
 #include "TableIterator.h"
 #include "Row.hpp"
 #include "sha1.h"
+#include "sha256.h"
 
 namespace voltdb {
 class SerializationTest : public CppUnit::TestFixture {
 CPPUNIT_TEST_SUITE( SerializationTest );
-CPPUNIT_TEST(testAuthenticationRequest);
+CPPUNIT_TEST(testAuthenticationRequestSha1);
+CPPUNIT_TEST(testAuthenticationRequestSha256);
 CPPUNIT_TEST(testAuthenticationResponse);
 CPPUNIT_TEST(testInvocationAllParams);
 CPPUNIT_TEST(testInvocationResponseSuccess);
@@ -84,7 +87,7 @@ SharedByteBuffer fileAsByteBuffer(std::string filename) {
     return b;
 }
 
-void testAuthenticationRequest() {
+void testAuthenticationRequestSha1() {
     SharedByteBuffer original = fileAsByteBuffer("authentication_request.msg");
     SharedByteBuffer generated(new char[8192], 8192);
     unsigned char hashedPassword[20];
@@ -93,7 +96,19 @@ void testAuthenticationRequest() {
     SHA1_Init(&context);
     SHA1_Update( &context, reinterpret_cast<const unsigned char*>(password.data()), password.size());
     SHA1_Final ( &context, hashedPassword);
-    AuthenticationRequest request( "hello", "database", hashedPassword);
+    AuthenticationRequest request( "hello", "database", hashedPassword, HASH_SHA1 );
+    request.serializeTo(&generated);
+    CPPUNIT_ASSERT(original.remaining() == generated.remaining());
+    CPPUNIT_ASSERT(::memcmp(original.bytes(), generated.bytes(), original.remaining()) == 0);
+}
+
+void testAuthenticationRequestSha256() {
+    SharedByteBuffer original = fileAsByteBuffer("authentication_request_sha256.msg");
+    SharedByteBuffer generated(new char[8192], 8192);
+    unsigned char hashedPassword[32];
+    std::string password("world");
+    computeSHA256(password.c_str(), password.size(), hashedPassword);
+    AuthenticationRequest request( "hello", "database", hashedPassword, HASH_SHA256);
     request.serializeTo(&generated);
     CPPUNIT_ASSERT(original.remaining() == generated.remaining());
     CPPUNIT_ASSERT(::memcmp(original.bytes(), generated.bytes(), original.remaining()) == 0);

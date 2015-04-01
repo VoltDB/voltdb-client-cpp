@@ -28,8 +28,10 @@
 #include <event2/thread.h>
 #include <event2/event.h>
 #include "sha1.h"
+#include "sha256.h"
 #include <boost/foreach.hpp>
 #include <sstream>
+
 
 
 #define HIGH_WATERMARK 1024 * 1024 * 55
@@ -244,6 +246,7 @@ ClientImpl::~ClientImpl() {
     m_bevs.clear();
     m_contexts.clear();
     m_callbacks.clear();
+    if (m_passwordHash != NULL) free(m_passwordHash);
     event_base_free(m_base);
 }
 
@@ -279,10 +282,19 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
     if (!m_base) {
         throw voltdb::LibEventException();
     }
-    SHA1_CTX context;
-    SHA1_Init(&context);
-    SHA1_Update( &context, reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size());
-    SHA1_Final ( &context, m_passwordHash);
+    m_hashScheme = config.m_hashScheme;
+    if (m_hashScheme == HASH_SHA1) {
+        SHA1_CTX context;
+        SHA1_Init(&context);
+        SHA1_Update( &context, reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size());
+        m_passwordHash = (unsigned char *)malloc(20*sizeof(char));
+        SHA1_Final ( &context, m_passwordHash);
+    } else if (config.m_hashScheme == HASH_SHA256) {
+        m_passwordHash = (unsigned char *)malloc(32*sizeof(char));
+        computeSHA256(config.m_password.c_str(), config.m_password.size(), m_passwordHash);
+    } else {
+        throw voltdb::LibEventException();
+    }
 
     if (0 == pipe(m_wakeupPipe)) {
         struct event *ev = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
@@ -344,7 +356,7 @@ void ClientImpl::initiateAuthentication(PendingConnection* pc, struct buffereven
     if (bufferevent_enable(bev, EV_READ)) {
         throw voltdb::LibEventException();
     }
-    AuthenticationRequest authRequest( m_username, "database", m_passwordHash );
+    AuthenticationRequest authRequest( m_username, "database", m_passwordHash, m_hashScheme );
     ScopedByteBuffer bb(authRequest.getSerializedSize());
     authRequest.serializeTo(&bb);
 

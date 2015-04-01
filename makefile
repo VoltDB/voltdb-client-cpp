@@ -23,6 +23,7 @@ OBJS := obj/Client.o \
 		obj/ConnectionPool.o \
 		obj/RowBuilder.o \
 		obj/sha1.o \
+		obj/sha256.o \
 		obj/Table.o \
 		obj/WireType.o \
                 obj/Distributer.o \
@@ -137,3 +138,4 @@ clean:
 	-$(RM) $(KIT_NAME)
 	-$(RM) $(KIT_NAME).tgz
 	-@echo ' '
+# DO NOT DELETE

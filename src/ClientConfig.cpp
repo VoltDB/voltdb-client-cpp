@@ -67,25 +67,26 @@ public:
 
     ClientConfig::ClientConfig(
             std::string username,
-            std::string password) :
+            std::string password, ClientAuthHashScheme scheme) :
             m_username(username), m_password(password), m_listener(reinterpret_cast<StatusListener*>(NULL)),
-            m_maxOutstandingRequests(3000){
-
+            m_maxOutstandingRequests(3000), m_hashScheme(scheme) {
     }
     ClientConfig::ClientConfig(
             std::string username,
             std::string password,
-            StatusListener *listener) :
+            StatusListener *listener, ClientAuthHashScheme scheme) :
             m_username(username), m_password(password), m_listener(new DummyStatusListener(listener)),
-            m_maxOutstandingRequests(3000){
+            m_maxOutstandingRequests(3000), m_hashScheme(scheme) {
 
+        m_hashScheme = HASH_SHA256;
     }
     ClientConfig::ClientConfig(
             std::string username,
             std::string password,
-            boost::shared_ptr<StatusListener> listener) :
+            boost::shared_ptr<StatusListener> listener, ClientAuthHashScheme scheme) :
                 m_username(username), m_password(password), m_listener(listener),
-                m_maxOutstandingRequests(3000) {
+                m_maxOutstandingRequests(3000), m_hashScheme(scheme) {
+        m_hashScheme = HASH_SHA256;
     }
 }
 
