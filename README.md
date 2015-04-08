@@ -18,7 +18,7 @@ New Features in V5.2
 You can now use SHA-256 to hash password for authentication request. V5.2 onward
 server is required. The default is SHA-1. To use SHA-256 create client config as
 ```C++
-voltdb::ClientConfig config("myusername", "mypassword", voltdb::HASH_SHA256);</code>
+voltdb::ClientConfig config("myusername", "mypassword", voltdb::HASH_SHA256);
 voltdb::Client client = voltdb::Client::create(config);
 ```
 
