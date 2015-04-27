@@ -120,7 +120,7 @@ public:
 
     /*
      * If one of the run family of methods is running on another thread, this
-     * method will instruct it to exit as soon as it finishes it's current
+     * method will instruct it to exit as soon as it finishes it's current 
      * immediate task. If the thread in the run method is blocked/idle, then
      * it will return immediately.
      */
@@ -145,6 +145,11 @@ private:
      * Updates procedures and topology information for transaction routing algorithm
      */
     void updateHashinator();
+
+    /*
+     * Calls a volt procedure to subscribe to topology notifications
+     */
+    void subscribeToTopologyNotifications();
 
     /*
      * Get the buffered event based on transaction routing algorithm
@@ -173,10 +178,10 @@ private:
     BEVToCallbackMap m_callbacks;
     boost::shared_ptr<voltdb::StatusListener> m_listener;
     bool m_invocationBlockedOnBackpressure;
-    bool m_loopBreakRequested;
+    boost::atomic<bool> m_loopBreakRequested;
     bool m_isDraining;
     bool m_instanceIdIsSet;
-    int32_t m_outstandingRequests;
+    boost::atomic<int32_t> m_outstandingRequests;
     //Identifier of the database instance this client is connected to
     int64_t m_clusterStartTime;
     int32_t m_leaderAddress;
@@ -199,6 +204,7 @@ private:
 
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;
+    static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
 };
 }
 #endif /* VOLTDB_CLIENTIMPL_H_ */

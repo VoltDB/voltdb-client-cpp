@@ -407,6 +407,14 @@ public:
     int32_t capacity() {
         return m_capacity;
     }
+
+    bool operator!=(const ByteBuffer& other) {
+        bool isEqual = (m_capacity == other.m_capacity);
+        isEqual = (isEqual && (memcmp(m_buffer, other.m_buffer, m_capacity) == 0));
+
+        return !isEqual;
+    }
+
 private:
     ByteBuffer& operator = (const ByteBuffer& other) {
         m_buffer = other.m_buffer;
@@ -490,6 +498,7 @@ public:
         m_buffer = other.m_buffer;
         m_position = other.m_position;
         m_limit = other.m_limit;
+        m_capacity = other.m_capacity;
         return *this;
     }
 

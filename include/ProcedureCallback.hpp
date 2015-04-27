@@ -33,6 +33,9 @@ namespace voltdb {
  */
 class ProcedureCallback {
 public:
+
+    enum AbandonReason { NOT_ABANDONED, TOO_BUSY };
+
     /*
      * Invoked when a response to an invocation is available or
      * the connection to the node the invocation was sent to was lost.
@@ -43,6 +46,7 @@ public:
      * @return true if the event loop should break after invoking this callback, false otherwise
      */
     virtual bool callback(InvocationResponse response) throw (voltdb::Exception) = 0;
+    virtual void abandon(AbandonReason reason) {}
     virtual ~ProcedureCallback() {}
 };
 }
