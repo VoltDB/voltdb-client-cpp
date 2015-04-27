@@ -1,5 +1,5 @@
-This list includes only software that is linked/compiled with the VoltDB C++ client library and 
-is distributed with that library (i.e., included in the VoltDB clientapi repository). Additional 
+This list includes only software that is linked/compiled with the VoltDB C++ client library and
+is distributed with that library (i.e., included in the VoltDB clientapi repository). Additional
 tools may be needed to build and test the VoltDB C++ client library.
 
 ================================================================================
@@ -38,7 +38,7 @@ By Steve Reid <sreid@sea-to-sky.net>
 /* this file is in the public domain */
 /*
 -----------------
-Modified 7/98 
+Modified 7/98
 By James H. Brown <jbrown@burgoyne.com>
 Still 100% Public Domain
 
@@ -108,7 +108,7 @@ modification, are permitted provided that the following conditions are met:
 
    this list of conditions and the following disclaimer.
 
-   
+
 
  * Redistributions in binary form must reproduce the above copyright
 
@@ -116,7 +116,7 @@ modification, are permitted provided that the following conditions are met:
 
    documentation and/or other materials provided with the distribution.
 
-   
+
 
  * Neither the name Tomasz Sowa nor the names of contributors to this
 
@@ -177,12 +177,12 @@ H-store (for CPP byte buffer code)
  */
  ================================================================================
  CPPUnit
- 
+
  This library is released under the GNU Lesser General Public License.
- 
+
  ================================================================================
  Note that the CPP client api tests require all of the VoltDB Community Edition and its dependencies.
- 
+
  ================================================================================
  Licenses referred to by some above package license texts
 ================================================================================
@@ -647,3 +647,6 @@ DAMAGES.
                      END OF TERMS AND CONDITIONS
 
 
+=========================================================================
+// MurmurHash3 was written by Austin Appleby, and is placed in the public
+// domain. The author hereby disclaims copyright to this source code.
