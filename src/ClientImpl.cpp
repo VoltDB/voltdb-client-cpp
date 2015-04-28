@@ -33,6 +33,7 @@
 #include <sstream>
 
 
+
 #define HIGH_WATERMARK 1024 * 1024 * 55
 #define RECONNECT_INTERVAL 10
 
@@ -347,6 +348,7 @@ private:
 
 void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException, voltdb::LibEventException){
 
+
     std::stringstream ss;
     ss << "ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port;
     logMessage(ClientLogger::INFO, ss.str());
@@ -391,6 +393,7 @@ void ClientImpl::initiateAuthentication(PendingConnection* pc, struct buffereven
         }
 
 void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::Exception, voltdb::ConnectException){
+
     logMessage(ClientLogger::DEBUG, "ClientImpl::finalizeAuthentication");
 
     FreeBEVOnFailure protector(bev);
@@ -428,6 +431,7 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
                voltdb::regularReadCallback,
                voltdb::regularWriteCallback,
                voltdb::regularEventCallback, this);
+
         {
             boost::mutex::scoped_lock lock(m_pendingConnectionLock);
             for (std::list<PendingConnectionSPtr>::iterator i = m_pendingConnectionList.begin(); i != m_pendingConnectionList.end(); ++i) {
@@ -458,6 +462,7 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
                 std::cerr << "Status listener threw exception on connection active: " << e.what() << std::endl;
             }
         }
+
     }
     else {
 
@@ -474,11 +479,12 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
 }
 
 void ClientImpl::createConnection(const std::string& hostname, const unsigned short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+
     std::stringstream ss;
     ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
     logMessage(ClientLogger::INFO, ss.str());
 
-	PendingConnectionSPtr pc(new PendingConnection(hostname, port, m_base, this));
+    PendingConnectionSPtr pc(new PendingConnection(hostname, port, m_base, this));
     initiateConnection(pc);
 
     if (event_base_dispatch(m_base) == -1) {
@@ -539,7 +545,6 @@ void ClientImpl::createPendingConnection(const std::string &hostname, const unsi
 
     event_base_once(m_base, -1, EV_TIMEOUT, reconnectCallback, this, &tv);
 }
-
 
 
 /*
@@ -746,6 +751,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
 void ClientImpl::runOnce() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException) {
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::runOnce");
+
     if (m_bevs.empty() && m_pendingConnectionSize.load(boost::memory_order_consume) <= 0) {
         throw voltdb::NoConnectionsException();
     }

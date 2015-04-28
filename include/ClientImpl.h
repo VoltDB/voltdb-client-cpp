@@ -120,7 +120,7 @@ public:
 
     /*
      * If one of the run family of methods is running on another thread, this
-     * method will instruct it to exit as soon as it finishes it's current 
+     * method will instruct it to exit as soon as it finishes it's current
      * immediate task. If the thread in the run method is blocked/idle, then
      * it will return immediately.
      */
@@ -133,6 +133,7 @@ public:
     bool getClientAffinity(){return m_useClientAffinity;}
 
     int32_t outstandingRequests() const {return m_outstandingRequests;}
+
     void setLoggerCallback(ClientLogger *pLogger) { m_pLogger = pLogger;}
 
 private:
