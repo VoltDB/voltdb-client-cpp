@@ -1,5 +1,5 @@
 /* This file is part of VoltDB.
- * Copyright (C) 2008-2013 VoltDB Inc.
+ * Copyright (C) 2008-2015 VoltDB Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -21,12 +21,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+package scratchpad;
+
 import org.voltdb.*;
 import org.voltdb.client.*;
 
-import org.voltdb.*;
 import org.voltdb.VoltTable.ColumnInfo;
-import java.io.IOException;
 import java.nio.*;
 import java.nio.channels.*;
 import java.net.*;
@@ -42,12 +42,13 @@ public class GenerateTestFiles {
     public static void main(String[] args) throws Exception {
         ServerSocketChannel ssc = ServerSocketChannel.open();
         ssc.socket().bind(new InetSocketAddress("localhost", 21212));
-        final org.voltdb.client.Client client = ClientFactory.createClient();
+        ClientConfig config = new ClientConfig("hello", "world", (ClientStatusListenerExt )null, ClientAuthHashScheme.HASH_SHA256);
+        final org.voltdb.client.Client client = ClientFactory.createClient(config);
         Thread clientThread = new Thread() {
             @Override
             public void run() {
                 try {
-                    client.createConnection( "localhost", "hello", "world");
+                    client.createConnection( "localhost", 21212);
                     client.callProcedure("Insert", "Hello", "World", "English");
                     try {
                         client.callProcedure("Insert", "Hello", "World", "English");
@@ -70,8 +71,46 @@ public class GenerateTestFiles {
         sc.configureBlocking(true);
         int read = sc.read(message);
         message.flip();
-        FileOutputStream fos = new FileOutputStream("authentication_request.msg");
+        FileOutputStream fos = new FileOutputStream("authentication_request_sha256.msg");
         fos.write(message.array(), 0, message.remaining());
+        fos.flush();
+        fos.close();
+
+        ssc.close();
+
+        ssc = ServerSocketChannel.open();
+        ssc.socket().bind(new InetSocketAddress("localhost", 21212));
+        config = new ClientConfig("hello", "world", (ClientStatusListenerExt )null, ClientAuthHashScheme.HASH_SHA1);
+        final org.voltdb.client.Client oclient = ClientFactory.createClient(config);
+        Thread oclientThread = new Thread() {
+            @Override
+            public void run() {
+                try {
+                    oclient.createConnection( "localhost", 21212);
+                    oclient.callProcedure("Insert", "Hello", "World", "English");
+                    try {
+                        oclient.callProcedure("Insert", "Hello", "World", "English");
+                    } catch (Exception e) {
+
+                    }
+                    oclient.callProcedure("Select", "English");
+                    oclient.callProcedure(new NullCallback(), "@Shutdown");
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        };
+        oclientThread.setDaemon(true);
+        oclientThread.start();
+        sc = ssc.accept();
+        sc.socket().setTcpNoDelay(true);
+        ByteBuffer omessage = ByteBuffer.allocate(8096);
+        sc.configureBlocking(true);
+        read = sc.read(omessage);
+        omessage.flip();
+        fos = new FileOutputStream("authentication_request.msg");
+        fos.write(omessage.array(), 0, omessage.remaining());
         fos.flush();
         fos.close();
 
@@ -94,6 +133,7 @@ public class GenerateTestFiles {
         fos.write(message.array(), 0, message.remaining());
         fos.flush();
         fos.close();
+        System.exit(0);
 
         sc.write(message);
         message.clear();
@@ -175,7 +215,7 @@ public class GenerateTestFiles {
             public void run() {
                 try {
                     org.voltdb.client.Client newClient = ClientFactory.createClient();
-                    newClient.createConnection( "localhost", "hello", "world");
+                    newClient.createConnection( "localhost", 21212);
                     String strings[] = new String[] { "oh", "noes" };
                     byte bytes[] = new byte[] { 22, 33, 44 };
                     short shorts[] = new short[] { 22, 33, 44 };
@@ -224,8 +264,10 @@ public class GenerateTestFiles {
         vt.addRow( 0, "", 2, 4, 5, new TimestampType(44), new BigDecimal("3.1459"));
         vt.addRow( 0, null, 2, 4, 5, null, null);
         vt.addRow( null, "woobie", null, null, null, new TimestampType(44), new BigDecimal("3.1459"));
-        FastSerializer fs = new FastSerializer();
-        fs.writeObject(vt);
+        ByteBuffer bb = ByteBuffer.allocate(vt.getSerializedSize());
+        vt.flattenToBuffer(bb);
+        FastSerializer fs = new FastSerializer(vt.getSerializedSize());
+        fs.write(bb);
         fos = new FileOutputStream("serialized_table.bin");
         fos.write(fs.getBytes());
         fos.flush();

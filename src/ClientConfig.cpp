@@ -1,5 +1,5 @@
 /* This file is part of VoltDB.
- * Copyright (C) 2008-2013 VoltDB Inc.
+ * Copyright (C) 2008-2015 VoltDB Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -67,25 +67,26 @@ public:
 
     ClientConfig::ClientConfig(
             std::string username,
-            std::string password) :
+            std::string password, ClientAuthHashScheme scheme) :
             m_username(username), m_password(password), m_listener(reinterpret_cast<StatusListener*>(NULL)),
-            m_maxOutstandingRequests(3000){
-
+            m_maxOutstandingRequests(3000), m_hashScheme(scheme) {
     }
     ClientConfig::ClientConfig(
             std::string username,
             std::string password,
-            StatusListener *listener) :
+            StatusListener *listener, ClientAuthHashScheme scheme) :
             m_username(username), m_password(password), m_listener(new DummyStatusListener(listener)),
-            m_maxOutstandingRequests(3000){
+            m_maxOutstandingRequests(3000), m_hashScheme(scheme) {
 
+        m_hashScheme = HASH_SHA256;
     }
     ClientConfig::ClientConfig(
             std::string username,
             std::string password,
-            boost::shared_ptr<StatusListener> listener) :
+            boost::shared_ptr<StatusListener> listener, ClientAuthHashScheme scheme) :
                 m_username(username), m_password(password), m_listener(listener),
-                m_maxOutstandingRequests(3000) {
+                m_maxOutstandingRequests(3000), m_hashScheme(scheme) {
+        m_hashScheme = HASH_SHA256;
     }
 }
 
