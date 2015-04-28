@@ -49,6 +49,11 @@ public:
     ~ClientAsioImpl();
 
     ClientAsioImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException);
+    ClientAsioImpl(ClientConfig config, const size_t threadPoolSize) throw(voltdb::Exception, voltdb::LibEventException);
+
+    void setAffinityEnabled(const bool enabled) {
+        m_affinityEnabled = enabled;
+    }
 private:
 
     boost::shared_ptr<ClientAsioHandler> routeProcedure(Procedure &proc, SharedByteBuffer &sbb);
@@ -66,6 +71,8 @@ private:
     unsigned char m_passwordHash[20];
 
     Distributer  m_distributer;
+
+    bool m_affinityEnabled;
 };
 
 class ClientAsioHandler {
@@ -85,6 +92,8 @@ private:
     bool isOpen() const {return m_socket.is_open();}
 
     boost::asio::io_service& m_service;
+    boost::asio::strand m_wstrand;
+    boost::asio::strand m_rstrand;
     boost::asio::ip::tcp::socket m_socket;
 
     const std::string m_username;

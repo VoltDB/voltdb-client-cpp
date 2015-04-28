@@ -143,6 +143,13 @@ int Distributer::getHostIdByPartitionId(int partitionId)
     return it->second;
 }
 
+void Distributer::handleTopologyNotification(const std::vector<voltdb::Table>& t){
+    // If The savedTopoTable is not the same as our notified one, we have to update the hashinator
+    if (m_savedTopoTable != t[0]) {
+        updateAffinityTopology(t);
+        debug_msg("updateAffinityTopology after notification");
+    }
+}
 
 void Distributer::updateAffinityTopology(const std::vector<voltdb::Table>& topoTable){
 //    Partition, Sites, Leader
@@ -196,6 +203,8 @@ void Distributer::updateAffinityTopology(const std::vector<voltdb::Table>& topoT
 
     //mark update status as finished
     m_isUpdating = false;
+
+    m_savedTopoTable = topoTable[0];
 }
 
 void Distributer::updateProcedurePartitioning(const std::vector<voltdb::Table>& procInfoTable){

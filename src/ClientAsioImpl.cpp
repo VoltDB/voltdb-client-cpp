@@ -94,9 +94,9 @@ throw (voltdb::Exception, voltdb::ConnectException) {
     m_socket.set_option(option);
 
 // 6. Schedule for next inokation responce header read
-    boost::shared_array<char> hdr = boost::shared_array<char>(new char[4]);
+    boost::shared_array<char> hdr = boost::shared_array<char>(new char[1024*4]);
     boost::asio::async_read(m_socket, boost::asio::buffer(hdr.get(), 4),
-                        boost::bind(&ClientAsioHandler::handleReadHeader, this, boost::asio::placeholders::error, hdr));
+                        m_rstrand.wrap(boost::bind(&ClientAsioHandler::handleReadHeader, this, boost::asio::placeholders::error, hdr)));
 
 // 7. return current connection host ID, used by hashinator to route requests
     return r.hostId();
@@ -129,9 +129,9 @@ void ClientAsioHandler::handleRead(const boost::system::error_code& error, boost
        }
 
        // schedule for next response header read
-       boost::shared_array<char> hdr = boost::shared_array<char>(new char[4]);
+       boost::shared_array<char> hdr = boost::shared_array<char>(new char[1024*4]);
        boost::asio::async_read(m_socket, boost::asio::buffer(hdr.get(), 4),
-                        boost::bind(&ClientAsioHandler::handleReadHeader, this, boost::asio::placeholders::error, hdr));
+                        m_rstrand.wrap(boost::bind(&ClientAsioHandler::handleReadHeader, this, boost::asio::placeholders::error, hdr)));
     } else {
         //std::cout << "ClientAsioImpl handleRead error" << std::endl;
         doClose();
@@ -147,9 +147,9 @@ void ClientAsioHandler::handleReadHeader(const boost::system::error_code& error,
         ByteBuffer lengthBuffer(hdr.get(), 4);
         const size_t mgsLength = static_cast<size_t>(lengthBuffer.getInt32());
         // schedule for the message body read
-        boost::shared_array<char> msg = boost::shared_array<char>(new char[mgsLength]);
+        boost::shared_array<char> msg = (mgsLength > 1024*4)? boost::shared_array<char>(new char[mgsLength]): hdr;
         boost::asio::async_read(m_socket, boost::asio::buffer(msg.get(), mgsLength),
-                            boost::bind(&ClientAsioHandler::handleRead, this, boost::asio::placeholders::error, msg, mgsLength));
+                            m_rstrand.wrap(boost::bind(&ClientAsioHandler::handleRead, this, boost::asio::placeholders::error, msg, mgsLength)));
     } else {
         //std::cout << "ClientAsioImpl handleReadHeader error" << std::endl;
         doClose();
@@ -167,7 +167,7 @@ void ClientAsioHandler::doWrite(SharedByteBuffer& sbb, boost::shared_ptr<Procedu
         m_callbacks[clientData] = callback;
     }
     boost::asio::async_write(m_socket, boost::asio::buffer(sbb.bytes(), sbb.remaining()),
-                         boost::bind(&ClientAsioHandler::handleWrite, this, boost::asio::placeholders::error, sbb));
+                         m_wstrand.wrap(boost::bind(&ClientAsioHandler::handleWrite, this, boost::asio::placeholders::error, sbb)));
 }
 
 void ClientAsioHandler::doClose() {
@@ -183,7 +183,7 @@ void ClientAsioHandler::doClose() {
 }
 
 ClientAsioHandler::ClientAsioHandler(boost::asio::io_service& service, const std::string& username, const unsigned char* passwordHash): 
-m_service(service), m_socket(service), m_username(username), m_passwordHash(passwordHash){
+m_service(service), m_wstrand(service), m_rstrand(service), m_socket(service), m_username(username), m_passwordHash(passwordHash){
 }
 
 
@@ -232,7 +232,7 @@ throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedP
     proc.serializeTo(&sbb, clientData);
 
 // Try to route the procedure
-    boost::shared_ptr<ClientAsioHandler> handler = routeProcedure(proc, sbb);
+    boost::shared_ptr<ClientAsioHandler> handler(routeProcedure(proc, sbb));
     size_t nextConnectionIndex = m_nextConnectionIndex.fetch_add(1, boost::memory_order_relaxed);
 
 // If routing did not work just do a roundrobin
@@ -256,23 +256,42 @@ ClientAsioImpl::~ClientAsioImpl() {
 }
 
 ClientAsioImpl::ClientAsioImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException):
-m_work(boost::in_place(boost::ref(m_service))), m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0), m_username(config.m_username) {
+m_work(boost::in_place(boost::ref(m_service))),
+m_nextRequestId(INT64_MIN),
+m_nextConnectionIndex(0),
+m_username(config.m_username),
+m_affinityEnabled(true) {
     SHA1_CTX context;
     SHA1_Init(&context);
     SHA1_Update(&context, reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size());
     SHA1_Final(&context, m_passwordHash);
 
     m_ioThreads.create_thread(boost::bind(&boost::asio::io_service::run, &m_service));
-    m_ioThreads.create_thread(boost::bind(&boost::asio::io_service::run, &m_service));
+}
+
+ClientAsioImpl::ClientAsioImpl(ClientConfig config, const size_t threadPoolSize) throw(voltdb::Exception, voltdb::LibEventException):
+m_work(boost::in_place(boost::ref(m_service))),
+m_nextRequestId(INT64_MIN),
+m_nextConnectionIndex(0),
+m_username(config.m_username),
+m_affinityEnabled(true) {
+    SHA_CTX context;
+    SHA1_Init(&context);
+    SHA1_Update(&context, reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size());
+    SHA1_Final(m_passwordHash,&context);
+
+    for (size_t i = 0 ; i<threadPoolSize; i++) {
+        m_ioThreads.create_thread(boost::bind(&boost::asio::io_service::run, &m_service));
+    }
 }
 
 /*
  *Callback for async topology update for transaction routing algorithm
  */
-class TopoUpdateCallback : public voltdb::ProcedureCallback
+class TopoUpdateCallbackAsio : public voltdb::ProcedureCallback
 {
 public:
-    TopoUpdateCallback(Distributer *dist):m_dist(dist){}
+    TopoUpdateCallbackAsio(Distributer *dist):m_dist(dist){}
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (!response.failure()){
@@ -286,10 +305,10 @@ public:
 /*
  * Callback for ("@SystemCatalog", "PROCEDURES")
  */
-class ProcUpdateCallback : public voltdb::ProcedureCallback
+class ProcUpdateCallbackAsio : public voltdb::ProcedureCallback
 {
 public:
-    ProcUpdateCallback(Distributer *dist):m_dist(dist){}
+    ProcUpdateCallbackAsio(Distributer *dist):m_dist(dist){}
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (!response.failure()){
@@ -305,18 +324,19 @@ public:
 
 
 void ClientAsioImpl::updateHashinator(){
+    if (!m_affinityEnabled) return;
     m_distributer.startUpdate();
     voltdb::Procedure systemCatalogProc("@SystemCatalog");
     voltdb::ParameterSet* params = systemCatalogProc.params();
     params->addString("PROCEDURES");
 
-    boost::shared_ptr<ProcUpdateCallback> procCallback(new ProcUpdateCallback(&m_distributer));
+    boost::shared_ptr<voltdb::ProcedureCallback> procCallback(new ProcUpdateCallbackAsio(&m_distributer));
 
     voltdb::Procedure statisticsProc("@Statistics");
     params = statisticsProc.params();
     params->addString("TOPO").addInt32(0);
 
-    boost::shared_ptr<TopoUpdateCallback> topoCallback(new TopoUpdateCallback(&m_distributer));
+    boost::shared_ptr<voltdb::ProcedureCallback> topoCallback(new TopoUpdateCallbackAsio(&m_distributer));
 
     invoke(systemCatalogProc, procCallback);
     invoke(statisticsProc, topoCallback);
