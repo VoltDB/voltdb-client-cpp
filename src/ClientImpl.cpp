@@ -641,9 +641,16 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
     }
 
     if (m_outstandingRequests >= m_maxOutstandingRequests) {
-        // We are overloaded, we need to reject traffic and notify the caller
+    	if (m_listener.get() != NULL) {
+			try {
+				 m_listener->backpressure(true);
+			} catch (const std::exception& e) {
+				std::cerr << "Exception thrown on invocation of backpressure callback: " << e.what() << std::endl;
+			}
+		}
+    	// We are overloaded, we need to reject traffic and notify the caller
         callback->abandon(ProcedureCallback::TOO_BUSY);
-	return;
+        return;
     }
 
     //do not call the procedures if hashinator is in the LEGACY mode
