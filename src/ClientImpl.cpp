@@ -85,6 +85,25 @@ public:
     ClientImpl* m_ci;
 };
 
+class TopologyNotificationCallback : public voltdb::ProcedureCallback
+{
+public:
+    TopologyNotificationCallback(Distributer *dist):m_dist(dist){}
+    bool callback(InvocationResponse response) throw (voltdb::Exception)
+    {
+        if (response.failure()){
+            //TODO:log
+            return false;
+        }
+        m_dist->handleTopologyNotification(response.results());
+        return true;
+    }
+
+    void abandon(AbandonReason reason) {}
+ private:
+    Distributer *m_dist;
+};
+
 typedef boost::shared_ptr<PendingConnection> PendingConnectionSPtr;
 
 class CxnContext {
@@ -259,6 +278,8 @@ void initLibevent() {
     }
 }
 
+const int64_t ClientImpl::VOLT_NOTIFICATION_MAGIC_NUMBER(9223372036854775806);
+
 ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException) :
         m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0), m_listener(config.m_listener),
         m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false), m_isDraining(false),
@@ -302,6 +323,10 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
     } else {
         m_wakeupPipe[1] = -1;
     }
+    SHA1_CTX context;
+    SHA1_Init(&context);
+    SHA1_Update( &context, reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size());
+    SHA1_Final(&context, m_passwordHash);
 }
 
 class FreeBEVOnFailure {
@@ -396,6 +421,11 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
                    new CxnContext(pc->m_hostname, pc->m_port));
         boost::shared_ptr<CallbackMap> callbackMap(new CallbackMap());
         m_callbacks[bev] = callbackMap;
+
+        //Add callback for Topology Notification to map for magic volt session id
+        boost::shared_ptr<TopologyNotificationCallback> topoNotificationCallback(new TopologyNotificationCallback(&m_distributer));
+        callbackMap->insert(std::pair< int64_t, boost::shared_ptr<ProcedureCallback> >(VOLT_NOTIFICATION_MAGIC_NUMBER, topoNotificationCallback));
+
         bufferevent_setcb(
                bev,
                voltdb::regularReadCallback,
@@ -414,8 +444,10 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
         }
 
         //update topology info and procedures info
-        if (m_useClientAffinity)
+        if (m_useClientAffinity) {
             updateHashinator();
+            subscribeToTopologyNotifications();
+        }
 
     	std::stringstream ss;
     	ss << "connectionActive " << m_contexts[bev]->m_name << ":" << m_contexts[bev]->m_port ;
@@ -528,6 +560,9 @@ public:
         (*m_responseOut) = response;
         return true;
     }
+
+    void abandon(AbandonReason reason) {}
+
 private:
     InvocationResponse *m_responseOut;
 };
@@ -563,6 +598,9 @@ public:
     bool callback(InvocationResponse response) throw (voltdb::Exception) {
         return m_callback->callback(response);
     }
+
+    void abandon(AbandonReason reason) {}
+
 };
 
 void ClientImpl::invoke(Procedure &proc, ProcedureCallback *callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::ElasticModeMismatchException) {
@@ -602,6 +640,19 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
         throw voltdb::NoConnectionsException();
     }
 
+    if (m_outstandingRequests >= m_maxOutstandingRequests) {
+    	if (m_listener.get() != NULL) {
+			try {
+				 m_listener->backpressure(true);
+			} catch (const std::exception& e) {
+				std::cerr << "Exception thrown on invocation of backpressure callback: " << e.what() << std::endl;
+			}
+		}
+    	// We are overloaded, we need to reject traffic and notify the caller
+        callback->abandon(ProcedureCallback::TOO_BUSY);
+        return;
+    }
+
     //do not call the procedures if hashinator is in the LEGACY mode
     if (!m_distributer.isUpdating() && !m_distributer.isElastic()) {
         //todo: need to remove the connection
@@ -639,7 +690,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
             break;
         }
 
-        //Assume backpressure if the number of outstanding requests is too large
+        //Assume backpressure if the number of outstanding requests is too large, i.e. leave bev == NULL
         if (m_outstandingRequests <= m_maxOutstandingRequests) {
             for (size_t ii = 0; ii < m_bevs.size(); ii++) {
                 bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
@@ -685,7 +736,9 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
     //elastic scalability is disabled
     if (m_useClientAffinity && !m_distributer.isUpdating()) {
         struct bufferevent *routed_bev = routeProcedure(proc, sbb);
-        if (routed_bev) bev = routed_bev;
+        // Check if the routed_bev is valid and has not been removed due to lost connection
+        if ((routed_bev) && (m_callbacks.find(routed_bev) != m_callbacks.end()))
+            bev = routed_bev;
     }
 
     struct evbuffer *evbuf = bufferevent_get_output(bev);
@@ -756,26 +809,39 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
             InvocationResponse response(messageBytes, context->m_nextLength);
             boost::shared_ptr<CallbackMap> callbackMap = m_callbacks[bev];
             CallbackMap::iterator i = callbackMap->find(response.clientData());
-            try {
-                m_ignoreBackpressure = true;
-                breakEventLoop |= i->second->callback(response);
-                m_ignoreBackpressure = false;
-            } catch (std::exception &e) {
-                if (m_listener.get() != NULL) {
-                    try {
-                        m_ignoreBackpressure = true;
-                        breakEventLoop |= m_listener->uncaughtException( e, i->second, response);
-                        m_ignoreBackpressure = false;
-                    } catch (const std::exception& e) {
-                        std::cerr << "Uncaught exception handler threw exception: " << e.what() << std::endl;
+            if(i != callbackMap->end()){
+                try {
+                    m_ignoreBackpressure = true;
+                    breakEventLoop |= i->second->callback(response);
+                    m_ignoreBackpressure = false;
+                } catch (std::exception &e) {
+                    if (m_listener.get() != NULL) {
+                        try {
+                            m_ignoreBackpressure = true;
+                            breakEventLoop |= m_listener->uncaughtException( e, i->second, response);
+                            m_ignoreBackpressure = false;
+                        } catch (const std::exception& e) {
+                            std::cerr << "Uncaught exception handler threw exception: " << e.what() << std::endl;
+                        }
                     }
                 }
+                /*
+                 * When Volt sends us out a notification, it comes with the ClientData
+                 * filled in with a known 64-bit number.
+                 * In this case, we don't want to remove the callback. We need a static
+                 * callback here to continually process notifications.
+                 */
+                if(response.clientData() != VOLT_NOTIFICATION_MAGIC_NUMBER){
+                    callbackMap->erase(i);
+                    m_outstandingRequests--;
+                }
             }
-            callbackMap->erase(i);
-            m_outstandingRequests--;
 
             //If the client is draining and it just drained the last request, break the loop
             if (m_isDraining && m_outstandingRequests == 0) {
+                breakEventLoop = true;
+            } else if (m_loopBreakRequested && (m_outstandingRequests <= m_maxOutstandingRequests)) {
+                // ignore break requested until we have too many outstanding requests
                 breakEventLoop = true;
             }
         } else {
@@ -784,6 +850,7 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
             } else {
                 bufferevent_setwatermark( bev, EV_READ, static_cast<size_t>(context->m_nextLength), HIGH_WATERMARK);
             }
+            breakEventLoop |= (m_loopBreakRequested && (m_outstandingRequests <= m_maxOutstandingRequests));
             break;
         }
     }
@@ -933,6 +1000,25 @@ public:
  private:
     Distributer *m_dist;
 };
+
+class SubscribeCallback : public voltdb::ProcedureCallback
+{
+public:
+    SubscribeCallback(Distributer *dist):m_dist(dist){}
+    bool callback(InvocationResponse response) throw (voltdb::Exception)
+    {
+        if (response.failure()){
+            //TODO:log
+            std::cout << "subscribeToTopoNotifications FAILED" << std::endl;
+            return false;
+        }
+        return true;
+    }
+
+ private:
+    Distributer *m_dist;
+};
+
 /*
  * Callback for ("@SystemCatalog", "PROCEDURES")
  */
@@ -980,9 +1066,24 @@ void ClientImpl::updateHashinator(){
     invoke(statisticsProc, topoCallback);
 }
 
+void ClientImpl::subscribeToTopologyNotifications(){
+    std::vector<voltdb::Parameter> parameterTypes(1);
+    parameterTypes[0] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
+    //parameterTypes[1] = voltdb::Parameter(voltdb::WIRE_TYPE_INTEGER);
+    voltdb::Procedure statisticsProc("@Subscribe", parameterTypes);
+    voltdb::ParameterSet* params = statisticsProc.params();
+    params->addString("TOPOLOGY");
+
+    boost::shared_ptr<SubscribeCallback> topoCallback(new SubscribeCallback(&m_distributer));
+
+    invoke(statisticsProc, topoCallback);
+}
+
 void ClientImpl::setClientAffinity(bool enable){
-    if(enable && !m_useClientAffinity && !m_bevs.empty())
+    if(enable && !m_useClientAffinity && !m_bevs.empty()) {
         updateHashinator();
+        subscribeToTopologyNotifications();
+    }
     m_useClientAffinity = enable;
 }
 

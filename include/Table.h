@@ -87,6 +87,14 @@ public:
      * the specified level of indentation before each line.
      */
     void toString(std::ostringstream &ostream, std::string indent) const;
+
+    void operator >> (std::ostream &ostream) const;
+
+    //ToDo: Implement operator==
+    bool operator!=(const Table& rhs) const;
+
+    Table(std::istream &istream);
+
 private:
     boost::shared_ptr<std::vector<voltdb::Column> > m_columns;
     int32_t m_rowStart;

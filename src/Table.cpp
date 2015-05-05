@@ -101,4 +101,37 @@ namespace voltdb {
             ostream << std::endl;
         }
     }
+
+    void Table::operator >> (std::ostream &ostream) const {
+
+        int32_t size = m_buffer.limit();
+        ostream.write((const char*)&size, sizeof(size));
+        if (size != 0) {
+            ostream.write(m_buffer.bytes(), size);
+        }
+    }
+
+    bool Table::operator!=(const Table& rhs) const {
+        // ToDo: Implement comparison ... byte comparison of buffer???
+        return m_buffer != rhs.m_buffer;
+    }
+
+    static voltdb::SharedByteBuffer readByteBuffer(std::istream &istream) {
+        int32_t size;
+        istream.read((char*)&size, sizeof(size));
+        if (size != 0) {
+            boost::shared_array<char> buffer(new char[size]);
+            istream.read(buffer.get(), size);
+            return voltdb::SharedByteBuffer(buffer, size);
+        } else {
+            return SharedByteBuffer();
+        }
+    }
+
+    Table::Table(std::istream &istream) {
+        voltdb::SharedByteBuffer buffer = readByteBuffer(istream);
+        if (buffer.limit() != 0) {
+            *this = Table(buffer);
+        }
+    }
 }
