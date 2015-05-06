@@ -1000,7 +1000,7 @@ public:
 class SubscribeCallback : public voltdb::ProcedureCallback
 {
 public:
-    SubscribeCallback(Distributer *dist):m_dist(dist){}
+    SubscribeCallback(){}
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()){
@@ -1010,9 +1010,6 @@ public:
         }
         return true;
     }
-
- private:
-    Distributer *m_dist;
 };
 
 /*
@@ -1070,7 +1067,7 @@ void ClientImpl::subscribeToTopologyNotifications(){
     voltdb::ParameterSet* params = statisticsProc.params();
     params->addString("TOPOLOGY");
 
-    boost::shared_ptr<SubscribeCallback> topoCallback(new SubscribeCallback(&m_distributer));
+    boost::shared_ptr<SubscribeCallback> topoCallback(new SubscribeCallback());
 
     invoke(statisticsProc, topoCallback);
 }
