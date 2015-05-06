@@ -303,6 +303,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
     if (!m_base) {
         throw voltdb::LibEventException();
     }
+    m_enableAbandon = config.m_enableAbandon;
     m_hashScheme = config.m_hashScheme;
     if (m_hashScheme == HASH_SHA1) {
         SHA1_CTX context;
@@ -645,8 +646,10 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
             }
         }
     	// We are overloaded, we need to reject traffic and notify the caller
-        callback->abandon(ProcedureCallback::TOO_BUSY);
-        return;
+        if (m_enableAbandon) {
+            callback->abandon(ProcedureCallback::TOO_BUSY);
+            return;
+        }
     }
 
     //do not call the procedures if hashinator is in the LEGACY mode

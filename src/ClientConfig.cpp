@@ -67,26 +67,23 @@ public:
 
     ClientConfig::ClientConfig(
             std::string username,
-            std::string password, ClientAuthHashScheme scheme) :
+            std::string password, ClientAuthHashScheme scheme, bool enableAbandon) :
             m_username(username), m_password(password), m_listener(reinterpret_cast<StatusListener*>(NULL)),
-            m_maxOutstandingRequests(3000), m_hashScheme(scheme) {
+            m_maxOutstandingRequests(3000), m_hashScheme(scheme), m_enableAbandon(enableAbandon) {
     }
     ClientConfig::ClientConfig(
             std::string username,
             std::string password,
-            StatusListener *listener, ClientAuthHashScheme scheme) :
+            StatusListener *listener, ClientAuthHashScheme scheme, bool enableAbandon) :
             m_username(username), m_password(password), m_listener(new DummyStatusListener(listener)),
-            m_maxOutstandingRequests(3000), m_hashScheme(scheme) {
-
-        m_hashScheme = HASH_SHA256;
+            m_maxOutstandingRequests(3000), m_hashScheme(scheme), m_enableAbandon(enableAbandon) {
     }
     ClientConfig::ClientConfig(
             std::string username,
             std::string password,
-            boost::shared_ptr<StatusListener> listener, ClientAuthHashScheme scheme) :
+            boost::shared_ptr<StatusListener> listener, ClientAuthHashScheme scheme, bool enableAbandon) :
                 m_username(username), m_password(password), m_listener(listener),
-                m_maxOutstandingRequests(3000), m_hashScheme(scheme) {
-        m_hashScheme = HASH_SHA256;
+                m_maxOutstandingRequests(3000), m_hashScheme(scheme), m_enableAbandon(enableAbandon) {
     }
 }
 

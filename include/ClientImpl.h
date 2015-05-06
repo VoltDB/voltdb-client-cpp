@@ -195,6 +195,8 @@ private:
     bool m_useClientAffinity;
     //Flag to be set if topology is changed: node disconnected/rejoined
     bool m_updateHashinator;
+    //If to use abandon in case of backpressure.
+    bool m_enableAbandon;
 
     std::list<boost::shared_ptr<PendingConnection> > m_pendingConnectionList;
     boost::atomic<size_t> m_pendingConnectionSize;
