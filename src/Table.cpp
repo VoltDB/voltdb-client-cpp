@@ -127,6 +127,19 @@ namespace voltdb {
         return (m_buffer == rhs.m_buffer);
     }
 
+    //Do easy checks first before heavyweight checks.
+    bool Table::operator!=(const Table& rhs) const {
+        if (this == &rhs) return false;
+        bool noteq = (this->rowCount() != rhs.rowCount() || this->columnCount() != rhs.columnCount());
+        if (noteq) return true;
+        //The column count maches amek sure they match.
+        for (size_t ii = 0; ii < m_columns->size(); ii++) {
+            if (m_columns->at(ii) != rhs.m_columns->at(ii)) return true;
+        }
+        //Is underlying buffer same?
+        return (m_buffer != rhs.m_buffer);
+    }
+
     static voltdb::SharedByteBuffer readByteBuffer(std::istream &istream) {
         int32_t size;
         istream.read((char*)&size, sizeof(size));

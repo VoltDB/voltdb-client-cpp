@@ -91,6 +91,7 @@ public:
     void operator >> (std::ostream &ostream) const;
 
     bool operator==(const Table& rhs) const;
+    bool operator!=(const Table& rhs) const;
 
     Table(std::istream &istream);
 

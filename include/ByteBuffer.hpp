@@ -414,6 +414,15 @@ public:
         return false;
     }
 
+    bool operator!=(const ByteBuffer& other) {
+        if (this == &other) return false;
+        bool noteq = (m_capacity != other.m_capacity || m_limit != other.m_limit);
+        if (!noteq) {
+            return (memcmp(m_buffer, other.m_buffer, m_limit) != 0);
+        }
+        return true;
+    }
+
 private:
     ByteBuffer& operator = (const ByteBuffer& other) {
         m_buffer = other.m_buffer;
