@@ -20,6 +20,8 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+#include <vector>
+
 #include "Table.h"
 #include "TableIterator.h"
 #include "Row.hpp"
@@ -111,9 +113,18 @@ namespace voltdb {
         }
     }
 
-    bool Table::operator!=(const Table& rhs) const {
-        // ToDo: Implement comparison ... byte comparison of buffer???
-        return m_buffer != rhs.m_buffer;
+    //Do easy checks first before heavyweight checks.
+    bool Table::operator==(const Table& rhs) const {
+        if (this == &rhs) return true;
+        bool eq = (this->rowCount() == rhs.rowCount() && this->columnCount() == rhs.columnCount());
+        if (!eq) return false;
+        //The column count maches amek sure they match.
+        for (size_t ii = 0; ii < m_columns->size(); ii++) {
+            if (m_columns->at(ii) == rhs.m_columns->at(ii)) continue;
+            return false;
+        }
+        //Is underlying buffer same?
+        return (m_buffer == rhs.m_buffer);
     }
 
     static voltdb::SharedByteBuffer readByteBuffer(std::istream &istream) {

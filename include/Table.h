@@ -90,8 +90,7 @@ public:
 
     void operator >> (std::ostream &ostream) const;
 
-    //ToDo: Implement operator==
-    bool operator!=(const Table& rhs) const;
+    bool operator==(const Table& rhs) const;
 
     Table(std::istream &istream);
 

@@ -273,8 +273,8 @@ public:
         char *data = getByReference(index + 4, length);
         return std::string(data, static_cast<uint32_t>(length));
     }
-    
-    bool getBytes(bool &wasNull, int32_t bufsize, uint8_t *out_value, int32_t *out_len) 
+
+    bool getBytes(bool &wasNull, int32_t bufsize, uint8_t *out_value, int32_t *out_len)
     throw (OverflowUnderflowException) {
         int32_t length = getInt32();
         *out_len = length;
@@ -288,7 +288,7 @@ public:
         memcpy(out_value, data, length);
         return true;
     }
-    bool getBytes(int32_t index, bool &wasNull, const int32_t bufsize, uint8_t *out_value, int32_t *out_len) 
+    bool getBytes(int32_t index, bool &wasNull, const int32_t bufsize, uint8_t *out_value, int32_t *out_len)
     throw (OverflowUnderflowException, IndexOutOfBoundsException) {
         int32_t length = getInt32(index);
         *out_len = length;
@@ -302,15 +302,15 @@ public:
         memcpy(out_value, data, length);
         return true;
     }
-    ByteBuffer& putBytes(const int32_t bufsize, const uint8_t *in_value) 
+    ByteBuffer& putBytes(const int32_t bufsize, const uint8_t *in_value)
     throw (OverflowUnderflowException) {
         assert(in_value  || bufsize==0);
         putInt32(bufsize);
         put((const char*)in_value, bufsize);
         return *this;
     }
-    ByteBuffer& putBytes(int32_t index, const int32_t bufsize, const uint8_t *in_value) 
-    throw (OverflowUnderflowException, IndexOutOfBoundsException) {        
+    ByteBuffer& putBytes(int32_t index, const int32_t bufsize, const uint8_t *in_value)
+    throw (OverflowUnderflowException, IndexOutOfBoundsException) {
         assert(in_value  || bufsize==0);
         putInt32(index, bufsize);
         put(index + 4, (const char*)in_value, bufsize);
@@ -397,9 +397,6 @@ public:
 
     ByteBuffer(const ByteBuffer &other) :
         m_buffer(other.m_buffer), m_position(other.m_position), m_capacity(other.m_capacity), m_limit(other.m_limit) {
-/*        if (m_buffer == NULL) {
-            throw NullPointerException();
-        }*/
     }
 
     virtual ~ByteBuffer() {}
@@ -408,11 +405,13 @@ public:
         return m_capacity;
     }
 
-    bool operator!=(const ByteBuffer& other) {
-        bool isEqual = (m_capacity == other.m_capacity);
-        isEqual = (isEqual && (memcmp(m_buffer, other.m_buffer, m_capacity) == 0));
-
-        return !isEqual;
+    bool operator==(const ByteBuffer& other) {
+        if (this == &other) return true;
+        bool eq = (m_capacity == other.m_capacity && m_limit == other.m_limit);
+        if (eq) {
+            return (memcmp(m_buffer, other.m_buffer, m_limit) == 0);
+        }
+        return false;
     }
 
 private:
