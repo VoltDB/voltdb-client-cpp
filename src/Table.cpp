@@ -118,11 +118,8 @@ namespace voltdb {
         if (this == &rhs) return true;
         bool eq = (this->rowCount() == rhs.rowCount() && this->columnCount() == rhs.columnCount());
         if (!eq) return false;
-        //The column count maches amek sure they match.
-        for (size_t ii = 0; ii < m_columns->size(); ii++) {
-            if (m_columns->at(ii) == rhs.m_columns->at(ii)) continue;
-            return false;
-        }
+        //Make sure all columns and their order matches.
+        if (m_columns != rhs.m_columns) return false;
         //Is underlying buffer same?
         return (m_buffer == rhs.m_buffer);
     }
@@ -132,10 +129,8 @@ namespace voltdb {
         if (this == &rhs) return false;
         bool noteq = (this->rowCount() != rhs.rowCount() || this->columnCount() != rhs.columnCount());
         if (noteq) return true;
-        //The column count maches amek sure they match.
-        for (size_t ii = 0; ii < m_columns->size(); ii++) {
-            if (m_columns->at(ii) != rhs.m_columns->at(ii)) return true;
-        }
+        //Make sure all columns and their order matches.
+        if (m_columns != rhs.m_columns) return true;
         //Is underlying buffer same?
         return (m_buffer != rhs.m_buffer);
     }
