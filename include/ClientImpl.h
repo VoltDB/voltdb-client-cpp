@@ -148,6 +148,11 @@ private:
     void updateHashinator();
 
     /*
+     * Calls a volt procedure to subscribe to topology notifications
+     */
+    void subscribeToTopologyNotifications();
+
+    /*
      * Get the buffered event based on transaction routing algorithm
      */
     struct bufferevent *routeProcedure(Procedure &proc, ScopedByteBuffer &sbb);
@@ -174,10 +179,10 @@ private:
     BEVToCallbackMap m_callbacks;
     boost::shared_ptr<voltdb::StatusListener> m_listener;
     bool m_invocationBlockedOnBackpressure;
-    bool m_loopBreakRequested;
+    boost::atomic<bool> m_loopBreakRequested;
     bool m_isDraining;
     bool m_instanceIdIsSet;
-    int32_t m_outstandingRequests;
+    boost::atomic<int32_t> m_outstandingRequests;
     //Identifier of the database instance this client is connected to
     int64_t m_clusterStartTime;
     int32_t m_leaderAddress;
@@ -190,6 +195,8 @@ private:
     bool m_useClientAffinity;
     //Flag to be set if topology is changed: node disconnected/rejoined
     bool m_updateHashinator;
+    //If to use abandon in case of backpressure.
+    bool m_enableAbandon;
 
     std::list<boost::shared_ptr<PendingConnection> > m_pendingConnectionList;
     boost::atomic<size_t> m_pendingConnectionSize;
@@ -200,6 +207,7 @@ private:
 
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;
+    static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
 };
 }
 #endif /* VOLTDB_CLIENTIMPL_H_ */

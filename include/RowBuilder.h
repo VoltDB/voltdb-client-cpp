@@ -81,7 +81,7 @@ public:
     }
     void addNull() {
         if (m_currentColumn > m_columns.size()) {
-            throw new ColumnMismatchException();
+            throw ColumnMismatchException();
         }
         switch (m_columns[m_currentColumn].m_type) {
         case WIRE_TYPE_BIGINT:

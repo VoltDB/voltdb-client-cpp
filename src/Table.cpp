@@ -20,6 +20,8 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+#include <vector>
+
 #include "Table.h"
 #include "TableIterator.h"
 #include "Row.hpp"
@@ -99,6 +101,56 @@ namespace voltdb {
             Row row = iter.next();
             row.toString(ostream, indent + "    ");
             ostream << std::endl;
+        }
+    }
+
+    void Table::operator >> (std::ostream &ostream) const {
+
+        int32_t size = m_buffer.limit();
+        ostream.write((const char*)&size, sizeof(size));
+        if (size != 0) {
+            ostream.write(m_buffer.bytes(), size);
+        }
+    }
+
+    //Do easy checks first before heavyweight checks.
+    bool Table::operator==(const Table& rhs) const {
+        if (this == &rhs) return true;
+        bool eq = (this->rowCount() == rhs.rowCount() && this->columnCount() == rhs.columnCount());
+        if (!eq) return false;
+        //Make sure all columns and their order matches.
+        if (m_columns != rhs.m_columns) return false;
+        //Is underlying buffer same?
+        return (m_buffer == rhs.m_buffer);
+    }
+
+    //Do easy checks first before heavyweight checks.
+    bool Table::operator!=(const Table& rhs) const {
+        if (this == &rhs) return false;
+        bool noteq = (this->rowCount() != rhs.rowCount() || this->columnCount() != rhs.columnCount());
+        if (noteq) return true;
+        //Make sure all columns and their order matches.
+        if (m_columns != rhs.m_columns) return true;
+        //Is underlying buffer same?
+        return (m_buffer != rhs.m_buffer);
+    }
+
+    static voltdb::SharedByteBuffer readByteBuffer(std::istream &istream) {
+        int32_t size;
+        istream.read((char*)&size, sizeof(size));
+        if (size != 0) {
+            boost::shared_array<char> buffer(new char[size]);
+            istream.read(buffer.get(), size);
+            return voltdb::SharedByteBuffer(buffer, size);
+        } else {
+            return SharedByteBuffer();
+        }
+    }
+
+    Table::Table(std::istream &istream) {
+        voltdb::SharedByteBuffer buffer = readByteBuffer(istream);
+        if (buffer.limit() != 0) {
+            *this = Table(buffer);
         }
     }
 }

@@ -189,6 +189,55 @@ public:
         return ostream.str();
     }
 
+
+    void operator >> (std::ostream &ostream) const {
+        ostream.write((const char*)&m_statusCode, sizeof(m_statusCode));
+        writeString(ostream, m_statusString);
+        ostream.write((const char*)&m_appStatusCode, sizeof(m_appStatusCode));
+        writeString(ostream, m_appStatusString);
+        ostream.write((const char*)&m_clientData, sizeof(m_clientData));
+        ostream.write((const char*)&m_clusterRoundTripTime, sizeof(m_clusterRoundTripTime));
+        size_t size = m_results.size();
+        ostream.write((const char *)&size, sizeof(size));
+        for (size_t ii = 0; ii < m_results.size(); ii++) {
+            m_results[ii] >> ostream;
+        }
+    }
+
+    InvocationResponse(std::istream &istream) {
+        istream.read((char *)&m_statusCode, sizeof(m_statusCode));
+        m_statusString = readString(istream);
+        istream.read((char *)&m_appStatusCode, sizeof(m_appStatusCode));
+        m_appStatusString = readString(istream);
+        istream.read((char *)&m_clientData, sizeof(m_clientData));
+        istream.read((char *)&m_clusterRoundTripTime, sizeof(m_clusterRoundTripTime));
+        size_t size;
+        istream.read((char *)&size, sizeof(size));
+        m_results.resize(size);
+        for (size_t ii = 0; ii < size; ii++) {
+            m_results[ii] = voltdb::Table(istream);
+        }
+    }
+
+private:
+    static std::ostream &writeString(std::ostream &ostream, const std::string &str) {
+        const int32_t size = str.size();
+        ostream.write((const char*)&size, sizeof(size));
+        if (size != 0) {
+            ostream.write(str.data(), size);
+        } return ostream;
+    }
+
+    std::string readString(std::istream &istream) {
+        std::string str;
+        int32_t size;
+        istream.read((char*)&size, sizeof(size));
+        if (size != 0) {
+            str.resize(size);
+            istream.read((char *)str.data(), size);
+        } return str;
+    }
+
 private:
     int64_t m_clientData;
     int8_t m_statusCode;

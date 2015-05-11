@@ -42,6 +42,17 @@ public:
     WireType type() const {
         return m_type;
     }
+
+    bool operator==(const Column& rhs) const {
+        if (this == &rhs) return true;
+        return (m_type == rhs.m_type && m_name == rhs.m_name);
+    }
+
+    bool operator!=(const Column& rhs) const {
+        if (this == &rhs) return false;
+        return (m_type != rhs.m_type || m_name != rhs.m_name);
+    }
+
 };
 }
 #endif /* COLUMN_HPP_ */
