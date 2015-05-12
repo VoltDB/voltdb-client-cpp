@@ -85,25 +85,6 @@ public:
     ClientImpl* m_ci;
 };
 
-class TopologyNotificationCallback : public voltdb::ProcedureCallback
-{
-public:
-    TopologyNotificationCallback(Distributer *dist):m_dist(dist){}
-    bool callback(InvocationResponse response) throw (voltdb::Exception)
-    {
-        if (response.failure()){
-            //TODO:log
-            return false;
-        }
-        m_dist->handleTopologyNotification(response.results());
-        return true;
-    }
-
-    void abandon(AbandonReason reason) {}
- private:
-    Distributer *m_dist;
-};
-
 typedef boost::shared_ptr<PendingConnection> PendingConnectionSPtr;
 
 class CxnContext {
@@ -418,10 +399,6 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
                    new CxnContext(pc->m_hostname, pc->m_port));
         boost::shared_ptr<CallbackMap> callbackMap(new CallbackMap());
         m_callbacks[bev] = callbackMap;
-
-        //Add callback for Topology Notification to map for magic volt session id
-        boost::shared_ptr<TopologyNotificationCallback> topoNotificationCallback(new TopologyNotificationCallback(&m_distributer));
-        callbackMap->insert(std::pair< int64_t, boost::shared_ptr<ProcedureCallback> >(VOLT_NOTIFICATION_MAGIC_NUMBER, topoNotificationCallback));
 
         bufferevent_setcb(
                bev,
@@ -806,31 +783,29 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
             evbuffer_remove( evbuf, messageBytes.get(), static_cast<size_t>(context->m_nextLength));
             remaining -= context->m_nextLength;
             InvocationResponse response(messageBytes, context->m_nextLength);
-            boost::shared_ptr<CallbackMap> callbackMap = m_callbacks[bev];
-            CallbackMap::iterator i = callbackMap->find(response.clientData());
-            if(i != callbackMap->end()){
-                try {
-                    m_ignoreBackpressure = true;
-                    breakEventLoop |= i->second->callback(response);
-                    m_ignoreBackpressure = false;
-                } catch (std::exception &e) {
-                    if (m_listener.get() != NULL) {
-                        try {
-                            m_ignoreBackpressure = true;
-                            breakEventLoop |= m_listener->uncaughtException( e, i->second, response);
-                            m_ignoreBackpressure = false;
-                        } catch (const std::exception& e) {
-                            std::cerr << "Uncaught exception handler threw exception: " << e.what() << std::endl;
+            if (response.clientData() == VOLT_NOTIFICATION_MAGIC_NUMBER) {
+                if (!response.failure()){
+                    m_distributer.handleTopologyNotification(response.results());
+                }
+            } else {
+                boost::shared_ptr<CallbackMap> callbackMap = m_callbacks[bev];
+                CallbackMap::iterator i = callbackMap->find(response.clientData());
+                if(i != callbackMap->end()){
+                    try {
+                        m_ignoreBackpressure = true;
+                        breakEventLoop |= i->second->callback(response);
+                        m_ignoreBackpressure = false;
+                    } catch (std::exception &e) {
+                        if (m_listener.get() != NULL) {
+                            try {
+                                m_ignoreBackpressure = true;
+                                breakEventLoop |= m_listener->uncaughtException( e, i->second, response);
+                                m_ignoreBackpressure = false;
+                            } catch (const std::exception& e) {
+                                std::cerr << "Uncaught exception handler threw exception: " << e.what() << std::endl;
+                            }
                         }
                     }
-                }
-                /*
-                 * When Volt sends us out a notification, it comes with the ClientData
-                 * filled in with a known 64-bit number.
-                 * In this case, we don't want to remove the callback. We need a static
-                 * callback here to continually process notifications.
-                 */
-                if(response.clientData() != VOLT_NOTIFICATION_MAGIC_NUMBER){
                     callbackMap->erase(i);
                     m_outstandingRequests--;
                 }
