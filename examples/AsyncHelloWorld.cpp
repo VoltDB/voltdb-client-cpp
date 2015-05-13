@@ -78,9 +78,10 @@ public:
 int main(int argc, char **argv) {
     /*
      * Instantiate a client and connect to the database.
+     * SHA-256 can be used as of VoltDB5.2 by specifying voltdb::HASH_SHA256
      */
-    voltdb::ClientConfig clientConfig("program", "password");
-    voltdb::Client client = voltdb::Client::create();
+    voltdb::ClientConfig config("myusername", "mypassword", voltdb::HASH_SHA1);
+    voltdb::Client client = voltdb::Client::create(config);
     client.createConnection("localhost");
 
     /*
