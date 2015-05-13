@@ -112,7 +112,7 @@ testbin: $(LIB_NAME).a $(TEST_OBJS)
 
 test: testbin
 	@echo 'Running CPPUnit tests'
-	-./testbin
+	./testbin
 	@echo ' '
 
 # Connection pool testing is put separately since for now it requires a local running Volt server
@@ -123,7 +123,7 @@ cptestbin: $(LIB_NAME).a $(CPTEST_OBJS)
 
 cptest: cptestbin
 	@echo 'Running Connection Pool CPPUnit tests'
-	-./cptestbin
+	./cptestbin
 	@echo ' '
 
 # Other Targets
