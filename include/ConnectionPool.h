@@ -51,12 +51,17 @@ public:
     /*
      * Retrieve a client that connects to the specified hostname and port using the provided username and password
      */
-    voltdb::Client acquireClient(std::string hostname, std::string username, std::string password, unsigned short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
+    voltdb::Client acquireClient(std::string hostname, std::string username, std::string password, unsigned short port = 21212, ClientAuthHashScheme sha = HASH_SHA1) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
 
     /*
      * Retrieve a client that connects to the specified hostname and port using the provided username and password
      */
-    voltdb::Client acquireClient(std::string hostname, std::string username, std::string password, StatusListener *listener, unsigned short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
+    voltdb::Client acquireClient(std::string hostname, std::string username, std::string password, StatusListener *listener, unsigned short port = 21212, ClientAuthHashScheme sha = HASH_SHA1) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
+
+    /*
+     * Retrieve a client that connects to the specified hostname and port using the provided username and password (sha256 is used for creating a new connection)
+     */
+    voltdb::Client acquire256Client(std::string hostname, std::string username, std::string password, StatusListener *listener, unsigned short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
 
     void returnClient(Client client) throw (voltdb::Exception);
 
