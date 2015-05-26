@@ -159,7 +159,8 @@ ConnectionPool::acquireClient(
         std::string username,
         std::string password,
         StatusListener *listener,
-        unsigned short port)
+        unsigned short port,
+        ClientAuthHashScheme sha)
 throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     LockGuard guard(m_lock);
     ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
@@ -201,7 +202,7 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
 
     // no connection available, make a new one
     DelegatingStatusListener *delegatingListener = new DelegatingStatusListener();
-    Client client = voltdb::Client::create(ClientConfig( username, password, delegatingListener));
+    Client client = voltdb::Client::create(ClientConfig( username, password, delegatingListener, sha));
     client.createConnection(hostname, port);
     boost::shared_ptr<ClientStuff> stuff(new ClientStuff(client, identifier, delegatingListener));
     stuff->m_listener->m_listener = listener;
@@ -214,9 +215,10 @@ ConnectionPool::acquireClient(
         std::string hostname,
         std::string username,
         std::string password,
-        unsigned short port)
+        unsigned short port,
+        ClientAuthHashScheme sha)
 throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
-    return acquireClient(hostname, username, password, NULL, port);
+    return acquireClient(hostname, username, password, NULL, port, sha);
 }
 
 void ConnectionPool::returnClient(Client client) throw (voltdb::Exception) {
