@@ -126,6 +126,8 @@ public:
      */
     void interrupt();
 
+    void close();
+
     /*
      * API to be called to enable client affinity (transaction homing)
      */
