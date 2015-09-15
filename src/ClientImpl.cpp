@@ -330,7 +330,7 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
     std::stringstream ss;
     ss << "ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port;
     logMessage(ClientLogger::INFO, ss.str());
-    struct bufferevent * bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+    struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
     if (bev == NULL) {
         throw ConnectException();
     }
@@ -346,7 +346,19 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
         throw voltdb::LibEventException();
     }
     protector.success();
+}
+
+void ClientImpl::close() {
+    if (m_bevs.empty()) return;
+    //drain before we close;
+    drain();
+    for (std::vector<struct bufferevent *>::iterator i = m_bevs.begin(); i != m_bevs.end(); ++i) {
+        int fd = bufferevent_getfd(*i);
+        evutil_closesocket(fd);
+        bufferevent_free(*i);
     }
+    m_bevs.clear();
+}
 
 void ClientImpl::initiateAuthentication(PendingConnection* pc, struct bufferevent *bev)throw (voltdb::LibEventException) {
 

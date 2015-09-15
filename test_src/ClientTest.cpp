@@ -75,6 +75,7 @@ class ClientTest : public CppUnit::TestFixture {
 CPPUNIT_TEST_SUITE( ClientTest );
 CPPUNIT_TEST( testConnect );
 CPPUNIT_TEST( testSyncInvoke );
+CPPUNIT_TEST( testSyncInvokeClose );
 CPPUNIT_TEST( testLargeReply );
 CPPUNIT_TEST_EXCEPTION( testInvokeSyncNoConnections, voltdb::NoConnectionsException );
 CPPUNIT_TEST_EXCEPTION( testInvokeAsyncNoConnections, voltdb::NoConnectionsException );
@@ -117,6 +118,42 @@ public:
         params->addString("Hello").addString("World").addString("English");
         m_voltdb->filenameForNextResponse("invocation_response_success.msg");
         InvocationResponse response = (m_client)->invoke(proc);
+        CPPUNIT_ASSERT(response.success());
+        CPPUNIT_ASSERT(response.statusString() == "");
+        CPPUNIT_ASSERT(response.appStatusCode() == -128);
+        CPPUNIT_ASSERT(response.appStatusString() == "");
+        CPPUNIT_ASSERT(response.results().size() == 0);
+    }
+
+    void testSyncInvokeClose() {
+        m_client->createConnection("localhost");
+        std::vector<Parameter> signature;
+        signature.push_back(Parameter(WIRE_TYPE_STRING));
+        signature.push_back(Parameter(WIRE_TYPE_STRING));
+        signature.push_back(Parameter(WIRE_TYPE_STRING));
+        Procedure proc("Insert", signature);
+        ParameterSet *params = proc.params();
+        params->addString("Hello").addString("World").addString("English");
+        m_voltdb->filenameForNextResponse("invocation_response_success.msg");
+        InvocationResponse response = (m_client)->invoke(proc);
+        m_client->close();
+        CPPUNIT_ASSERT(response.success());
+        CPPUNIT_ASSERT(response.statusString() == "");
+        CPPUNIT_ASSERT(response.appStatusCode() == -128);
+        CPPUNIT_ASSERT(response.appStatusString() == "");
+        CPPUNIT_ASSERT(response.results().size() == 0);
+        bool thrown = false;
+        try {
+            response = (m_client)->invoke(proc);
+        } catch (const voltdb::NoConnectionsException &e){
+            thrown = true;
+        }
+        CPPUNIT_ASSERT(thrown);
+        //make sure we can reconnect and invoke
+        m_client->createConnection("localhost");
+        ParameterSet *params2 = proc.params();
+        params2->addString("Hello").addString("World").addString("English");
+        response = (m_client)->invoke(proc);
         CPPUNIT_ASSERT(response.success());
         CPPUNIT_ASSERT(response.statusString() == "");
         CPPUNIT_ASSERT(response.appStatusCode() == -128);

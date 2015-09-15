@@ -58,7 +58,12 @@ public:
     void createConnection(const std::string &hostname, const unsigned short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
 
     /*
-     * Creates a pending connection that is handled in the reconnect callback 
+     * Close client connection.
+     */
+    void close();
+
+    /*
+     * Creates a pending connection that is handled in the reconnect callback
      * @param hostname Hostname or IP address to connect to
      * @param port Port to connect to
      * @param time since when connection is down
@@ -129,7 +134,7 @@ public:
 
     /*
      * If one of the run family of methods is running on another thread, this
-     * method will instruct it to exit as soon as it finishes it's current 
+     * method will instruct it to exit as soon as it finishes it's current
      * immediate task. If the thread in the run method is blocked/idle, then
      * it will return immediately.
      */
@@ -137,12 +142,12 @@ public:
 
     /*
      * If one of the run family of methods is running on another thread, this
-     * method will instruct it to exit as soon as it finishes it's current 
+     * method will instruct it to exit as soon as it finishes it's current
      * immediate task. If the thread in the run method is blocked/idle, then
      * it will return immediately.
      * The difference from the interrupt is it stops only currently running loop,
      * and has no effect if the loop isn,t running
-     */ 
+     */
      void wakeup();
 
     /*
@@ -166,7 +171,7 @@ public:
      */
     void setLoggerCallback(ClientLogger *pLogger);
 
-    int32_t outstandingRequests() const; 
+    int32_t outstandingRequests() const;
     ~Client();
 private:
     /*
