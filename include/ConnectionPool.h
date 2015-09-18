@@ -60,6 +60,8 @@ public:
 
     void returnClient(Client client) throw (voltdb::Exception);
 
+    void closeClientConnection(Client client) throw (voltdb::Exception);
+
     /*
      * Return the number of clients held by this thread
      */
