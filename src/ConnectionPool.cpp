@@ -240,6 +240,25 @@ void ConnectionPool::returnClient(Client client) throw (voltdb::Exception) {
     throw MisplacedClientException();
 }
 
+void ConnectionPool::closeClientConnection(Client client) throw (voltdb::Exception) {
+    LockGuard guard(m_lock);
+    ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
+    if (clients == NULL) {
+        throw MisplacedClientException();
+    }
+
+    for (ClientSet::iterator i = clients->begin(); i != clients->end(); i++) {
+        if ((*i)->m_client == client) {
+            client.close();
+            (*i)->m_listener->m_listener = NULL;
+            clients->erase(i);
+            return;
+        }
+    }
+
+    throw MisplacedClientException();
+}
+
 /*
  * Return the number of clients held by this thread
  */
