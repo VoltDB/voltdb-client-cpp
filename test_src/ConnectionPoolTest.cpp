@@ -38,6 +38,7 @@ class ConnectionPoolTest : public CppUnit::TestFixture {
 CPPUNIT_TEST_SUITE( ConnectionPoolTest );
 CPPUNIT_TEST( testReuse );
 CPPUNIT_TEST( testReturn );
+CPPUNIT_TEST( testClose );
 CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -63,6 +64,15 @@ public:
          m_connectionPool->returnClient(client);
          voltdb::Client client2 = m_connectionPool->acquireClient("localhost", "program", "password", NULL, 21212);
          CPPUNIT_ASSERT(client == client2);
+    }
+
+    void testClose() {
+         std::cout << "CLOSE TEST" << std::endl;
+         voltdb::Client client = m_connectionPool->acquireClient("localhost", "program", "password", NULL, 21212);
+         m_connectionPool->closeClientConnection(client);
+         voltdb::Client client2 = m_connectionPool->acquireClient("localhost", "program", "password", NULL, 21212);
+         bool c = client == client2;
+         CPPUNIT_ASSERT(!c);
     }
 
 private:
