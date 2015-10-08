@@ -71,8 +71,14 @@ public:
          voltdb::Client client = m_connectionPool->acquireClient("localhost", "program", "password", NULL, 21212);
          m_connectionPool->closeClientConnection(client);
          voltdb::Client client2 = m_connectionPool->acquireClient("localhost", "program", "password", NULL, 21212);
-         bool c = client == client2;
-         CPPUNIT_ASSERT(!c);
+         bool c = client != client2;
+         //make sure client is new
+         CPPUNIT_ASSERT(c);
+         //No exception should be thrown.
+         m_connectionPool->closeClientConnection(client);
+         client2 = m_connectionPool->acquireClient("localhost", "program", "password", NULL, 21212);
+         m_connectionPool->releaseClient(client2);
+         m_connectionPool->closeClientConnection(client2);
     }
 
 private:

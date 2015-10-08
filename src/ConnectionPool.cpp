@@ -255,8 +255,6 @@ void ConnectionPool::closeClientConnection(Client client) throw (voltdb::Excepti
             return;
         }
     }
-
-    throw MisplacedClientException();
 }
 
 /*
