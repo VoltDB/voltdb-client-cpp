@@ -244,7 +244,8 @@ void ConnectionPool::closeClientConnection(Client client) throw (voltdb::Excepti
     LockGuard guard(m_lock);
     ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
     if (clients == NULL) {
-        throw MisplacedClientException();
+        //No clients closing a stale object or not owned by this thread.
+        return;
     }
 
     for (ClientSet::iterator i = clients->begin(); i != clients->end(); i++) {
