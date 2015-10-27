@@ -32,8 +32,6 @@
 #include <boost/foreach.hpp>
 #include <sstream>
 
-
-
 #define HIGH_WATERMARK 1024 * 1024 * 55
 #define RECONNECT_INTERVAL 10
 
@@ -248,6 +246,10 @@ ClientImpl::~ClientImpl() {
     m_callbacks.clear();
     if (m_passwordHash != NULL) free(m_passwordHash);
     event_base_free(m_base);
+    if (m_wakeupPipe[1] != -1) {
+       ::close(m_wakeupPipe[0]);
+       ::close(m_wakeupPipe[1]);
+    }
 }
 
 // Initialization for the library that only gets called once
@@ -299,12 +301,6 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         throw voltdb::LibEventException();
     }
 
-    if (0 == pipe(m_wakeupPipe)) {
-        struct event *ev = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
-        event_add(ev, NULL);
-    } else {
-        m_wakeupPipe[1] = -1;
-    }
 }
 
 class FreeBEVOnFailure {
@@ -349,9 +345,13 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
 }
 
 void ClientImpl::close() {
-    if (m_bevs.empty()) return;
     //drain before we close;
     drain();
+    if (m_wakeupPipe[1] != -1) {
+       ::close(m_wakeupPipe[0]);
+       ::close(m_wakeupPipe[1]);
+    }
+    if (m_bevs.empty()) return;
     for (std::vector<struct bufferevent *>::iterator i = m_bevs.begin(); i != m_bevs.end(); ++i) {
         int fd = bufferevent_getfd(*i);
         evutil_closesocket(fd);
@@ -470,6 +470,12 @@ void ClientImpl::createConnection(const std::string& hostname, const unsigned sh
     ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
     logMessage(ClientLogger::INFO, ss.str());
 
+    if (0 == pipe(m_wakeupPipe)) {
+        struct event *ev = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
+        event_add(ev, NULL);
+    } else {
+        m_wakeupPipe[1] = -1;
+    }
     PendingConnectionSPtr pc(new PendingConnection(hostname, port, m_base, this));
     initiateConnection(pc);
 
