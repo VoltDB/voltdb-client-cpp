@@ -74,15 +74,6 @@ public:
     void createConnection(const std::string &hostname, const unsigned short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
 
     /*
-     * Creates a pending connection that is handled in the reconnect callback
-     * @param hostname Hostname or IP address to connect to
-     * @param port Port to connect to
-     * @param time since when connection is down
-     */
-    void createPendingConnection(const std::string &hostname, const unsigned short port, const int64_t time=0);
-    void erasePendingConnection(PendingConnection *);
-
-    /*
      * Synchronously invoke a stored procedure and return a the response.
      */
     InvocationResponse invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
@@ -199,6 +190,15 @@ private:
     bool m_updateHashinator;
     //If to use abandon in case of backpressure.
     bool m_enableAbandon;
+
+    /*
+     * Creates a pending connection that is handled in the reconnect callback
+     * @param hostname Hostname or IP address to connect to
+     * @param port Port to connect to
+     * @param time since when connection is down
+     */
+    void createPendingConnection(const std::string &hostname, const unsigned short port, const int64_t time=0);
+    void erasePendingConnection(PendingConnection *);
 
     std::list<boost::shared_ptr<PendingConnection> > m_pendingConnectionList;
     boost::atomic<size_t> m_pendingConnectionSize;

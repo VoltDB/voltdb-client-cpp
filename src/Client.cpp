@@ -49,14 +49,6 @@ Client::close() {
     m_impl->close();
 }
 
-void
-Client::createPendingConnection(
-        const std::string &hostname,
-        const unsigned short port,
-        const int64_t time) {
-    m_impl->createPendingConnection(hostname, port, time);
-}
-
 /*
  * Synchronously invoke a stored procedure and return a the response.
  */
