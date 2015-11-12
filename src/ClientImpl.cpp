@@ -30,6 +30,7 @@
 #include "sha1.h"
 #include "sha256.h"
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 #include <sstream>
 
 
@@ -246,6 +247,7 @@ ClientImpl::~ClientImpl() {
     m_bevs.clear();
     m_contexts.clear();
     m_callbacks.clear();
+    m_connectionAttemptList.clear();
     if (m_passwordHash != NULL) free(m_passwordHash);
     event_base_free(m_base);
 }
@@ -325,8 +327,6 @@ private:
 };
 
 void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException, voltdb::LibEventException){
-
-
     std::stringstream ss;
     ss << "ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port;
     logMessage(ClientLogger::INFO, ss.str());
@@ -465,6 +465,7 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
 }
 
 void ClientImpl::createConnection(const std::string& hostname, const unsigned short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+    m_connectionAttemptList.push_back(hostname + boost::lexical_cast<std::string>(port));
 
     std::stringstream ss;
     ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
@@ -513,7 +514,10 @@ void ClientImpl::reconnectEventCallback() {
     event_base_once(m_base, -1, EV_TIMEOUT, reconnectCallback, this, &tv);
 }
 
-void ClientImpl::createPendingConnection(const std::string &hostname, const unsigned short port, int64_t time){
+void ClientImpl::createPendingConnection(const std::string &hostname, const unsigned short port, int64_t time) throw (voltdb::ConnectException) {
+    if (m_connectionAttemptList.size() == 0 ||
+        std::find(m_connectionAttemptList.begin(), m_connectionAttemptList.end(), (hostname + boost::lexical_cast<std::string>(port))) == m_connectionAttemptList.end())
+        throw ConnectException();
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::createPendingConnection");
 

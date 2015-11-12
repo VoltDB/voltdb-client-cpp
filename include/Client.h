@@ -63,6 +63,14 @@ public:
     void close();
 
     /*
+     * Creates a pending connection that is handled in the reconnect callback
+     * @param hostname Hostname or IP address to connect to
+     * @param port Port to connect to
+     * @param time since when connection is down
+     */
+    void createPendingConnection(const std::string &hostname, const unsigned short port, const int64_t time=0) throw (voltdb::ConnectException);
+
+    /*
      * Synchronously invoke a stored procedure and return a the response. Callbacks for asynchronous requests
      * submitted earlier may be invoked before this method returns.
      * @throws NoConnectionsException No connections to submit the request on
