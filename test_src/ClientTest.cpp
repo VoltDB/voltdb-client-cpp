@@ -298,6 +298,30 @@ public:
         syncResponse = (m_client)->invoke(proc);
     }
 
+    void testPendingConnection() {
+        m_voltdb.reset(0);
+        Client client = Client::create(ClientConfig("hello", "world", *m_dlistener));
+        m_client = &client;
+        m_client->createConnection("localhost", 21212, true);
+        std::vector<Parameter> signature;
+        signature.push_back(Parameter(WIRE_TYPE_STRING));
+        signature.push_back(Parameter(WIRE_TYPE_STRING));
+        signature.push_back(Parameter(WIRE_TYPE_STRING));
+        Procedure proc("Insert", signature);
+        ParameterSet *params = proc.params();
+        params->addString("Hello").addString("World").addString("English");
+        InvocationResponse response = (m_client)->invoke(proc);
+        CPPUNIT_ASSERT(response.failure());
+        m_voltdb.reset(new MockVoltDB(*m_client));
+        m_voltdb->filenameForNextResponse("invocation_response_success.msg");
+        response = (m_client)->invoke(proc);
+        CPPUNIT_ASSERT(response.success());
+        CPPUNIT_ASSERT(response.statusString() == "");
+        CPPUNIT_ASSERT(response.appStatusCode() == -128);
+        CPPUNIT_ASSERT(response.appStatusString() == "");
+        CPPUNIT_ASSERT(response.results().size() == 0);
+    }
+
     void testLostConnectionBreaksEventLoop() {
         class Listener : public StatusListener {
         public:

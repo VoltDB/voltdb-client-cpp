@@ -55,20 +55,12 @@ public:
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(const std::string &hostname, const unsigned short port = 21212) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
+    void createConnection(const std::string &hostname, const unsigned short port = 21212, const bool keepConnecting = false) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
 
     /*
      * Close client connection.
      */
     void close();
-
-    /*
-     * Creates a pending connection that is handled in the reconnect callback
-     * @param hostname Hostname or IP address to connect to
-     * @param port Port to connect to
-     * @param time since when connection is down
-     */
-    void createPendingConnection(const std::string &hostname, const unsigned short port, const int64_t time=0) throw (voltdb::ConnectException);
 
     /*
      * Synchronously invoke a stored procedure and return a the response. Callbacks for asynchronous requests

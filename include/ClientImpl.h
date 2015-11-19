@@ -71,16 +71,7 @@ public:
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(const std::string &hostname, const unsigned short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
-
-    /*
-     * Creates a pending connection that is handled in the reconnect callback
-     * @param hostname Hostname or IP address to connect to
-     * @param port Port to connect to
-     * @param time since when connection is down
-     */
-    void createPendingConnection(const std::string &hostname, const unsigned short port, const int64_t time=0) throw (voltdb::ConnectException);
-    void erasePendingConnection(PendingConnection *);
+    void createConnection(const std::string &hostname, const unsigned short port, const bool keepConnecting) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
 
     /*
      * Synchronously invoke a stored procedure and return a the response.
@@ -165,6 +156,15 @@ private:
     void initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException, voltdb::LibEventException);
 
     /*
+     * Creates a pending connection that is handled in the reconnect callback
+     * @param hostname Hostname or IP address to connect to
+     * @param port Port to connect to
+     * @param time since when connection is down
+     */
+    void createPendingConnection(const std::string &hostname, const unsigned short port, const int64_t time=0);
+    void erasePendingConnection(PendingConnection *);
+
+    /*
      * Method for sinking messages.
      * If a logger callback is not set then skip all messages
      */
@@ -210,8 +210,6 @@ private:
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
-
-    std::list<std::string> m_connectionAttemptList;
 };
 }
 #endif /* VOLTDB_CLIENTIMPL_H_ */
