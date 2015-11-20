@@ -492,7 +492,11 @@ void ClientImpl::createConnection(const std::string& hostname, const unsigned sh
             return;
         }
     }
-    throw ConnectException();
+    if (keepConnecting) {
+        createPendingConnection(hostname, port);
+    } else {
+        throw ConnectException();
+    }
 }
 
 static void reconnectCallback(evutil_socket_t fd, short events, void *clientData) {
