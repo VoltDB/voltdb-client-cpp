@@ -39,22 +39,15 @@ Client::~Client() {
 void
 Client::createConnection(
         const std::string &hostname,
-        const unsigned short port)
+        const unsigned short port,
+        const bool keepConnecting)
 throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
-    m_impl->createConnection(hostname, port);
+    m_impl->createConnection(hostname, port, keepConnecting);
 }
 
 void
 Client::close() {
     m_impl->close();
-}
-
-void
-Client::createPendingConnection(
-        const std::string &hostname,
-        const unsigned short port,
-        const int64_t time) {
-    m_impl->createPendingConnection(hostname, port, time);
 }
 
 /*

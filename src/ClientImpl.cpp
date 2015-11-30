@@ -50,8 +50,8 @@ int64_t get_sec_time() {
 
 class PendingConnection {
 public:
-    PendingConnection(const std::string& hostname,const unsigned short port, struct event_base *base, ClientImpl* ci)
-        :  m_hostname(hostname), m_port(port), m_base(base), m_authenticationResponseLength(-1),
+    PendingConnection(const std::string& hostname,const unsigned short port, const bool keepConnecting, struct event_base *base, ClientImpl* ci)
+        :  m_hostname(hostname), m_port(port), m_keepConnecting(keepConnecting), m_base(base), m_authenticationResponseLength(-1),
            m_status(true), m_loginExchangeCompleted(false), m_startPending(-1), m_ci(ci) {
     }
 
@@ -70,6 +70,7 @@ public:
      * */
     const std::string m_hostname;
     const unsigned short m_port;
+    const bool m_keepConnecting;
 
     /*
      *Event and event base associated with connection
@@ -321,25 +322,30 @@ private:
 };
 
 void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException, voltdb::LibEventException){
-
-
     std::stringstream ss;
     ss << "ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port;
     logMessage(ClientLogger::INFO, ss.str());
     struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
     if (bev == NULL) {
-        throw ConnectException();
+        if (pc->m_keepConnecting) {
+            createPendingConnection(pc->m_hostname, pc->m_port);
+        } else {
+            throw ConnectException();
+        }
     }
     FreeBEVOnFailure protector(bev);
     bufferevent_setcb(bev, authenticationReadCallback, NULL, authenticationEventCallback, pc.get());
 
     if (bufferevent_socket_connect_hostname(bev, NULL, AF_INET, pc->m_hostname.c_str(), pc->m_port) != 0) {
+        if (pc->m_keepConnecting) {
+            createPendingConnection(pc->m_hostname, pc->m_port);
+        } else {
+            ss.str("");
+            ss << "!!!! ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port << " failed";
+            logMessage(ClientLogger::ERROR, ss.str());
 
-        ss.str("");
-        ss << "!!!! ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port << " failed";
-    	logMessage(ClientLogger::ERROR, ss.str());
-
-        throw voltdb::LibEventException();
+            throw voltdb::LibEventException();
+        }
     }
     protector.success();
 }
@@ -464,7 +470,7 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
             protector.success();
 }
 
-void ClientImpl::createConnection(const std::string& hostname, const unsigned short port) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+void ClientImpl::createConnection(const std::string& hostname, const unsigned short port, const bool keepConnecting) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
 
     std::stringstream ss;
     ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
@@ -476,7 +482,7 @@ void ClientImpl::createConnection(const std::string& hostname, const unsigned sh
     } else {
         m_wakeupPipe[1] = -1;
     }
-    PendingConnectionSPtr pc(new PendingConnection(hostname, port, m_base, this));
+    PendingConnectionSPtr pc(new PendingConnection(hostname, port, keepConnecting, m_base, this));
     initiateConnection(pc);
 
     if (event_base_dispatch(m_base) == -1) {
@@ -492,7 +498,11 @@ void ClientImpl::createConnection(const std::string& hostname, const unsigned sh
             return;
         }
     }
-    throw ConnectException();
+    if (keepConnecting) {
+        createPendingConnection(hostname, port);
+    } else {
+        throw ConnectException();
+    }
 }
 
 static void reconnectCallback(evutil_socket_t fd, short events, void *clientData) {
@@ -519,11 +529,11 @@ void ClientImpl::reconnectEventCallback() {
     event_base_once(m_base, -1, EV_TIMEOUT, reconnectCallback, this, &tv);
 }
 
-void ClientImpl::createPendingConnection(const std::string &hostname, const unsigned short port, int64_t time){
+void ClientImpl::createPendingConnection(const std::string &hostname, const unsigned short port, int64_t time) {
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::createPendingConnection");
 
-    PendingConnectionSPtr pc(new PendingConnection(hostname, port, m_base, this));
+    PendingConnectionSPtr pc(new PendingConnection(hostname, port, false, m_base, this));
     pc->m_startPending = time;
     {
         boost::mutex::scoped_lock lock(m_pendingConnectionLock);
