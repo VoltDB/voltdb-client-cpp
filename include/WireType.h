@@ -39,7 +39,9 @@ enum WireType {
     WIRE_TYPE_STRING = 9,
     WIRE_TYPE_TIMESTAMP = 11,
     WIRE_TYPE_DECIMAL = 22,
-    WIRE_TYPE_VARBINARY = 25
+    WIRE_TYPE_VARBINARY = 25,
+    WIRE_TYPE_GEOGRAPHY_POINT = 26, // currenty unsupported
+    WIRE_TYPE_GEOGRAPHY = 27,       // currenty unsupported
 };
 
 std::string wireTypeToString(WireType type);

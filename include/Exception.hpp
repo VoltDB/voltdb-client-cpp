@@ -159,6 +159,31 @@ public:
 };
 
 /*
+ * Thrown when a user attempts to use a type that is not supported.
+ * Users may see this exception.
+ */
+class UnsupportedTypeException : public voltdb::Exception {
+public:
+
+    explicit UnsupportedTypeException(const std::string& typeName) :
+        Exception() {
+        char msg[256];
+        snprintf(msg, sizeof msg, "Attempted to use a SQL type that is unsupported in the C++ client: %s", typeName.c_str());
+        m_what = msg;
+    }
+
+    virtual ~UnsupportedTypeException() throw() {}
+
+    virtual const char* what() const throw() {
+        return m_what.c_str();
+    }
+
+private:
+
+    std::string m_what;
+};
+
+/*
  * Thrown by Distributer when detects server run in LEGACY mode
  */
 class ElasticModeMismatchException : public voltdb::Exception {

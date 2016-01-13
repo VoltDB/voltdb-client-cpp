@@ -48,8 +48,12 @@ std::string wireTypeToString(WireType type) {
         return std::string("DECIMAL");
     case WIRE_TYPE_VARBINARY:
         return std::string("VARBINARY");
+    case WIRE_TYPE_GEOGRAPHY_POINT:
+        return std::string("GEOGRAPHY_POINT");
+    case WIRE_TYPE_GEOGRAPHY:
+        return std::string("GEOGRAPHY");
     default:
-        assert(false);
+        return std::string("<<Unknown Type>>");
     }
 }
 }

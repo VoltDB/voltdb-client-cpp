@@ -227,11 +227,33 @@ public:
     }
 
     /*
+     * Retrieve the value at the specified column index as a geographical point.
+     * This data type is not currently supported by the C++ client so this always
+     * throws an exception.
+     * @throws UnsupportedTypeException always
+     * @return never returns
+     */
+    void getGeographyPoint(int32_t column) {
+        throw UnsupportedTypeException(wireTypeToString(WIRE_TYPE_GEOGRAPHY_POINT));
+    }
+
+    /*
+     * Retrieve the value at the specified column index as a geographical object.
+     * This data type is not currently supported by the C++ client so this always
+     * throws an exception.
+     * @throws UnsupportedTypeException always
+     * @return never returns
+     */
+    void getGeography(int32_t column) {
+        throw UnsupportedTypeException(wireTypeToString(WIRE_TYPE_GEOGRAPHY));
+    }
+
+    /*
      * Returns true if the value at the specified column index is NULL and false otherwise
      * @throws InvalidColumnException The name of the column was invalid.
      * @return true if the value is NULL and false otherwise
      */
-    bool isNull(int32_t column) throw(voltdb::InvalidColumnException) {
+    bool isNull(int32_t column) throw(voltdb::InvalidColumnException, voltdb::UnsupportedTypeException) {
         if (column < 0 || column >= static_cast<ssize_t>(m_columns->size())) {
             throw InvalidColumnException(column);
         }
@@ -257,7 +279,7 @@ public:
             int out_len;
             getVarbinary(column, 0, NULL, &out_len); break;
         default:
-            assert(false);
+            throw UnsupportedTypeException(wireTypeToString(columnType));
         }
         return wasNull();
     }
@@ -269,7 +291,7 @@ public:
      * not match the type of the get method.
      * @return Whether the buffer provided was large enough.
      */
-    bool getVarbinary(const std::string& cname, int32_t bufsize, uint8_t *out_value, int32_t *out_len) 
+    bool getVarbinary(const std::string& cname, int32_t bufsize, uint8_t *out_value, int32_t *out_len)
     throw(voltdb::InvalidColumnException) {
         return getVarbinary(getColumnIndexByName(cname), bufsize, out_value, out_len);
     }
@@ -363,6 +385,28 @@ public:
     }
 
     /*
+     * Retrieve the value at the specified column name as a geographical point.
+     * This data type is not currently supported by the C++ client so this always
+     * throws an exception.
+     * @throws UnsupportedTypeException always
+     * @return never returns
+     */
+    void getGeographyPoint(const std::string& cname) throw(UnsupportedTypeException) {
+        return getGeographyPoint(getColumnIndexByName(cname));
+    }
+
+    /*
+     * Retrieve the value at the specified column name as a geographical object.
+     * This data type is not currently supported by the C++ client so this always
+     * throws an exception.
+     * @throws UnsupportedTypeException always
+     * @return never returns
+     */
+    void getGeography(const std::string& cname) throw(UnsupportedTypeException) {
+        return getGeography(getColumnIndexByName(cname));
+    }
+
+    /*
      * Returns true if the value in the column with the specified name is NULL and false otherwise
      * @throws InvalidColumnException The name of the column was invalid.
      * @return true if the value is NULL and false otherwise
@@ -420,7 +464,7 @@ public:
                 ostream << getTimestamp(ii); break;
             case WIRE_TYPE_DECIMAL:
                 ostream << getDecimal(ii).toString(); break;
-            case WIRE_TYPE_VARBINARY:  
+            case WIRE_TYPE_VARBINARY:
                 ostream << "VARBINARY VALUE"; break;
             default:
                 assert(false);
@@ -444,48 +488,48 @@ private:
         WireType columnType = m_columns->at(static_cast<size_t>(index)).m_type;
         switch (columnType) {
         case WIRE_TYPE_DECIMAL:
-            if (type != WIRE_TYPE_DECIMAL) 
+            if (type != WIRE_TYPE_DECIMAL)
                 throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_DECIMAL));
             break;
         case WIRE_TYPE_TIMESTAMP:
-            if (type != WIRE_TYPE_TIMESTAMP) 
+            if (type != WIRE_TYPE_TIMESTAMP)
                 throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_TIMESTAMP));
             break;
         case WIRE_TYPE_BIGINT:
-            if (type != WIRE_TYPE_BIGINT) 
+            if (type != WIRE_TYPE_BIGINT)
                 throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_BIGINT));
             break;
         case WIRE_TYPE_INTEGER:
-            if (type != WIRE_TYPE_BIGINT && type != WIRE_TYPE_INTEGER) 
+            if (type != WIRE_TYPE_BIGINT && type != WIRE_TYPE_INTEGER)
                 throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_INTEGER));
             break;
         case WIRE_TYPE_SMALLINT:
             if (type != WIRE_TYPE_BIGINT &&
                     type != WIRE_TYPE_INTEGER &&
-                    type != WIRE_TYPE_SMALLINT) 
+                    type != WIRE_TYPE_SMALLINT)
                 throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_SMALLINT));
             break;
         case WIRE_TYPE_TINYINT:
             if (type != WIRE_TYPE_BIGINT &&
                     type != WIRE_TYPE_INTEGER &&
                     type != WIRE_TYPE_SMALLINT &&
-                    type != WIRE_TYPE_TINYINT) 
+                    type != WIRE_TYPE_TINYINT)
                 throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_TINYINT));
             break;
         case WIRE_TYPE_FLOAT:
-            if (type != WIRE_TYPE_FLOAT) 
+            if (type != WIRE_TYPE_FLOAT)
                 throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_FLOAT));
             break;
         case WIRE_TYPE_STRING:
-            if (type != WIRE_TYPE_STRING) 
+            if (type != WIRE_TYPE_STRING)
                 throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_STRING));
             break;
         case WIRE_TYPE_VARBINARY:
-            if (type != WIRE_TYPE_VARBINARY) 
+            if (type != WIRE_TYPE_VARBINARY)
                 throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_VARBINARY));
             break;
         default:
-            assert(false);
+            throw UnsupportedTypeException(wireTypeToString(columnType));
             break;
         }
         return columnType;
@@ -539,7 +583,7 @@ private:
                     length = 1;
                     break;
                 default:
-                    assert(false);
+                    throw UnsupportedTypeException(wireTypeToString(type));
                 }
                 m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + length;
             }
