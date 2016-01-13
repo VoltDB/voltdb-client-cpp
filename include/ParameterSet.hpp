@@ -69,7 +69,7 @@ public:
     template <WireType T>
     ParameterSet& addTypedBytes(const int32_t size, const uint8_t *value)
     throw (voltdb::ParamMismatchException) {
-        assert(WIRE_TYPE_VARBINARY==T || WIRE_TYPE_STRING == T);
+        assert(WIRE_TYPE_VARBINARY == T || WIRE_TYPE_STRING == T);
         validateType(T, false);
         if (value) {
             m_buffer.ensureRemaining(1 + 4 + size);
@@ -112,7 +112,7 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addBytes(const int32_t size, const uint8_t *value) 
+    ParameterSet& addBytes(const int32_t size, const uint8_t *value)
     throw (voltdb::ParamMismatchException) {
         return addTypedBytes<WIRE_TYPE_VARBINARY>(size, value);
     }
@@ -450,7 +450,7 @@ public:
 
 private:
 
-    ParameterSet(std::vector<Parameter> parameters): 
+    ParameterSet(std::vector<Parameter> parameters):
         m_parameters(parameters)
        ,m_buffer(8192)
        ,m_currentParam(0)

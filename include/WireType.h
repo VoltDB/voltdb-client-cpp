@@ -27,6 +27,11 @@
 #include <string>
 
 namespace voltdb {
+/*
+ * Note: these constants must be the same as those in:
+ *   frontend/org/voltdb/VoltType.java
+ *   ee/common/types.h
+ */
 enum WireType {
     WIRE_TYPE_INVALID = -98,
     WIRE_TYPE_ARRAY = -99,
@@ -39,7 +44,9 @@ enum WireType {
     WIRE_TYPE_STRING = 9,
     WIRE_TYPE_TIMESTAMP = 11,
     WIRE_TYPE_DECIMAL = 22,
-    WIRE_TYPE_VARBINARY = 25
+    WIRE_TYPE_VARBINARY = 25,
+    WIRE_TYPE_GEOGRAPHY_POINT = 26, // currenty unsupported
+    WIRE_TYPE_GEOGRAPHY = 27,       // currenty unsupported
 };
 
 std::string wireTypeToString(WireType type);
