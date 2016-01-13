@@ -27,6 +27,11 @@
 #include <string>
 
 namespace voltdb {
+/*
+ * Note: these constants must be the same as those in:
+ *   frontend/org/voltdb/VoltType.java
+ *   ee/common/types.h
+ */
 enum WireType {
     WIRE_TYPE_INVALID = -98,
     WIRE_TYPE_ARRAY = -99,
