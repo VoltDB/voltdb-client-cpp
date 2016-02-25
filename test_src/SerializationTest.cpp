@@ -58,11 +58,18 @@ CPPUNIT_TEST(testInvocationResponseSelect);
 CPPUNIT_TEST(testSerializedTable);
 CPPUNIT_TEST_SUITE_END();
 public:
+
+    static const long        FAKE_CLUSTER_START_TIME      = 0x4B1DFA11FEEDFACEL;
+    static const long        FAKE_CLIENT_DATA             = 0xDEADBEEFDABBAD00L;
+    static const long        FAKE_LEADER_IP_ADDRESS       = 0x7f000001;
+    static const int         FAKE_CLUSTER_ROUND_TRIP_TIME = 0x00000004;
+    static const std::string FAKE_BUILD_STRING;
+
 SharedByteBuffer fileAsByteBuffer(std::string filename) {
 
     int ret = 0;
 
-    std::string path = "test_src/" + filename;
+    std::string path = "test_src/test_data/" + filename;
     FILE *fp = fopen(path.c_str(), "r");
     assert(fp);
     ret = fseek(fp, 0L, SEEK_END);
@@ -119,10 +126,13 @@ void testAuthenticationResponse() {
     original.position(4);//skip length prefix
     AuthenticationResponse response(original);
     CPPUNIT_ASSERT(response.success());
-    CPPUNIT_ASSERT(response.hostId() == 0);
-    CPPUNIT_ASSERT(response.clusterStartTime() == 1277314297206);
-    CPPUNIT_ASSERT(response.leaderAddress() == 2130706433);
-    CPPUNIT_ASSERT(response.buildString() == "?revision=");
+    CPPUNIT_ASSERT(response.hostId()           == 0);
+    std::cout << "st: " << response.clusterStartTime() << "\n";
+    std::cout << "la: " << response.leaderAddress() << "\n";
+    std::cout << "bs: " << response.buildString() << "\n";
+    CPPUNIT_ASSERT(response.clusterStartTime() == FAKE_CLUSTER_START_TIME);
+    CPPUNIT_ASSERT(response.leaderAddress()    == FAKE_LEADER_IP_ADDRESS);
+    CPPUNIT_ASSERT(response.buildString()      == FAKE_BUILD_STRING);
 }
 
 void testInvocationAllParams() {
@@ -158,9 +168,35 @@ void testInvocationAllParams() {
     ps->addNull().addString("ohnoes!").addInt8(22).addInt16(22).addInt32(22).addInt64(22).addDouble(3.1459).addTimestamp(33).addDecimal(Decimal(std::string("3.1459")));
     int32_t size = proc.getSerializedSize();
     ScopedByteBuffer buffer(new char[size], size);
-    proc.serializeTo(&buffer, INT64_MIN);
+    proc.serializeTo(&buffer, FAKE_CLIENT_DATA);
+    int cmp = ::memcmp(original.bytes(), buffer.bytes(), size);
+#if  0
+    // Dump the request for debugging.
+    {
+        uint8_t genbuf[1024];
+        buffer.get(0, (char *)genbuf, buffer.limit());
+        std::ofstream of("generated_invocation_request_all_params.msg");
+        of.write((const char *)genbuf, buffer.limit());
+        of.close();
+    }
+    std::cout << "Comparison: " << cmp << "\n";
+    if (cmp != 0) {
+        int width = std::cout.width();
+        char *orig_bytes = original.bytes();
+        char *buff_bytes = buffer.bytes();
+        for (int idx = 0; idx < size; idx += 1) {
+            if (orig_bytes[idx] != buff_bytes[idx]) {
+                std::cout << "   Byte " << idx << " differs: "
+                          << std::hex << (((unsigned int)orig_bytes[idx]) & 0xff) << std::dec
+                          << " != "
+                          << std::hex << (((unsigned int)buff_bytes[idx]) & 0xff) << std::dec << "\n";
+            }
+        }
+        std::cout.width(width);
+    }
+#endif
     CPPUNIT_ASSERT(original.remaining() == size);
-    CPPUNIT_ASSERT(::memcmp(original.bytes(), buffer.bytes(), size) == 0);
+    CPPUNIT_ASSERT(cmp == 0);
 }
 
 void testInvocationResponseSuccess() {
@@ -170,12 +206,12 @@ void testInvocationResponseSuccess() {
     original.get(copy.get(), original.remaining());
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.success());
-    CPPUNIT_ASSERT(response.clientData() == (-9223372036854775807 - 1));
+    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
     CPPUNIT_ASSERT(response.appStatusCode() == -128);
     CPPUNIT_ASSERT(response.appStatusString() == "");
     CPPUNIT_ASSERT(response.statusString() == "");
-    CPPUNIT_ASSERT(response.results().size() == 0);
-    CPPUNIT_ASSERT(response.clusterRoundTripTime() == 9);
+    CPPUNIT_ASSERT(response.results().size() == 1);
+    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
 }
 
 void testInvocationResponseFailCV() {
@@ -186,12 +222,12 @@ void testInvocationResponseFailCV() {
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.failure());
     CPPUNIT_ASSERT(response.statusCode() == STATUS_CODE_GRACEFUL_FAILURE);
-    CPPUNIT_ASSERT(response.clientData() == -9223372036854775807);
+    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
     CPPUNIT_ASSERT(response.appStatusCode() == -128);
     CPPUNIT_ASSERT(response.appStatusString() == "");
     CPPUNIT_ASSERT(response.statusString().find("VOLTDB ERROR: CONSTRAINT VIOLATION") != std::string::npos);
     CPPUNIT_ASSERT(response.results().size() == 0);
-    CPPUNIT_ASSERT(response.clusterRoundTripTime() == 7);
+    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
 }
 
 void testInvocationResponseSelect() {
@@ -201,12 +237,12 @@ void testInvocationResponseSelect() {
     original.get(copy.get(), original.remaining());
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.success());
-    CPPUNIT_ASSERT(response.clientData() == -9223372036854775806);
+    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
     CPPUNIT_ASSERT(response.appStatusCode() == -128);
     CPPUNIT_ASSERT(response.appStatusString() == "");
     CPPUNIT_ASSERT(response.statusString() == "");
     CPPUNIT_ASSERT(response.results().size() == 1);
-    CPPUNIT_ASSERT(response.clusterRoundTripTime() == 0);
+    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
     Table results = response.results()[0];
     CPPUNIT_ASSERT(results.getStatusCode() == -128);
     CPPUNIT_ASSERT(results.rowCount() == 1);
@@ -467,6 +503,8 @@ void testSerializedTable() {
     CPPUNIT_ASSERT(!r.wasNull());
 }
 };
+
+const std::string SerializationTest::FAKE_BUILD_STRING("volt_6.1_test_build_string");
 
 CPPUNIT_TEST_SUITE_REGISTRATION( SerializationTest );
 }

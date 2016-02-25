@@ -378,6 +378,7 @@ void ClientImpl::initiateAuthentication(PendingConnection* pc, struct buffereven
         throw voltdb::LibEventException();
     }
     AuthenticationRequest authRequest( m_username, "database", m_passwordHash, m_hashScheme );
+    int size = authRequest.getSerializedSize();
     ScopedByteBuffer bb(authRequest.getSerializedSize());
     authRequest.serializeTo(&bb);
 
