@@ -309,8 +309,6 @@ public:
         validateType(WIRE_TYPE_TINYINT, true);
         m_buffer.ensureRemaining(6 + static_cast<int32_t>(sizeof(int8_t) * vals.size()));
         // Convert array of TINYINT to VARBINARY.
-        // m_buffer.putInt8(WIRE_TYPE_ARRAY);
-        // m_buffer.putInt8(WIRE_TYPE_TINYINT);
         m_buffer.putInt8(WIRE_TYPE_VARBINARY);
         m_buffer.putInt32(static_cast<int32_t>(vals.size()));
         for (std::vector<int8_t>::const_iterator i = vals.begin(); i != vals.end(); ++i) {
