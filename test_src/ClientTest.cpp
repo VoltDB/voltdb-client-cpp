@@ -122,7 +122,7 @@ public:
         CPPUNIT_ASSERT(response.statusString() == "");
         CPPUNIT_ASSERT(response.appStatusCode() == -128);
         CPPUNIT_ASSERT(response.appStatusString() == "");
-        CPPUNIT_ASSERT(response.results().size() == 0);
+        CPPUNIT_ASSERT(response.results().size() == 1);
     }
 
     void testSyncInvokeClose() {
@@ -141,7 +141,7 @@ public:
         CPPUNIT_ASSERT(response.statusString() == "");
         CPPUNIT_ASSERT(response.appStatusCode() == -128);
         CPPUNIT_ASSERT(response.appStatusString() == "");
-        CPPUNIT_ASSERT(response.results().size() == 0);
+        CPPUNIT_ASSERT(response.results().size() == 1);
         bool thrown = false;
         try {
             response = (m_client)->invoke(proc);
@@ -158,7 +158,7 @@ public:
         CPPUNIT_ASSERT(response.statusString() == "");
         CPPUNIT_ASSERT(response.appStatusCode() == -128);
         CPPUNIT_ASSERT(response.appStatusString() == "");
-        CPPUNIT_ASSERT(response.results().size() == 0);
+        CPPUNIT_ASSERT(response.results().size() == 1);
     }
 
     class SyncCallback : public ProcedureCallback {

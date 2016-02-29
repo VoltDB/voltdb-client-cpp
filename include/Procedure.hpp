@@ -53,10 +53,13 @@ public:
     }
 
     int32_t getSerializedSize() {
-        return 5 + //length prefix
-               4 + static_cast<int32_t>(m_name.size()) + // proc name
-                m_params.getSerializedSize() + //parameters
-                + 8; //client data
+        return
+            5                                      // length prefix and wire protocol version
+            + 4                                    // proc size
+            + static_cast<int32_t>(m_name.size())  // proc name
+            + 8                                    // client data
+            + m_params.getSerializedSize()         // parameters
+            ;
     }
 
     const std::string& getName()const {return m_name;}

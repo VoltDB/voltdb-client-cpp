@@ -42,17 +42,13 @@ namespace voltdb {
                     + 4 //length prefix
                     + 1 //version number
                     + 1; //scheme
-            if (m_hashScheme == HASH_SHA1) // dont bump version for old scheme.
-                sz -= 1;
             return sz;
         }
 
         void serializeTo(ByteBuffer *buffer) {
             buffer->position(4);
-            buffer->putInt8((int8_t)(m_hashScheme == HASH_SHA1 ? 0 : 1)); //version bump only of not old scheme.
-            if (m_hashScheme != HASH_SHA1) {
-                buffer->putInt8(m_hashScheme); //scheme.
-            }
+            buffer->putInt8(1); // Always version 1.
+            buffer->putInt8(m_hashScheme); //scheme.
             buffer->putString(m_service);
             buffer->putString(m_username);
             buffer->put(reinterpret_cast<char*> (m_passwordHash), (m_hashScheme == HASH_SHA1 ? 20 : 32));

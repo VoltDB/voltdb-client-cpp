@@ -5,3 +5,6 @@
 /libeventinstall/
 /voltdb-client-cpp-*
 /*.tar.gz
+*.d
+*.o
+/testbin
