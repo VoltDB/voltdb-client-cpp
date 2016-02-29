@@ -127,9 +127,6 @@ void testAuthenticationResponse() {
     AuthenticationResponse response(original);
     CPPUNIT_ASSERT(response.success());
     CPPUNIT_ASSERT(response.hostId()           == 0);
-    std::cout << "st: " << response.clusterStartTime() << "\n";
-    std::cout << "la: " << response.leaderAddress() << "\n";
-    std::cout << "bs: " << response.buildString() << "\n";
     CPPUNIT_ASSERT(response.clusterStartTime() == FAKE_CLUSTER_START_TIME);
     CPPUNIT_ASSERT(response.leaderAddress()    == FAKE_LEADER_IP_ADDRESS);
     CPPUNIT_ASSERT(response.buildString()      == FAKE_BUILD_STRING);

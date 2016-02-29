@@ -379,7 +379,7 @@ void ClientImpl::initiateAuthentication(PendingConnection* pc, struct buffereven
     }
     AuthenticationRequest authRequest( m_username, "database", m_passwordHash, m_hashScheme );
     int size = authRequest.getSerializedSize();
-    ScopedByteBuffer bb(authRequest.getSerializedSize());
+    ScopedByteBuffer bb(size);
     authRequest.serializeTo(&bb);
 
     struct evbuffer *evbuf = bufferevent_get_output(bev);
