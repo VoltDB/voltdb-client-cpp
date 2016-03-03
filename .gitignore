@@ -7,3 +7,5 @@
 /*.tar.gz
 *.d
 *.o
+/testbin
+/.settings
