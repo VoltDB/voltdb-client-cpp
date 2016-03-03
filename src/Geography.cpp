@@ -163,7 +163,6 @@ int32_t Geography::deserializeFrom(ByteBuffer &aData,
                                    int32_t first_offset,
                                    bool &aWasNull)
 {
-    Geography::Ring rng;
     int32_t offset = first_offset;
     // The first four bytes are the length.  We read them
     // only so we can validate the read.  The length does
@@ -186,6 +185,7 @@ int32_t Geography::deserializeFrom(ByteBuffer &aData,
     assert(offset < last_offset);
     assert(0 <= numRings);
     for (int idx = 0; idx < numRings; idx += 1) {
+        Ring &rng = addEmptyRing();
         rng.clear();
         // The first byte is noise.
         offset += 1;
@@ -212,7 +212,8 @@ int32_t Geography::deserializeFrom(ByteBuffer &aData,
         if (0 < idx) {
             rng.reverse();
         }
-        addRing(rng);
+        // We don't have to add rng because we added it
+        // when it was created.
     }
     assert(offset+33 == last_offset);
     return len;

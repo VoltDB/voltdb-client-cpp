@@ -435,6 +435,12 @@ void testInvocationGeoInsert() {
         << GeographyPoint(1, 1)
         << GeographyPoint(0, 1)
         << GeographyPoint(0, 0);
+    smallPoly.addEmptyRing()
+        << GeographyPoint(0.1, 0.1)
+        << GeographyPoint(0.1, 0.9)
+        << GeographyPoint(0.9, 0.9)
+        << GeographyPoint(0.9, 0.1)
+        << GeographyPoint(0.1, 0.1);
     GeographyPoint smallPoint(0.5, 0.5);
     ps->addInt32(200);
     ps->addGeography(smallPoly);
@@ -639,6 +645,12 @@ void testInvocationGeoSelectBoth() {
                              << GeographyPoint(1, 1)
                              << GeographyPoint(0, 1)
                              << GeographyPoint(0, 0);
+    smallPoly.addEmptyRing()
+                             << GeographyPoint(0.1, 0.1)
+                             << GeographyPoint(0.1, 0.9)
+                             << GeographyPoint(0.9, 0.9)
+                             << GeographyPoint(0.9, 0.1)
+                             << GeographyPoint(0.1, 0.1);
     while (iterator.hasNext()) {
         Row r = iterator.next();
         CPPUNIT_ASSERT(r.columnCount() == 3);
@@ -688,11 +700,16 @@ void testInvocationGeoSelectBothMid() {
     int resultCount = 0;
     GeographyPoint twentyPoint(20, 20);
     Geography midPoly;
-    midPoly.addEmptyRing()<< GeographyPoint( 0,  0)
-                          << GeographyPoint(45,  0)
-                          << GeographyPoint(45, 45)
-                          << GeographyPoint( 0, 45)
-                          << GeographyPoint( 0, 0);
+    midPoly.addEmptyRing() << GeographyPoint( 0,  0)
+                           << GeographyPoint(45,  0)
+                           << GeographyPoint(45, 45)
+                           << GeographyPoint( 0, 45)
+                           << GeographyPoint( 0, 0);
+    midPoly.addEmptyRing() << GeographyPoint(10, 10)
+                           << GeographyPoint(10, 30)
+                           << GeographyPoint(30, 30)
+                           << GeographyPoint(30, 10)
+                           << GeographyPoint(10, 10);
     while (iterator.hasNext()) {
         Row r = iterator.next();
         CPPUNIT_ASSERT(r.columnCount() == 3);
@@ -796,13 +813,17 @@ void testInvocationGeoSelectPointNull() {
     CPPUNIT_ASSERT(columns[2].m_type == WIRE_TYPE_GEOGRAPHY_POINT);
     TableIterator iterator = results.iterator();
     int resultCount = 0;
-    Geography smallPoly;
     Geography midPoly;
-    smallPoly.addEmptyRing() << GeographyPoint( 0,  0)
-                             << GeographyPoint(45,  0)
-                             << GeographyPoint(45, 45)
-                             << GeographyPoint( 0, 45)
-                             << GeographyPoint( 0,  0);
+    midPoly.addEmptyRing() << GeographyPoint( 0,  0)
+                           << GeographyPoint(45,  0)
+                           << GeographyPoint(45, 45)
+                           << GeographyPoint( 0, 45)
+                           << GeographyPoint( 0,  0);
+    midPoly.addEmptyRing() << GeographyPoint(10, 10)
+                           << GeographyPoint(10, 30)
+                           << GeographyPoint(30, 30)
+                           << GeographyPoint(30, 10)
+                           << GeographyPoint(10, 10);
     while (iterator.hasNext()) {
         Row r = iterator.next();
         CPPUNIT_ASSERT(r.columnCount() == 3);
@@ -811,9 +832,9 @@ void testInvocationGeoSelectPointNull() {
         CPPUNIT_ASSERT(r.getInt64(0) == 103L);
         CPPUNIT_ASSERT(false == r.wasNull());
         Geography g103 = r.getGeography("GEO");
-        CPPUNIT_ASSERT(true  == r.getGeography("GEO").approximatelyEqual(smallPoly, EPSILON));
+        CPPUNIT_ASSERT(true  == r.getGeography("GEO").approximatelyEqual(midPoly, EPSILON));
         CPPUNIT_ASSERT(false == r.wasNull());
-        CPPUNIT_ASSERT(true  == r.getGeography(1).approximatelyEqual(smallPoly, EPSILON));
+        CPPUNIT_ASSERT(true  == r.getGeography(1).approximatelyEqual(midPoly, EPSILON));
         CPPUNIT_ASSERT(false == r.wasNull());
         CPPUNIT_ASSERT(r.getGeographyPoint("GEO_PT").isNull());
         CPPUNIT_ASSERT(true  == r.wasNull());
