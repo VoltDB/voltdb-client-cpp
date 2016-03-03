@@ -44,10 +44,278 @@
 #include "Row.hpp"
 #include "sha1.h"
 #include "sha256.h"
-#include "Geography.h"
-#include "GeographyPoint.h"
+#include "Geography.hpp"
+#include "GeographyPoint.hpp"
+
+#undef DEBUG_BYTE_BUFFERS
+#ifdef  DEBUG_BYTE_BUFFERS
+#include <ctype.h>
+#endif
 
 namespace voltdb {
+
+static const double EPSILON = 1.0e-14;
+
+static void compareByteBuffers(ByteBuffer &original, std::string originalName,
+                               ByteBuffer generated, std::string generatedName) {
+    int orig_size = original.remaining();
+    int gen_size  = generated.remaining();
+    int size = (orig_size < gen_size) ? orig_size : gen_size;
+    int cmp = ::memcmp(original.bytes(), generated.bytes(), size);
+#ifdef DEBUG_BYTE_BUFFERS
+    if (gen_size != orig_size || cmp != 0) {
+        char buffer[8192];
+        std::ofstream gen_file(generatedName);
+        std::ofstream orig_file(originalName);
+        generated.get(0, buffer, generated.remaining());
+        gen_file.write(buffer, generated.remaining());
+        gen_file.close();
+        original.get(0, buffer, original.remaining());
+        orig_file.write(buffer, original.remaining());
+        orig_file.close();
+        std::cout << "Byte buffer comparison failure: cmp == " << cmp << "\n";
+        std::cout << "                                original size == " << orig_size
+                  << ", generated size == " << gen_size << "\n";
+        std::cout << "Idx   Original  Generated\n";
+        for (int idx = 0; idx < size; idx += 1) {
+            char buff1[8];
+            char buff2[8];
+            unsigned char oval = (unsigned char)original.getInt8(idx);
+            unsigned char gval = (unsigned char)generated.getInt8(idx);
+            printf("%04d.) %5d (%s) %5d (%s)%s\n",
+                   idx,
+                   oval,
+                   (sprintf(buff1,
+                            isprint(oval) ? "%2c" : "%02x",
+                            oval), buff1),
+                   gval,
+                   (sprintf(buff2,
+                            isprint(gval) ? "%2c" : "%02x",
+                            gval), buff2),
+                   (oval != gval) ? "***" : "");
+        }
+    }
+#endif
+    CPPUNIT_ASSERT(gen_size == orig_size);
+    CPPUNIT_ASSERT(cmp == 0);
+}
+
+static bool getParameterType(ByteBuffer &message, int8_t &type, bool &isArray) {
+    isArray = false;
+    type = message.getInt8();
+    if (type == WIRE_TYPE_ARRAY) {
+        type = message.getInt8();
+        if (type == WIRE_TYPE_TINYINT) {
+            type = WIRE_TYPE_VARBINARY;
+        } else {
+            isArray = true;
+        }
+    }
+    return true;
+}
+
+static bool compareParameter(ByteBuffer &original, std::string originalName,
+                             ByteBuffer &generated, std::string generatedName,
+                             bool allowArrays = true)
+{
+    int8_t oParamType, gParamType;
+    bool   oIsArray, gIsArray;
+    if (!getParameterType(original, oParamType, oIsArray)) {
+        return false;
+    }
+    if (!getParameterType(generated, gParamType, gIsArray)) {
+        return false;
+    }
+    if ((oIsArray != gIsArray) || (oParamType != gParamType)) {
+        return false;
+    }
+    if (oIsArray) {
+        if (allowArrays) {
+            return false;
+        }
+        int32_t gNumElements = generated.getInt16();
+        int32_t oNumElements = original.getInt16();
+        if (gNumElements != oNumElements) {
+            return false;
+        }
+        for (int idx = 0; idx < gNumElements; idx += 1) {
+            if (!compareParameter(original, originalName,
+                                  generated, generatedName, false)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    switch (oParamType) {
+    case WIRE_TYPE_STRING:
+    case WIRE_TYPE_VARBINARY:
+        {
+            int32_t gsize = generated.getInt32();
+            int32_t osize = original.getInt32();
+            if (gsize != osize) {
+                return false;
+            }
+            bool oWasNull = false;
+            bool gWasNull = false;
+            std::string ostr = original.getString(oWasNull);
+            std::string gstr = original.getString(gWasNull);
+            if (oWasNull != gWasNull) {
+                return false;
+            }
+            if (ostr != gstr) {
+                return false;
+            }
+            return true;
+        }
+        break;
+    case WIRE_TYPE_GEOGRAPHY:
+        {
+            bool oWasNull = false;
+            bool gWasNull = false;
+            Geography ogeog;
+            int32_t oGSize = ogeog.deserializeFrom(original,
+                                                   original.position(),
+                                                   oWasNull);
+            Geography ggeog;
+            int32_t gGSize = ggeog.deserializeFrom(generated,
+                                                   generated.position(),
+                                                   gWasNull);
+            if (oGSize != gGSize) {
+                return false;
+            }
+            if (!ogeog.approximatelyEqual(ggeog, EPSILON)) {
+                return false;
+            }
+            return true;
+        }
+        break;
+    case WIRE_TYPE_TINYINT:
+        {
+            int8_t g = generated.getInt8();
+            int8_t o = original.getInt8();
+            return (g == o);
+        }
+    case WIRE_TYPE_SMALLINT:
+        {
+            int16_t g = generated.getInt16();
+            int16_t o = original.getInt16();
+            return (g == o);
+        }
+    case WIRE_TYPE_INTEGER:
+        {
+            int32_t g = generated.getInt32();
+            int32_t o = original.getInt32();
+            return (g == o);
+        }
+    case WIRE_TYPE_BIGINT:
+        {
+            int64_t g = generated.getInt64();
+            int64_t o = original.getInt64();
+            return (g == o);
+        }
+    case WIRE_TYPE_FLOAT:
+        {
+            double g = generated.getDouble();
+            double o = original.getDouble();
+            return (g == o);
+        }
+    case WIRE_TYPE_TIMESTAMP:
+        {
+            int64_t g = generated.getInt64();
+            int64_t o = original.getInt64();
+            return (g == o);
+        }
+    case WIRE_TYPE_DECIMAL:
+        {
+            int64_t g = generated.getInt64();
+            int64_t o = original.getInt64();
+            return (g == o);
+        }
+    case WIRE_TYPE_GEOGRAPHY_POINT:
+        {
+            GeographyPoint g, o;
+            bool gWasNull = false;
+            bool oWasNull = false;
+            int32_t oSize = o.deserializeFrom(original,
+                                              original.position(),
+                                              oWasNull);
+            int32_t gSize = g.deserializeFrom(generated,
+                                              generated.position(),
+                                              gWasNull);
+            if (gSize != oSize) {
+                return false;
+            }
+            original.position(original.position() + oSize);
+            generated.position(generated.position() + gSize);
+            return GeographyPoint::approximatelyEqual(g, o, EPSILON);
+        }
+    default:
+        return false;
+    }
+}
+
+static bool compareParameterSets(ByteBuffer &original, std::string originalName,
+                                 ByteBuffer &generated, std::string generatedName)
+{
+    int16_t oNumParams = original.getInt16();
+    int16_t gNumParams = generated.getInt16();
+    if (oNumParams != gNumParams) {
+        return false;
+    }
+    for (int idx = 0; idx < oNumParams; idx += 1) {
+        if (!compareParameter(original, originalName,
+                              generated, generatedName)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Reset the position of a byte buffer to its initial position.
+ */
+struct BBReset {
+    BBReset(ByteBuffer &bb)
+        : m_bb(bb), m_initPos(bb.position()) {}
+    ~BBReset() {
+        m_bb.position(m_initPos);
+    }
+    ByteBuffer &m_bb;
+    int m_initPos;
+};
+
+static bool compareRequestMessages(ByteBuffer &original, std::string originalName,
+                                   ByteBuffer &generated, std::string generatedName)
+{
+    BBReset oreset(original);
+    BBReset greset(generated);
+    int32_t osize = original.getInt32();
+    int32_t gsize = generated.getInt32();
+    if (osize != gsize) {
+        return false;
+    } else {
+        int8_t  oprotocol = original.getInt8();
+        int8_t  gprotocol = generated.getInt8();
+        if (oprotocol != gprotocol) {
+            return false;
+        }
+        bool oWasNull;
+        bool gWasNull;
+        std::string oProcName = original.getString(oWasNull);
+        std::string gProcName = generated.getString(gWasNull);
+        if (oProcName != oProcName || (oWasNull != gWasNull)) {
+            return false;
+        }
+        int64_t oClientData = original.getInt64();
+        int64_t gClientData = generated.getInt64();
+        if (oClientData != gClientData) {
+            return false;
+        }
+        return compareParameterSets(original, originalName,
+                                    generated, generatedName);
+    }
+}
+
 class SerializationTest : public CppUnit::TestFixture {
 CPPUNIT_TEST_SUITE( SerializationTest );
 CPPUNIT_TEST(testAuthenticationRequestSha1);
@@ -141,10 +409,101 @@ void testAuthenticationResponse() {
     CPPUNIT_ASSERT(response.buildString()      == FAKE_BUILD_STRING);
 }
 
+/**
+ * Here we are going to create a procedure which mimics
+ * the java client's procedure which we have already generated
+ * and captured.  We will then compare the two messages.
+ * We have already captured the response, so we validate that
+ * as well.
+ */
+void testInvocationGeoInsert() {
+    // This is the message the Java client generated.
+    SharedByteBuffer originalRequest = fileAsByteBuffer("invocation_request_insert_geo.msg");
+    // This is the the response the Java client generated.
+    SharedByteBuffer originalResponse = fileAsByteBuffer("invocation_response_insert_geo.msg");
+
+    std::vector<Parameter> params;
+    params.push_back(Parameter(WIRE_TYPE_INTEGER, false));
+    params.push_back(Parameter(WIRE_TYPE_GEOGRAPHY, false));
+    params.push_back(Parameter(WIRE_TYPE_GEOGRAPHY_POINT, false));
+    Procedure proc("InsertGeo", params);
+    ParameterSet *ps = proc.params();
+    Geography smallPoly;
+    smallPoly.addEmptyRing()
+        << GeographyPoint(0, 0)
+        << GeographyPoint(1, 0)
+        << GeographyPoint(1, 1)
+        << GeographyPoint(0, 1)
+        << GeographyPoint(0, 0);
+    GeographyPoint smallPoint(0.5, 0.5);
+    ps->addInt32(200);
+    ps->addGeography(smallPoly);
+    ps->addGeographyPoint(smallPoint);
+    int32_t procSize = proc.getSerializedSize();
+    ScopedByteBuffer generatedRequest(procSize);
+    proc.serializeTo(&generatedRequest, FAKE_CLIENT_DATA);
+
+    // compare originalRequest and generatedRequest.
+    compareRequestMessages(originalRequest,  "original_insert_geo.msg",
+                           generatedRequest, "generated_insert_geo.msg");
+    
+    // Investigate the response.  This is less interesting.
+    originalResponse.position(4);
+    boost::shared_array<char> copy(new char[originalResponse.remaining()]);
+    originalResponse.get(copy.get(), originalResponse.remaining());
+    InvocationResponse response(copy, originalResponse.capacity() - 4);
+    CPPUNIT_ASSERT(response.success());
+    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
+    CPPUNIT_ASSERT(response.appStatusCode() == -128);
+    CPPUNIT_ASSERT(response.appStatusString() == "");
+    CPPUNIT_ASSERT(response.statusString() == "");
+    CPPUNIT_ASSERT(response.results().size() == 1);
+    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
+}
+
+void testInvocationGeoInsertNulls() {
+    SharedByteBuffer originalRequest  = fileAsByteBuffer("invocation_request_insert_geo_nulls.msg");
+    SharedByteBuffer originalResponse = fileAsByteBuffer("invocation_response_insert_geo_nulls.msg");
+
+    // These will be a null Geography and GeographyPoint.
+    Geography      smallPoly;
+    GeographyPoint smallPoint;
+    std::vector<Parameter> params;
+    params.push_back(Parameter(WIRE_TYPE_INTEGER, false));
+    params.push_back(Parameter(WIRE_TYPE_GEOGRAPHY, false));
+    params.push_back(Parameter(WIRE_TYPE_GEOGRAPHY_POINT, false));
+    Procedure proc("InsertGeo", params);
+
+    ParameterSet *ps = proc.params();
+    ps->addInt32(201);
+    ps->addGeography(smallPoly);
+    ps->addGeographyPoint(smallPoint);
+    int32_t procSize = proc.getSerializedSize();
+    ScopedByteBuffer generatedRequest(procSize);
+    proc.serializeTo(&generatedRequest, FAKE_CLIENT_DATA);
+
+    // compare originalRequest and generatedRequest.
+    compareRequestMessages(originalRequest,  "original_insert_geo_nulls.msg",
+                           generatedRequest, "generated_insert_geo_nulls.msg");
+
+    // Investigate the original response.  Again, this is less interesting.
+    originalResponse.position(4);
+    boost::shared_array<char> copy(new char[originalResponse.remaining()]);
+    originalResponse.get(copy.get(), originalResponse.remaining());
+    InvocationResponse response(copy, originalResponse.capacity() - 4);
+    CPPUNIT_ASSERT(response.success());
+    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
+    CPPUNIT_ASSERT(response.appStatusCode() == -128);
+    CPPUNIT_ASSERT(response.appStatusString() == "");
+    CPPUNIT_ASSERT(response.statusString() == "");
+    CPPUNIT_ASSERT(response.results().size() == 1);
+    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
+}
+
 void testInvocationAllParams() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_request_all_params.msg");
     std::vector<Parameter> params;
-    params.push_back(Parameter(WIRE_TYPE_STRING, true));
+     params.push_back(Parameter(WIRE_TYPE_STRING, true));
     params.push_back(Parameter(WIRE_TYPE_TINYINT, true));
     params.push_back(Parameter(WIRE_TYPE_SMALLINT, true));
     params.push_back(Parameter(WIRE_TYPE_INTEGER, true));
@@ -175,34 +534,8 @@ void testInvocationAllParams() {
     int32_t size = proc.getSerializedSize();
     ScopedByteBuffer buffer(new char[size], size);
     proc.serializeTo(&buffer, FAKE_CLIENT_DATA);
-    int cmp = ::memcmp(original.bytes(), buffer.bytes(), size);
-#if  0
-    // Dump the request for debugging.
-    {
-        uint8_t genbuf[1024];
-        buffer.get(0, (char *)genbuf, buffer.limit());
-        std::ofstream of("generated_invocation_request_all_params.msg");
-        of.write((const char *)genbuf, buffer.limit());
-        of.close();
-    }
-    std::cout << "Comparison: " << cmp << "\n";
-    if (cmp != 0) {
-        int width = std::cout.width();
-        char *orig_bytes = original.bytes();
-        char *buff_bytes = buffer.bytes();
-        for (int idx = 0; idx < size; idx += 1) {
-            if (orig_bytes[idx] != buff_bytes[idx]) {
-                std::cout << "   Byte " << idx << " differs: "
-                          << std::hex << (((unsigned int)orig_bytes[idx]) & 0xff) << std::dec
-                          << " != "
-                          << std::hex << (((unsigned int)buff_bytes[idx]) & 0xff) << std::dec << "\n";
-            }
-        }
-        std::cout.width(width);
-    }
-#endif
-    CPPUNIT_ASSERT(original.remaining() == size);
-    CPPUNIT_ASSERT(cmp == 0);
+    compareByteBuffers(original, "original_all_types.msg",
+                       buffer,   "generated_all_types.msg");
 }
 
 void testInvocationResponseSuccess() {
@@ -272,36 +605,6 @@ void testInvocationResponseSelect() {
     CPPUNIT_ASSERT(resultCount == 1);
 }
 
-void testInvocationGeoInsert() {
-    SharedByteBuffer original = fileAsByteBuffer("invocation_response_success.msg");
-    original.position(4);
-    boost::shared_array<char> copy(new char[original.remaining()]);
-    original.get(copy.get(), original.remaining());
-    InvocationResponse response(copy, original.capacity() - 4);
-    CPPUNIT_ASSERT(response.success());
-    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
-    CPPUNIT_ASSERT(response.appStatusCode() == -128);
-    CPPUNIT_ASSERT(response.appStatusString() == "");
-    CPPUNIT_ASSERT(response.statusString() == "");
-    CPPUNIT_ASSERT(response.results().size() == 1);
-    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
-}
-
-void testInvocationGeoInsertNulls() {
-    SharedByteBuffer original = fileAsByteBuffer("invocation_response_success.msg");
-    original.position(4);
-    boost::shared_array<char> copy(new char[original.remaining()]);
-    original.get(copy.get(), original.remaining());
-    InvocationResponse response(copy, original.capacity() - 4);
-    CPPUNIT_ASSERT(response.success());
-    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
-    CPPUNIT_ASSERT(response.appStatusCode() == -128);
-    CPPUNIT_ASSERT(response.appStatusString() == "");
-    CPPUNIT_ASSERT(response.statusString() == "");
-    CPPUNIT_ASSERT(response.results().size() == 1);
-    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
-}
-
 void testInvocationGeoSelectBoth() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_geo_both.msg");
     original.position(4);
@@ -329,46 +632,243 @@ void testInvocationGeoSelectBoth() {
     CPPUNIT_ASSERT(columns[2].m_type == WIRE_TYPE_GEOGRAPHY_POINT);
     TableIterator iterator = results.iterator();
     int resultCount = 0;
-    GeographyPoint smallPoint(0.5, 0.5);
     GeographyPoint originPoint(0, 0);
     Geography smallPoly;
-    Geography midPoly;
-    Geography::Ring rng;
-    smallPoly << (rng << GeographyPoint(0, 0)
-                      << GeographyPoint(1, 0)
-                      << GeographyPoint(1, 1)
-                      << GeographyPoint(0, 1)
-                      << GeographyPoint(0, 0));
-    Geography::Ring rng2;
-    midPoly << (rng2 << GeographyPoint(0, 0)
-                     << GeographyPoint(45, 0)
-                     << GeographyPoint(45, 45)
-                     << GeographyPoint(0, 45)
-                     << GeographyPoint(0, 0));
+    smallPoly.addEmptyRing() << GeographyPoint(0, 0)
+                             << GeographyPoint(1, 0)
+                             << GeographyPoint(1, 1)
+                             << GeographyPoint(0, 1)
+                             << GeographyPoint(0, 0);
     while (iterator.hasNext()) {
         Row r = iterator.next();
         CPPUNIT_ASSERT(r.columnCount() == 3);
-        CPPUNIT_ASSERT(r.getInt64(0) == 100L);
         CPPUNIT_ASSERT(r.getInt64("ID") == 100L);
-        CPPUNIT_ASSERT(r.getGeography("GEO") == smallPoly);
-        CPPUNIT_ASSERT(r.getGeography(1) == smallPoly);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getInt64(0) == 100L);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getGeography("GEO").approximatelyEqual(smallPoly, EPSILON));
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getGeography(1).approximatelyEqual(smallPoly, EPSILON));
+        CPPUNIT_ASSERT(false == r.wasNull());
         CPPUNIT_ASSERT(r.getGeographyPoint(2) == originPoint);
+        CPPUNIT_ASSERT(false == r.wasNull());
         CPPUNIT_ASSERT(r.getGeographyPoint("GEO_PT") == originPoint);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        resultCount++;
+    }
+    CPPUNIT_ASSERT(resultCount == 1);
+}
+
+void testInvocationGeoSelectBothMid() {
+    SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_geo_both_mid.msg");
+    original.position(4);
+    boost::shared_array<char> copy(new char[original.remaining()]);
+    original.get(copy.get(), original.remaining());
+    InvocationResponse response(copy, original.capacity() - 4);
+    CPPUNIT_ASSERT(response.success());
+    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
+    CPPUNIT_ASSERT(response.appStatusCode() == -128);
+    CPPUNIT_ASSERT(response.appStatusString() == "");
+    CPPUNIT_ASSERT(response.statusString() == "");
+    CPPUNIT_ASSERT(response.results().size() == 1);
+    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
+    Table results = response.results()[0];
+    CPPUNIT_ASSERT(results.getStatusCode() == -128);
+    CPPUNIT_ASSERT(results.rowCount() == 1);
+    CPPUNIT_ASSERT(results.columnCount() == 3);
+    std::vector<voltdb::Column> columns = results.columns();
+    CPPUNIT_ASSERT(columns.size() == 3);
+    CPPUNIT_ASSERT(columns[0].m_name == "ID");
+    CPPUNIT_ASSERT(columns[0].m_type == WIRE_TYPE_BIGINT);
+    CPPUNIT_ASSERT(columns[1].m_name == "GEO");
+    CPPUNIT_ASSERT(columns[1].m_type == WIRE_TYPE_GEOGRAPHY);
+    CPPUNIT_ASSERT(columns[2].m_name == "GEO_PT");
+    CPPUNIT_ASSERT(columns[2].m_type == WIRE_TYPE_GEOGRAPHY_POINT);
+    TableIterator iterator = results.iterator();
+    int resultCount = 0;
+    GeographyPoint twentyPoint(20, 20);
+    Geography midPoly;
+    midPoly.addEmptyRing()<< GeographyPoint( 0,  0)
+                          << GeographyPoint(45,  0)
+                          << GeographyPoint(45, 45)
+                          << GeographyPoint( 0, 45)
+                          << GeographyPoint( 0, 0);
+    while (iterator.hasNext()) {
+        Row r = iterator.next();
+        CPPUNIT_ASSERT(r.columnCount() == 3);
+        CPPUNIT_ASSERT(r.getInt64("ID") == 101L);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getInt64(0) == 101L);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getGeography("GEO").approximatelyEqual(midPoly, EPSILON));
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getGeography(1).approximatelyEqual(midPoly, EPSILON));
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getGeographyPoint("GEO_PT") == twentyPoint);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getGeographyPoint(2) == twentyPoint);
+        CPPUNIT_ASSERT(false == r.wasNull());
         resultCount++;
     }
     CPPUNIT_ASSERT(resultCount == 1);
 }
 
 void testInvocationGeoSelectPolyNull() {
-
+    SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_geo_polynull.msg");
+    original.position(4);
+    boost::shared_array<char> copy(new char[original.remaining()]);
+    original.get(copy.get(), original.remaining());
+    InvocationResponse response(copy, original.capacity() - 4);
+    CPPUNIT_ASSERT(response.success());
+    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
+    CPPUNIT_ASSERT(response.appStatusCode() == -128);
+    CPPUNIT_ASSERT(response.appStatusString() == "");
+    CPPUNIT_ASSERT(response.statusString() == "");
+    CPPUNIT_ASSERT(response.results().size() == 1);
+    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
+    Table results = response.results()[0];
+    CPPUNIT_ASSERT(results.getStatusCode() == -128);
+    CPPUNIT_ASSERT(results.rowCount() == 1);
+    CPPUNIT_ASSERT(results.columnCount() == 3);
+    std::vector<voltdb::Column> columns = results.columns();
+    CPPUNIT_ASSERT(columns.size() == 3);
+    CPPUNIT_ASSERT(columns[0].m_name == "ID");
+    CPPUNIT_ASSERT(columns[0].m_type == WIRE_TYPE_BIGINT);
+    CPPUNIT_ASSERT(columns[1].m_name == "GEO");
+    CPPUNIT_ASSERT(columns[1].m_type == WIRE_TYPE_GEOGRAPHY);
+    CPPUNIT_ASSERT(columns[2].m_name == "GEO_PT");
+    CPPUNIT_ASSERT(columns[2].m_type == WIRE_TYPE_GEOGRAPHY_POINT);
+    TableIterator iterator = results.iterator();
+    int resultCount = 0;
+    GeographyPoint originPoint(0, 0);
+    Geography smallPoly;
+    smallPoly.addEmptyRing() << GeographyPoint(0, 0)
+                             << GeographyPoint(1, 0)
+                             << GeographyPoint(1, 1)
+                             << GeographyPoint(0, 1)
+                             << GeographyPoint(0, 0);
+    while (iterator.hasNext()) {
+        Row r = iterator.next();
+        CPPUNIT_ASSERT(r.columnCount() == 3);
+        CPPUNIT_ASSERT(r.getInt64("ID") == 102L);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getInt64(0) == 102L);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        // The polygon is null here.  We will get an
+        // answer, but it will be the null polygon.
+        CPPUNIT_ASSERT(r.getGeography("GEO").isNull());
+        CPPUNIT_ASSERT(true == r.wasNull());
+        CPPUNIT_ASSERT(r.getGeography(1).isNull());
+        CPPUNIT_ASSERT(true == r.wasNull());
+        CPPUNIT_ASSERT(r.getGeographyPoint("GEO_PT") == originPoint);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getGeographyPoint(2) == originPoint);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        resultCount++;
+    }
+    CPPUNIT_ASSERT(resultCount == 1);
 }
 
 void testInvocationGeoSelectPointNull() {
-
+    SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_geo_ptnull.msg");
+    original.position(4);
+    boost::shared_array<char> copy(new char[original.remaining()]);
+    original.get(copy.get(), original.remaining());
+    InvocationResponse response(copy, original.capacity() - 4);
+    CPPUNIT_ASSERT(response.success());
+    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
+    CPPUNIT_ASSERT(response.appStatusCode() == -128);
+    CPPUNIT_ASSERT(response.appStatusString() == "");
+    CPPUNIT_ASSERT(response.statusString() == "");
+    CPPUNIT_ASSERT(response.results().size() == 1);
+    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
+    Table results = response.results()[0];
+    CPPUNIT_ASSERT(results.getStatusCode() == -128);
+    CPPUNIT_ASSERT(results.rowCount() == 1);
+    CPPUNIT_ASSERT(results.columnCount() == 3);
+    std::vector<voltdb::Column> columns = results.columns();
+    CPPUNIT_ASSERT(columns.size() == 3);
+    CPPUNIT_ASSERT(columns[0].m_name == "ID");
+    CPPUNIT_ASSERT(columns[0].m_type == WIRE_TYPE_BIGINT);
+    CPPUNIT_ASSERT(columns[1].m_name == "GEO");
+    CPPUNIT_ASSERT(columns[1].m_type == WIRE_TYPE_GEOGRAPHY);
+    CPPUNIT_ASSERT(columns[2].m_name == "GEO_PT");
+    CPPUNIT_ASSERT(columns[2].m_type == WIRE_TYPE_GEOGRAPHY_POINT);
+    TableIterator iterator = results.iterator();
+    int resultCount = 0;
+    Geography smallPoly;
+    Geography midPoly;
+    smallPoly.addEmptyRing() << GeographyPoint( 0,  0)
+                             << GeographyPoint(45,  0)
+                             << GeographyPoint(45, 45)
+                             << GeographyPoint( 0, 45)
+                             << GeographyPoint( 0,  0);
+    while (iterator.hasNext()) {
+        Row r = iterator.next();
+        CPPUNIT_ASSERT(r.columnCount() == 3);
+        CPPUNIT_ASSERT(r.getInt64("ID") == 103L);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getInt64(0) == 103L);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        Geography g103 = r.getGeography("GEO");
+        CPPUNIT_ASSERT(true  == r.getGeography("GEO").approximatelyEqual(smallPoly, EPSILON));
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(true  == r.getGeography(1).approximatelyEqual(smallPoly, EPSILON));
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getGeographyPoint("GEO_PT").isNull());
+        CPPUNIT_ASSERT(true  == r.wasNull());
+        CPPUNIT_ASSERT(r.getGeographyPoint(2).isNull());
+        CPPUNIT_ASSERT(true  == r.wasNull());
+        resultCount++;
+    }
+    CPPUNIT_ASSERT(resultCount == 1);
 }
 
 void testInvocationGeoSelectBothNull() {
-
+    SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_geo_bothnull.msg");
+    original.position(4);
+    boost::shared_array<char> copy(new char[original.remaining()]);
+    original.get(copy.get(), original.remaining());
+    InvocationResponse response(copy, original.capacity() - 4);
+    CPPUNIT_ASSERT(response.success());
+    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
+    CPPUNIT_ASSERT(response.appStatusCode() == -128);
+    CPPUNIT_ASSERT(response.appStatusString() == "");
+    CPPUNIT_ASSERT(response.statusString() == "");
+    CPPUNIT_ASSERT(response.results().size() == 1);
+    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
+    Table results = response.results()[0];
+    CPPUNIT_ASSERT(results.getStatusCode() == -128);
+    CPPUNIT_ASSERT(results.rowCount() == 1);
+    CPPUNIT_ASSERT(results.columnCount() == 3);
+    std::vector<voltdb::Column> columns = results.columns();
+    CPPUNIT_ASSERT(columns.size() == 3);
+    CPPUNIT_ASSERT(columns[0].m_name == "ID");
+    CPPUNIT_ASSERT(columns[0].m_type == WIRE_TYPE_BIGINT);
+    CPPUNIT_ASSERT(columns[1].m_name == "GEO");
+    CPPUNIT_ASSERT(columns[1].m_type == WIRE_TYPE_GEOGRAPHY);
+    CPPUNIT_ASSERT(columns[2].m_name == "GEO_PT");
+    CPPUNIT_ASSERT(columns[2].m_type == WIRE_TYPE_GEOGRAPHY_POINT);
+    TableIterator iterator = results.iterator();
+    int resultCount = 0;
+    while (iterator.hasNext()) {
+        Row r = iterator.next();
+        CPPUNIT_ASSERT(r.columnCount() == 3);
+        CPPUNIT_ASSERT(r.getInt64("ID") == 104L);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(r.getInt64(0) == 104L);
+        CPPUNIT_ASSERT(false == r.wasNull());
+        CPPUNIT_ASSERT(true  == r.getGeography("GEO").isNull());
+        CPPUNIT_ASSERT(true  == r.wasNull());
+        CPPUNIT_ASSERT(true  == r.getGeography(1).isNull());
+        CPPUNIT_ASSERT(true  == r.wasNull());
+        CPPUNIT_ASSERT(true  == r.getGeographyPoint("GEO_PT").isNull());
+        CPPUNIT_ASSERT(true  == r.wasNull());
+        CPPUNIT_ASSERT(true  == r.getGeographyPoint(2).isNull());
+        CPPUNIT_ASSERT(true  == r.wasNull());
+        resultCount++;
+    }
+    CPPUNIT_ASSERT(resultCount == 1);
 }
 
 void testSerializedTable() {
@@ -454,7 +954,7 @@ void testSerializedTable() {
 
     CPPUNIT_ASSERT(ti.hasNext());
     r = ti.next();
-    CPPUNIT_ASSERT(r.columnCount() == 7);
+    CPPUNIT_ASSERT(r.columnCount() == 9);
 
     CPPUNIT_ASSERT(!r.isNull(0));
     CPPUNIT_ASSERT(!r.isNull("column1"));
@@ -507,7 +1007,7 @@ void testSerializedTable() {
 
     CPPUNIT_ASSERT(ti.hasNext());
     r = ti.next();
-    CPPUNIT_ASSERT(r.columnCount() == 7);
+    CPPUNIT_ASSERT(r.columnCount() == 9);
 
     CPPUNIT_ASSERT(!r.isNull(0));
     CPPUNIT_ASSERT(!r.isNull("column1"));
@@ -560,7 +1060,7 @@ void testSerializedTable() {
 
     CPPUNIT_ASSERT(ti.hasNext());
     r = ti.next();
-    CPPUNIT_ASSERT(r.columnCount() == 7);
+    CPPUNIT_ASSERT(r.columnCount() == 9);
 
     CPPUNIT_ASSERT(r.isNull(0));
     CPPUNIT_ASSERT(r.isNull("column1"));

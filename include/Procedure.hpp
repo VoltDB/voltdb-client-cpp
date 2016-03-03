@@ -80,6 +80,7 @@ private:
     const std::string m_name;
     ParameterSet m_params;
 };
+
 }
 
 #endif /* VOLTDB_PROCEDURE_HPP_ */

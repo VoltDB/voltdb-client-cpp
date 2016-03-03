@@ -30,6 +30,8 @@
 #include "boost/shared_ptr.hpp"
 #include "Exception.hpp"
 #include "Decimal.hpp"
+#include "GeographyPoint.hpp"
+#include "Geography.hpp"
 
 namespace voltdb {
 class Procedure;
@@ -309,8 +311,6 @@ public:
         validateType(WIRE_TYPE_TINYINT, true);
         m_buffer.ensureRemaining(6 + static_cast<int32_t>(sizeof(int8_t) * vals.size()));
         // Convert array of TINYINT to VARBINARY.
-        // m_buffer.putInt8(WIRE_TYPE_ARRAY);
-        // m_buffer.putInt8(WIRE_TYPE_TINYINT);
         m_buffer.putInt8(WIRE_TYPE_VARBINARY);
         m_buffer.putInt32(static_cast<int32_t>(vals.size()));
         for (std::vector<int8_t>::const_iterator i = vals.begin(); i != vals.end(); ++i) {
@@ -408,6 +408,79 @@ public:
     ParameterSet& addString(const std::vector<buffer_t> &vals)
     throw (voltdb::ParamMismatchException) {
         return addTypedByteArray<WIRE_TYPE_STRING, buffer_t>(vals);
+    }
+
+    /**
+     * Add a single GeographyPoint.
+     */
+    ParameterSet& addGeographyPoint(const GeographyPoint &val) {
+        validateType(WIRE_TYPE_GEOGRAPHY_POINT, false);
+        m_buffer.ensureRemaining(1 + 2*sizeof(double));
+        m_buffer.putInt8(WIRE_TYPE_GEOGRAPHY_POINT);
+        m_buffer.putDouble(val.getLongitude());
+        m_buffer.putDouble(val.getLatitude());
+        m_currentParam++;
+        return *this;
+    }
+
+    /**
+     * Add a vector of GeographyPoints.
+     */
+    ParameterSet& addGeographyPoint(const std::vector<GeographyPoint> &vals) {
+        validateType(WIRE_TYPE_GEOGRAPHY_POINT, true);
+        m_buffer.ensureRemaining(4 + static_cast<int32_t>(2*sizeof(double) * vals.size()));
+        m_buffer.putInt8(WIRE_TYPE_ARRAY);
+        m_buffer.putInt8(WIRE_TYPE_GEOGRAPHY_POINT);
+        m_buffer.putInt16(static_cast<int16_t>(vals.size()));
+        for (std::vector<GeographyPoint>::const_iterator i = vals.begin(); i != vals.end(); ++i) {
+            m_buffer.putDouble(i->getLongitude());
+            m_buffer.putDouble(i->getLatitude());
+        }
+        m_currentParam++;
+        return *this;
+    }
+
+    /**
+     * Add a single Geography.
+     */
+    ParameterSet& addGeography(const Geography &val) {
+        validateType(WIRE_TYPE_GEOGRAPHY, false);
+        // getSerializedSize() will return space for the
+        // size.
+        int32_t valSize = val.getSerializedSize();
+        m_buffer.ensureRemaining(1 + valSize);
+        // serializeTo will put the size in the buffer.
+        m_buffer.putInt8(WIRE_TYPE_GEOGRAPHY);
+        int realSize = val.serializeTo(m_buffer);
+        assert(valSize == realSize);
+        m_currentParam++;
+        return *this;
+    }
+
+    /**
+     * Add a vector of Geographys.
+     */
+    ParameterSet& addGeography(const std::vector<Geography> &vals) {
+        validateType(WIRE_TYPE_GEOGRAPHY, true);
+        int32_t valSize = 4;
+        for (std::vector<Geography>::const_iterator idx = vals.begin();
+             idx != vals.end();
+             idx++) {
+            valSize += idx->getSerializedSize();
+        }
+        m_buffer.ensureRemaining(valSize);
+        m_buffer.putInt8(WIRE_TYPE_ARRAY);
+        m_buffer.putInt8(WIRE_TYPE_GEOGRAPHY);
+        m_buffer.putInt16(static_cast<int16_t>(vals.size()));
+        int realSize = 4;
+        for (std::vector<Geography>::const_iterator idx = vals.begin();
+             idx != vals.end();
+             idx++) {
+            realSize += idx->serializeTo(m_buffer);
+        }
+        assert(valSize == realSize);
+        m_currentParam++;
+        return *this;
     }
 
     /**

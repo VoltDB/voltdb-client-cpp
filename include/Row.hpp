@@ -33,8 +33,8 @@
 #include <stdint.h>
 #include "Decimal.hpp"
 #include <sstream>
-#include "Geography.h"
-#include "GeographyPoint.h"
+#include "Geography.hpp"
+#include "GeographyPoint.hpp"
 
 namespace voltdb {
 
@@ -237,14 +237,10 @@ public:
      */
     GeographyPoint getGeographyPoint(int32_t column) throw(voltdb::InvalidColumnException) {
         validateType(WIRE_TYPE_GEOGRAPHY_POINT, column);
-        double longitude = m_data.getDouble(getOffset(column));
-        double latitude = m_data.getDouble(getOffset(column));
-        if (longitude == 360.0 && latitude == 360.0) {
-            m_wasNull = true;
-        } else {
-            m_wasNull = false;
-        }
-        return GeographyPoint(longitude, latitude);
+        GeographyPoint gpoint;
+        m_wasNull = false;
+        gpoint.deserializeFrom(m_data, getOffset(column), m_wasNull);
+        return gpoint;
     }
 
     /*
@@ -256,38 +252,10 @@ public:
      */
     Geography getGeography(int32_t column) throw(voltdb::InvalidColumnException) {
         validateType(WIRE_TYPE_GEOGRAPHY, column);
+        m_wasNull = false;
         Geography answer;
-        Geography::Ring rng;
         int32_t offset = getOffset(column);
-        // The first seven bytes are somewhat overhead, but they contain
-        // the number of rings.
-        int32_t numRings = m_data.getInt32(offset + 3);
-        offset += 7;
-        assert(0 <= numRings);
-        for (int idx = 0; idx < numRings; idx += 1) {
-            rng.clear();
-            // The first byte is noise.
-            offset += 1;
-            // The next 4 bytes are the number of vertices.
-            int numVerts = m_data.getInt32(offset);
-            offset += 4;
-            assert(3 <= numVerts);
-            for (; numVerts > 0; numVerts -= 1) {
-                double x = m_data.getDouble(offset);
-                double y = m_data.getDouble(offset + sizeof(double));
-                double z = m_data.getDouble(offset + 2 * sizeof(double));
-                rng.addPoint(GeographyPoint::fromXYZ(x, y, z));
-                offset += 3*sizeof(double);
-            }
-            // There are 38 bytes of overhead at the end.
-            offset += 38;
-            // Close the loop.
-            rng.addPoint(rng.getPoint(0));
-            if (0 < idx) {
-                rng.reverse();
-            }
-            answer.addRing(rng);
-        }
+        answer.deserializeFrom(m_data, offset, m_wasNull);
         return answer;
     }
 
@@ -597,7 +565,7 @@ private:
             // to get the index at i.
             //
             WireType type = m_columns->at(static_cast<size_t>(i - 1)).m_type;
-            if (type == WIRE_TYPE_STRING || (type == WIRE_TYPE_VARBINARY)) {
+            if (isVariableSized(type)) {
                 int32_t length = m_data.getInt32(m_offsets[static_cast<size_t>(i - 1)]);
                 if (length == -1) {
                     m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + 4;
@@ -607,10 +575,9 @@ private:
                     m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + length + 4;
                 }
             } else {
-                // These are all fixed sized types except for
-                // GEOGRAPHY.  But GEOGRAPHY must be calculated by
-                // rapelling down the data structure.  So it fits
-                // in here nicely.
+                //
+                // These are all fixed sized data values.
+                //
                 int32_t length = 0;
                 switch (type) {
                 case WIRE_TYPE_DECIMAL:
@@ -633,9 +600,6 @@ private:
                 case WIRE_TYPE_GEOGRAPHY_POINT:
                     length = 2 * sizeof(double);
                     break;
-                case WIRE_TYPE_GEOGRAPHY:
-                    length = calculateGeographySize(i);
-                    break;
                 default:
                     throw UnsupportedTypeException(wireTypeToString(type));
                 }
@@ -643,33 +607,6 @@ private:
             }
         }
         m_hasCalculatedOffsets = true;
-    }
-
-    int32_t calculateGeographySize(int32_t idx) {
-        int32_t lastidx = idx - 1;
-        int32_t lastoffset = m_offsets[lastidx];
-        int32_t nextoffset = lastoffset;
-        // The first seven bytes are fixed.
-        nextoffset += 3;
-        int32_t num_rings = m_data.getInt32(nextoffset);
-        nextoffset += 4;
-        assert(0 <= num_rings);
-        for (;num_rings > 0; num_rings -= 1) {
-            // The first byte is skipped.
-            nextoffset += 1;
-            // The next 4 bytes are the number of vertices.
-            int32_t numverts = m_data.getInt32(nextoffset);
-            nextoffset += 4;
-            assert(3 <= numverts);
-            // The next numverts triples of double precision numbers are
-            // the vertices themselves, in XYZPoint format.  After that we
-            // have 38 bytes of opaque overhead.
-            nextoffset += numverts * 3 * sizeof(double) + 38;
-        }
-        // After all the vertices we have 33 bytes of opaque overhead.
-        nextoffset += 33;
-        // How much have we got now?
-        return nextoffset - lastoffset;
     }
 
     int32_t getOffset(int32_t index) {

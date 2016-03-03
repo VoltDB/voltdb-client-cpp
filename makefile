@@ -31,7 +31,9 @@ OBJS := obj/Client.o \
 		obj/Table.o \
 		obj/WireType.o \
                 obj/Distributer.o \
-                obj/MurmurHash3.o
+                obj/MurmurHash3.o \
+		obj/GeographyPoint.o \
+		obj/Geography.o
 
 TEST_OBJS := test_obj/ByteBufferTest.o \
 			 test_obj/MockVoltDB.o \
@@ -53,21 +55,21 @@ all: $(KIT_NAME).tar.gz
 obj/%.o: src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	$(CC) $(CFLAGS) -c -o $@ $?
+	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MP
 	@echo 'Finished building: $<'
 	@echo ' '
 
 obj/%.o: src/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	$(CC) $(CFLAGS) -c -o $@ $?
+	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MP
 	@echo 'Finished building: $<'
 	@echo ' '
 
 test_obj/%.o: test_src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	$(CC) $(CFLAGS) -c -o $@ $?
+	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MP
 	@echo 'Finished building: $<'
 	@echo ' '
 
@@ -80,6 +82,9 @@ $(LIB_NAME).so: $(OBJS)
 	@echo 'Building libvoltdbcpp.so shared library'
 	$(CC) -shared -o $@ $? $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS)
 	@echo
+
+-include $(OBJS:.o=.d)
+-include $(TEST_OBJS:.o=.d)
 
 $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 	@echo 'Building distribution kit'
@@ -133,7 +138,9 @@ cptest: cptestbin
 # Other Targets
 clean:
 	-$(RM) $(OBJS)
+	-$(RM) $(OBJS:.o=.d);
 	-$(RM) $(TEST_OBJS)
+	-$(RM) $(TEST_OBJS:.o=.d);
 	-$(RM) $(CPTEST_OBJS)
 	-$(RM) testbin*
 	-$(RM) cptestbin*
