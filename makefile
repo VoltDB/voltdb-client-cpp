@@ -1,3 +1,8 @@
+#
+# Set this to DEBUG on the command line if you want to build
+# with debugging.
+#
+BUILD=RELEASE
 ifeq (${BUILD},RELEASE)
 OPTIMIZATION=-O3
 endif
