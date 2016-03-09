@@ -237,9 +237,7 @@ public:
      */
     GeographyPoint getGeographyPoint(int32_t column) throw(voltdb::InvalidColumnException) {
         validateType(WIRE_TYPE_GEOGRAPHY_POINT, column);
-        GeographyPoint gpoint;
-        m_wasNull = false;
-        gpoint.deserializeFrom(m_data, getOffset(column), m_wasNull);
+        GeographyPoint gpoint(m_data, getOffset(column), m_wasNull);
         return gpoint;
     }
 
@@ -253,10 +251,7 @@ public:
     Geography getGeography(int32_t column) throw(voltdb::InvalidColumnException) {
         validateType(WIRE_TYPE_GEOGRAPHY, column);
         m_wasNull = false;
-        Geography answer;
-        int32_t offset = getOffset(column);
-        answer.deserializeFrom(m_data, offset, m_wasNull);
-        return answer;
+        return Geography(m_data, getOffset(column), m_wasNull);
     }
 
     /*
@@ -444,7 +439,7 @@ public:
     }
 
     /*
-     * Returns a string reprentation of this row with the specified level of indentation
+     * Returns a string representation of this row with the specified level of indentation
      * before each line
      */
     void toString(std::ostringstream &ostream, const std::string& indent) {
@@ -477,6 +472,12 @@ public:
                 ostream << getDecimal(ii).toString(); break;
             case WIRE_TYPE_VARBINARY:
                 ostream << "VARBINARY VALUE"; break;
+            case WIRE_TYPE_GEOGRAPHY_POINT:
+                ostream << getGeographyPoint(ii).toString();
+                break;
+            case WIRE_TYPE_GEOGRAPHY:
+                ostream << getGeography(ii).toString();
+                break;
             default:
                 assert(false);
             }

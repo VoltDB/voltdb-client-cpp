@@ -41,7 +41,38 @@ bool Geography::Ring::approximatelyEqual(const Ring &rhs, double epsilon) const 
         return false;
     }
     for (int idx = 0; idx < numPoints(); idx += 1) {
-        if (!GeographyPoint::approximatelyEqual(getPoint(idx), rhs.getPoint(idx), epsilon)) {
+        const GeographyPoint &pt = getPoint(idx);
+        const GeographyPoint &opt = rhs.getPoint(idx);
+        double lat = pt.getLatitude();
+        double olat = opt.getLatitude();
+        // If this point is close to one of the poles,
+        if (fabs(fabs(lat) - 90) < epsilon) {
+            // If the other point is close to this point,
+            if (fabs(lat - olat) < epsilon) {
+                // Go to the next point.
+                continue;
+            } else {
+                // Otherwise, whatever coordinates the other point has, it's
+                // not close to this one, so return false.
+                return false;
+            }
+        }
+        // If the latitudes are far apart, these
+        // are not equal.
+        if (epsilon <= fabs(lat - olat)) {
+            return false;
+        }
+        double lng = pt.getLongitude();
+        double olng = opt.getLongitude();
+        // If lng or olng is close to -180, then set it to
+        // +180, just to normalize it.
+        if (fabs(fabs(lng) - 180) < epsilon) {
+            lng = 180;
+        }
+        if (fabs(fabs(olng) - 180) < epsilon) {
+            olng = 180;
+        }
+        if (epsilon <= fabs(lng - olng)) {
             return false;
         }
     }
@@ -80,6 +111,15 @@ void Geography::Ring::serializeTo(ByteBuffer &buffer, bool reverseit) const {
     char zeros[38];
     memset(zeros, 0, sizeof(zeros));
     buffer.put(zeros, sizeof(zeros));
+}
+
+Geography::Geography(ByteBuffer &message, int32_t offset, bool &wasNull)
+    : m_rings()
+{
+    // deserializeFrom returns a value, which we have to
+    // explicitly throw away here, or the compiler will
+    // gripe.
+    (void)deserializeFrom(message, offset, wasNull);
 }
 
 bool Geography::approximatelyEqual(const Geography &rhs, double epsilon) const {
@@ -132,7 +172,7 @@ int32_t Geography::serializeTo(ByteBuffer &buffer) const {
     // Save space for the size.  We don't
     // really know what it is now, so we
     // well seek back to it after we are done.
-    buffer.putInt32(0);
+    buffer.position(buffer.position() + 4);
     // We write three bytes of overhead, followed by the
     // number of rings.
     buffer.putInt8(0);
@@ -187,7 +227,8 @@ int32_t Geography::deserializeFrom(ByteBuffer &aData,
     for (int idx = 0; idx < numRings; idx += 1) {
         Ring &rng = addEmptyRing();
         rng.clear();
-        // The first byte is noise.
+        // The first byte is protocol overhead.
+        // See the VoltDB Wire Protocol Specification.
         offset += 1;
         assert(offset < last_offset);
         // The next 4 bytes are the number of vertices.
@@ -205,6 +246,7 @@ int32_t Geography::deserializeFrom(ByteBuffer &aData,
             assert(offset < last_offset);
         }
         // There are 38 bytes of overhead at the end.
+        // See the VoltDB Wire Protocol Specification.
         offset += 38;
         assert(offset < last_offset);
         // Close the loop.
@@ -215,6 +257,8 @@ int32_t Geography::deserializeFrom(ByteBuffer &aData,
         // We don't have to add rng because we added it
         // when it was created.
     }
+    // There are 33 bytes of overhead at the end.
+    // See the VoltDB Wire Protocol Specification.
     assert(offset+33 == last_offset);
     return len;
 }
@@ -222,11 +266,11 @@ int32_t Geography::deserializeFrom(ByteBuffer &aData,
 std::string Geography::toString()
 {
     std::stringstream stream;
-    stream << "polygon(";
+    stream << "POLYGON (";
     std::string sep("");
     for (int idx = 0; idx < numRings(); idx += 1) {
         stream << sep << getRing(idx).toString();
-        sep = " ";
+        sep = ", ";
     }
     stream << ")";
     return stream.str();

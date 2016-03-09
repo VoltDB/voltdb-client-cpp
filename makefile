@@ -8,15 +8,16 @@ OPTIMIZATION=-O3
 endif
 
 CC=g++
-BOOST_INCLUDES=/usr/local/boost
-CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} -Wall
+BOOST_INCLUDES=/usr/local/include
+BOOST_LIBS=/usr/local/lib
+CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} -Wall -Wno-unused-local-typedef -Wno-gnu-static-float-init
 LIB_NAME=libvoltdbcpp
 KIT_NAME=voltdb-client-cpp-x86_64-5.2
 
 PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
 	THIRD_PARTY_DIR := third_party_libs/osx
-	SYSTEM_LIBS := -lc -lpthread -lboost_system-mt -lboost_thread-mt
+	SYSTEM_LIBS := -L$(BOOST_LIBS) -lc -lpthread -lboost_system-mt -lboost_thread-mt
 endif
 ifeq ($(PLATFORM),Linux)
 	THIRD_PARTY_DIR := third_party_libs/linux

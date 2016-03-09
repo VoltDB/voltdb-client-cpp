@@ -287,6 +287,22 @@ public:
         return m_what.c_str();
     }
 };
+
+class CoordinateOutOfRangeException : public voltdb::Exception {
+    std::string m_what;
+public:
+    explicit CoordinateOutOfRangeException() : Exception() {
+        m_what = "Coordinate out of Range";
+    }
+    explicit CoordinateOutOfRangeException(const std::string& name) : Exception() {
+        m_what = name + " coordinate out of range.";
+    }
+    virtual ~CoordinateOutOfRangeException() throw() {}
+    virtual const char* what() const throw() {
+        return m_what.c_str();
+    }
+};
+
 }
 
 #endif /* VOLTDB_EXCEPTION_HPP_ */

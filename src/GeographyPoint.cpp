@@ -37,7 +37,7 @@ GeographyPoint::GeographyPoint()
 std::string GeographyPoint::toString() const
 {
     std::stringstream stream;
-    stream << "point(" << getLongitude() << " " << getLatitude() << ")";
+    stream << "POINT (" << getLongitude() << " " << getLatitude() << ")";
     return stream.str();
 }
 
@@ -49,6 +49,28 @@ GeographyPoint GeographyPoint::fromXYZ(double x, double y, double z)
     double longitude = lngRadians * degreesPerRadian;
     double latitude = latRadians * degreesPerRadian;
     return GeographyPoint(longitude, latitude);
+}
+
+bool GeographyPoint::operator==(const GeographyPoint &aOther) const {
+    double lat = m_latitude;
+    double olat = aOther.getLatitude();
+    // At the North or South pole, we only care if the
+    // other is at the same pole.  We don't care about
+    // longitude at all
+    if (fabs(lat) == 90) {
+        return lat == olat;
+    }
+    double lng = m_longitude;
+    double olng = aOther.getLongitude();
+    // Normalize the longitudes, so that we
+    // don't confuse -180 and 180.
+    if (fabs(lng) == 180.0) {
+        lng = 180.0;
+    }
+    if (fabs(olng) == 180.0) {
+        olng = 180.0;
+    }
+    return lat == olat && lng == olng;
 }
 
 bool GeographyPoint::approximatelyEqual(const GeographyPoint &lhs,
@@ -72,6 +94,10 @@ void GeographyPoint::getXYZCoordinates(double &x, double &y, double &z) const
     x = cos(lngRadians) * cosPhi;
     y = sin(lngRadians) * cosPhi;
     z = sin(latRadians);
+}
+
+GeographyPoint::GeographyPoint(ByteBuffer &message, int32_t offset, bool &wasNull) {
+    (void)deserializeFrom(message, offset, wasNull);
 }
 
 int32_t GeographyPoint::deserializeFrom(ByteBuffer &message,

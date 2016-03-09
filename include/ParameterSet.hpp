@@ -415,6 +415,8 @@ public:
      */
     ParameterSet& addGeographyPoint(const GeographyPoint &val) {
         validateType(WIRE_TYPE_GEOGRAPHY_POINT, false);
+        // One byte for the type and 2*sizeof(double) bytes
+        // for the payload.
         m_buffer.ensureRemaining(1 + 2*sizeof(double));
         m_buffer.putInt8(WIRE_TYPE_GEOGRAPHY_POINT);
         m_buffer.putDouble(val.getLongitude());
@@ -428,6 +430,11 @@ public:
      */
     ParameterSet& addGeographyPoint(const std::vector<GeographyPoint> &vals) {
         validateType(WIRE_TYPE_GEOGRAPHY_POINT, true);
+        // 1 byte for the array marker
+        // 1 byte for the type marker (WIRE_TYPE_GEOGRAPHY_POINT)
+        // 2 bytes for the array size.
+        // -------
+        // 4 bytes + 2*sizeof(double) * the array count.
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(2*sizeof(double) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
         m_buffer.putInt8(WIRE_TYPE_GEOGRAPHY_POINT);
