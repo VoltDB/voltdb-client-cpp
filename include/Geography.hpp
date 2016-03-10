@@ -44,7 +44,9 @@ class ByteBuffer;
  * of the polygon would always be on the left hand of a point traversing
  * the border.
  */
-struct Geography {
+#define DEFAULT_EQUALITY_EPSILON 1.0e-12
+class Geography {
+public:
     /**
      * Objects of this class are rings.  A ring is a sequence of points,
      * and a point is a pair of <longitude, latitude> coordinates.  These
@@ -55,7 +57,8 @@ struct Geography {
      * Before a ring is inserted into a polygon it must be closed.  That is to
      * say, its first and last points must be equal.
      */
-    struct Ring {
+    class Ring {
+    public:
         Ring() {}
 
         /**
@@ -117,7 +120,7 @@ struct Geography {
          * more flexible test.
          */
         bool operator==(const Ring &aOther) const {
-            return approximatelyEqual(aOther, 0.0);
+            return approximatelyEqual(aOther, DEFAULT_EQUALITY_EPSILON);
         }
 
         bool operator!=(const Ring &aOther) const {
@@ -228,7 +231,7 @@ struct Geography {
      * for a more flexible operation.
      */
     bool operator==(const Geography &aOther) const {
-        return approximatelyEqual(aOther, 0.0);
+        return approximatelyEqual(aOther, DEFAULT_EQUALITY_EPSILON);
     }
 
     bool operator !=(const Geography &aOther) const {

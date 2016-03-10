@@ -32,7 +32,11 @@ class ByteBuffer;
  * so there is no destructor at all.  The default one is good enough
  * for us.
  */
-struct GeographyPoint {
+#define DEFAULT_EQUALITY_EPSILON  1.0e-12
+
+class GeographyPoint {
+public:
+
     /**
      * The default constructor makes a null geography.
      */
@@ -50,11 +54,11 @@ struct GeographyPoint {
     GeographyPoint(double aLongitude, double aLatitude)
         : m_longitude(aLongitude),
           m_latitude(aLatitude) {
-        if (aLatitude > 90.0 || aLongitude < -90.0) {
+        if (aLatitude > 90.0 || aLatitude < -90.0) {
             throw CoordinateOutOfRangeException("Longitude");
         }
-        if (aLongitude > 180.0 || aLatitude < -180.0) {
-            throw CoordinateOutOfRangeException("Latitude");
+        if (aLongitude > 180.0 || aLongitude < -180.0) {
+            throw CoordinateOutOfRangeException("Longitude");
         }
     }
 
@@ -98,10 +102,10 @@ struct GeographyPoint {
      * points on the anti-meridian properly, where longitude values of -180
      * are equal to values of +180.
      *
-     * Since GeographyPoint
-     * values are pairs of floating point numbers, this is perhaps
-     * not the best operation.  See voltdb::GeographyPoint::approximatelyEqual
-     * for a more flexible alternative.
+     * Since this compares floating point values, we declare two points to
+     * be equal if their coordinates are within DEFAULT_EQUALITY_EPSILON
+     * of each other.  See voltdb::GeographyPoint::approximatelyEqual for
+     * a more flexible alternative.
      */
     bool operator==(const GeographyPoint &aOther) const;
 
@@ -109,6 +113,17 @@ struct GeographyPoint {
         return !operator==(aOther);
     }
 
+    /**
+     * Return a point which is this point translated by the
+     * given offset.
+     *
+     * This is mostly used in testing.  We want to move points slightly,
+     * so that we can test approximate equality of polygons.
+     */
+    GeographyPoint translate(const GeographyPoint &offset) {
+        return GeographyPoint(getLongitude() + offset.getLongitude(),
+                              getLatitude() + offset.getLatitude());
+    }
     /**
      * Create a GeographyPoint from an XYZPoint coordinate triple.
      * See the VoltDB wire protocol specification for details.
@@ -121,12 +136,11 @@ struct GeographyPoint {
      * within epsilon of each other, taking into account the
      * special rules for the poles and for the anti-meridian.
      *
-     * Values in the range 1.0e-9 work well for epsilon.  This
+     * Values in the range 1.0e-12 work well for epsilon.  This
      * is sub-millimeter precision for longitude and latitude.
      */
-    static bool approximatelyEqual(const GeographyPoint &lhs,
-                                   const GeographyPoint &rhs,
-                                   double epsilon);
+    bool approximatelyEqual(const GeographyPoint &aOther,
+                            double epsilon) const;
     
     /**
      * Convert from longitude/latitude to points on the unit
@@ -145,8 +159,6 @@ private:
     double m_longitude;
     double m_latitude;
     static const double NULL_COORDINATE = 360.0;
-    static const double EQ_EPSILON      = 1.0e-9;
-
 };
 
 } /* namespace voltdb */

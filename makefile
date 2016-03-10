@@ -45,6 +45,8 @@ TEST_OBJS := test_obj/ByteBufferTest.o \
 			 test_obj/MockVoltDB.o \
 			 test_obj/ClientTest.o \
 			 test_obj/SerializationTest.o \
+			 test_obj/GeographyPointTest.o \
+			 test_obj/GeographyTest.o \
 			 test_obj/Tests.o
 
 CPTEST_OBJS := test_obj/ConnectionPoolTest.o \

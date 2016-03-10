@@ -247,7 +247,7 @@ static bool compareParameter(ByteBuffer &original, std::string originalName,
             }
             original.position(original.position() + oSize);
             generated.position(generated.position() + gSize);
-            return GeographyPoint::approximatelyEqual(g, o, EPSILON);
+            return g.approximatelyEqual(o, EPSILON);
         }
     default:
         return false;

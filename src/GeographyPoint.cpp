@@ -51,38 +51,33 @@ GeographyPoint GeographyPoint::fromXYZ(double x, double y, double z)
     return GeographyPoint(longitude, latitude);
 }
 
-bool GeographyPoint::operator==(const GeographyPoint &aOther) const {
+bool GeographyPoint::approximatelyEqual(const GeographyPoint &aOther,
+                                        double epsilon) const {
     double lat = m_latitude;
     double olat = aOther.getLatitude();
     // At the North or South pole, we only care if the
     // other is at the same pole.  We don't care about
     // longitude at all
-    if (fabs(lat) == 90) {
-        return lat == olat;
+    if (fabs(fabs(lat) - 90) < epsilon) {
+        return fabs(lat - olat) < epsilon;
     }
     double lng = m_longitude;
     double olng = aOther.getLongitude();
     // Normalize the longitudes, so that we
     // don't confuse -180 and 180.
-    if (fabs(lng) == 180.0) {
+    if (fabs(fabs(lng) - 180.0) < epsilon) {
         lng = 180.0;
     }
-    if (fabs(olng) == 180.0) {
+    if (fabs(fabs(olng) - 180.0) < epsilon) {
         olng = 180.0;
     }
-    return lat == olat && lng == olng;
+    return fabs(lat - olat) < epsilon
+            && fabs(lng - olng) < epsilon;
 }
 
-bool GeographyPoint::approximatelyEqual(const GeographyPoint &lhs,
-                                               const GeographyPoint &rhs,
-                                               double epsilon)
+bool GeographyPoint::operator==(const GeographyPoint &aOther) const
 {
-    if (epsilon == 0.0) {
-        return lhs == rhs;
-    } else {
-        return (fabs(lhs.getLongitude() - rhs.getLongitude()) < epsilon)
-            && (fabs(lhs.getLatitude() - rhs.getLatitude()) < epsilon);
-    }
+    return approximatelyEqual(aOther, DEFAULT_EQUALITY_EPSILON);
 }
 
 void GeographyPoint::getXYZCoordinates(double &x, double &y, double &z) const

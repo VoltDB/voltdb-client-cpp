@@ -41,38 +41,7 @@ bool Geography::Ring::approximatelyEqual(const Ring &rhs, double epsilon) const 
         return false;
     }
     for (int idx = 0; idx < numPoints(); idx += 1) {
-        const GeographyPoint &pt = getPoint(idx);
-        const GeographyPoint &opt = rhs.getPoint(idx);
-        double lat = pt.getLatitude();
-        double olat = opt.getLatitude();
-        // If this point is close to one of the poles,
-        if (fabs(fabs(lat) - 90) < epsilon) {
-            // If the other point is close to this point,
-            if (fabs(lat - olat) < epsilon) {
-                // Go to the next point.
-                continue;
-            } else {
-                // Otherwise, whatever coordinates the other point has, it's
-                // not close to this one, so return false.
-                return false;
-            }
-        }
-        // If the latitudes are far apart, these
-        // are not equal.
-        if (epsilon <= fabs(lat - olat)) {
-            return false;
-        }
-        double lng = pt.getLongitude();
-        double olng = opt.getLongitude();
-        // If lng or olng is close to -180, then set it to
-        // +180, just to normalize it.
-        if (fabs(fabs(lng) - 180) < epsilon) {
-            lng = 180;
-        }
-        if (fabs(fabs(olng) - 180) < epsilon) {
-            olng = 180;
-        }
-        if (epsilon <= fabs(lng - olng)) {
+        if (!getPoint(idx).approximatelyEqual(rhs.getPoint(idx), epsilon)) {
             return false;
         }
     }
