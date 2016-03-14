@@ -30,12 +30,12 @@
 #include "ClientLogger.h"
 #include <boost/shared_ptr.hpp>
 #include "ClientConfig.h"
+#include "Exception.hpp"
 
 namespace voltdb {
 class MockVoltDB;
 class ClientImpl;
 class ProcedureCallback;
-
 /*
  * A VoltDB client for invoking stored procedures on a VoltDB instance. The client and the
  * shared pointers it returns are not thread safe. If you need more parallelism you run multiple processes

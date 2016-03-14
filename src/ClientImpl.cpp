@@ -386,7 +386,7 @@ void ClientImpl::initiateAuthentication(PendingConnection* pc, struct buffereven
         throw voltdb::LibEventException();
     }
     protector.success();
-        }
+}
 
 void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::Exception, voltdb::ConnectException){
 
