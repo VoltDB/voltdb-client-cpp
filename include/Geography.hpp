@@ -44,7 +44,6 @@ class ByteBuffer;
  * of the polygon would always be on the left hand of a point traversing
  * the border.
  */
-#define DEFAULT_EQUALITY_EPSILON 1.0e-12
 class Geography {
 public:
     /**
