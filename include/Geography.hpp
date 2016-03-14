@@ -221,14 +221,22 @@ public:
     }
 
     /**
-     * Test to see if this point is exactly equal to this
+     * Test to see if this point is approximately equal to this
      * point.  We don't test for circular shifts of rings.
      * That is to say, the first rings must be exactly equal
      * and subsequent rings must be exactly equal.
      *
-     * Since this tests floating point numbers, it's not frequently
-     * what is wanted.  See voltdb::Geography::approximatelyEqual
-     * for a more flexible operation.
+     * Two points are approximately equal if their coordinates
+     * are within some epsilon of each other.  That is to say,
+     * if Math.abs(p1.getLongitude() - p2.getLongitude()) < epsilon
+     * and Math.abs(p1.getLatitude() - p2.getLatitude()) < epsilon.
+     * For this operation the value of epsilon is given by
+     * the constant DEFAULT_EQUALITY_EPSILON, which is 1.0e-12.
+     * Two Geography objects are approximately equal if all their
+     * coordinates of all their rings are approximately equal.
+     *
+     * Note that the function approximatelyEqual does the same
+     * thing, but allows the specification of epsilon.
      */
     bool operator==(const Geography &aOther) const {
         return approximatelyEqual(aOther, DEFAULT_EQUALITY_EPSILON);

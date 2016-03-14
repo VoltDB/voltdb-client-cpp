@@ -58,18 +58,34 @@ bool GeographyPoint::approximatelyEqual(const GeographyPoint &aOther,
     // At the North or South pole, we only care if the
     // other is at the same pole.  We don't care about
     // longitude at all
-    if (fabs(fabs(lat) - 90) < epsilon) {
-        return fabs(lat - olat) < epsilon;
+    if (epsilon == 0) {
+        if (fabs(lat) == 90.0) {
+            return lat == olat;
+        }
+    } else {
+        /*
+         * If |lat| is close to 90, then return
+         * true if lat and olat are close to each other,
+         * and ignore the longitude.
+         */
+        if (fabs(fabs(lat) - 90) < epsilon) {
+            return fabs(lat - olat) < epsilon;
+        }
     }
     double lng = m_longitude;
     double olng = aOther.getLongitude();
     // Normalize the longitudes, so that we
     // don't confuse -180 and 180.
-    if (fabs(fabs(lng) - 180.0) < epsilon) {
+    if ((epsilon == 0 && lng == -180)
+            || (epsilon > 0 && (fabs(fabs(lng) - 180.0) < epsilon))) {
         lng = 180.0;
     }
-    if (fabs(fabs(olng) - 180.0) < epsilon) {
+    if ((epsilon == 0 && olng == -180)
+            || (epsilon > 0 && fabs(fabs(olng) - 180.0) < epsilon)) {
         olng = 180.0;
+    }
+    if (epsilon == 0) {
+        return lat == olat && lng == olng;
     }
     return fabs(lat - olat) < epsilon
             && fabs(lng - olng) < epsilon;

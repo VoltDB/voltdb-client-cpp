@@ -138,6 +138,9 @@ public:
      *
      * Values in the range 1.0e-12 work well for epsilon.  This
      * is sub-millimeter precision for longitude and latitude.
+     *
+     * If epsilon is zero, then exact floating point equality is
+     * required.
      */
     bool approximatelyEqual(const GeographyPoint &aOther,
                             double epsilon) const;
