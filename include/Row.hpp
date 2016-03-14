@@ -33,6 +33,8 @@
 #include <stdint.h>
 #include "Decimal.hpp"
 #include <sstream>
+#include "Geography.hpp"
+#include "GeographyPoint.hpp"
 
 namespace voltdb {
 
@@ -228,24 +230,28 @@ public:
 
     /*
      * Retrieve the value at the specified column index as a geographical point.
-     * This data type is not currently supported by the C++ client so this always
-     * throws an exception.
-     * @throws UnsupportedTypeException always
-     * @return never returns
+     *
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return the deserialized GeographyPoint value.
      */
-    void getGeographyPoint(int32_t column) {
-        throw UnsupportedTypeException(wireTypeToString(WIRE_TYPE_GEOGRAPHY_POINT));
+    GeographyPoint getGeographyPoint(int32_t column) throw(voltdb::InvalidColumnException) {
+        validateType(WIRE_TYPE_GEOGRAPHY_POINT, column);
+        GeographyPoint gpoint(m_data, getOffset(column), m_wasNull);
+        return gpoint;
     }
 
     /*
      * Retrieve the value at the specified column index as a geographical object.
-     * This data type is not currently supported by the C++ client so this always
-     * throws an exception.
-     * @throws UnsupportedTypeException always
-     * @return never returns
+     *
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return the deserialized geography value.
      */
-    void getGeography(int32_t column) {
-        throw UnsupportedTypeException(wireTypeToString(WIRE_TYPE_GEOGRAPHY));
+    Geography getGeography(int32_t column) throw(voltdb::InvalidColumnException) {
+        validateType(WIRE_TYPE_GEOGRAPHY, column);
+        m_wasNull = false;
+        return Geography(m_data, getOffset(column), m_wasNull);
     }
 
     /*
@@ -391,7 +397,7 @@ public:
      * @throws UnsupportedTypeException always
      * @return never returns
      */
-    void getGeographyPoint(const std::string& cname) throw(UnsupportedTypeException) {
+    GeographyPoint getGeographyPoint(const std::string& cname) throw(UnsupportedTypeException) {
         return getGeographyPoint(getColumnIndexByName(cname));
     }
 
@@ -402,7 +408,7 @@ public:
      * @throws UnsupportedTypeException always
      * @return never returns
      */
-    void getGeography(const std::string& cname) throw(UnsupportedTypeException) {
+    Geography getGeography(const std::string& cname) throw(UnsupportedTypeException) {
         return getGeography(getColumnIndexByName(cname));
     }
 
@@ -433,7 +439,7 @@ public:
     }
 
     /*
-     * Returns a string reprentation of this row with the specified level of indentation
+     * Returns a string representation of this row with the specified level of indentation
      * before each line
      */
     void toString(std::ostringstream &ostream, const std::string& indent) {
@@ -466,6 +472,12 @@ public:
                 ostream << getDecimal(ii).toString(); break;
             case WIRE_TYPE_VARBINARY:
                 ostream << "VARBINARY VALUE"; break;
+            case WIRE_TYPE_GEOGRAPHY_POINT:
+                ostream << getGeographyPoint(ii).toString();
+                break;
+            case WIRE_TYPE_GEOGRAPHY:
+                ostream << getGeography(ii).toString();
+                break;
             default:
                 assert(false);
             }
@@ -487,46 +499,41 @@ private:
         }
         WireType columnType = m_columns->at(static_cast<size_t>(index)).m_type;
         switch (columnType) {
-        case WIRE_TYPE_DECIMAL:
-            if (type != WIRE_TYPE_DECIMAL)
-                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_DECIMAL));
-            break;
-        case WIRE_TYPE_TIMESTAMP:
-            if (type != WIRE_TYPE_TIMESTAMP)
-                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_TIMESTAMP));
-            break;
-        case WIRE_TYPE_BIGINT:
-            if (type != WIRE_TYPE_BIGINT)
-                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_BIGINT));
-            break;
         case WIRE_TYPE_INTEGER:
-            if (type != WIRE_TYPE_BIGINT && type != WIRE_TYPE_INTEGER)
+            if (type != WIRE_TYPE_BIGINT && type != WIRE_TYPE_INTEGER) {
                 throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_INTEGER));
+            }
             break;
         case WIRE_TYPE_SMALLINT:
             if (type != WIRE_TYPE_BIGINT &&
                     type != WIRE_TYPE_INTEGER &&
-                    type != WIRE_TYPE_SMALLINT)
+                    type != WIRE_TYPE_SMALLINT) {
                 throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_SMALLINT));
+            }
             break;
         case WIRE_TYPE_TINYINT:
             if (type != WIRE_TYPE_BIGINT &&
                     type != WIRE_TYPE_INTEGER &&
                     type != WIRE_TYPE_SMALLINT &&
-                    type != WIRE_TYPE_TINYINT)
+                    type != WIRE_TYPE_TINYINT) {
                 throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_TINYINT));
+            }
             break;
+        case WIRE_TYPE_TIMESTAMP:
+        case WIRE_TYPE_BIGINT:
         case WIRE_TYPE_FLOAT:
-            if (type != WIRE_TYPE_FLOAT)
-                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_FLOAT));
-            break;
         case WIRE_TYPE_STRING:
-            if (type != WIRE_TYPE_STRING)
-                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_STRING));
-            break;
         case WIRE_TYPE_VARBINARY:
-            if (type != WIRE_TYPE_VARBINARY)
-                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(WIRE_TYPE_VARBINARY));
+        case WIRE_TYPE_GEOGRAPHY:
+        case WIRE_TYPE_GEOGRAPHY_POINT:
+        case WIRE_TYPE_DECIMAL:
+            /*
+             * No implicit conversions for these types.  The column type
+             * and the actual type must be identical.
+             */
+            if (columnType != type) {
+                throw InvalidColumnException(getColumnNameByIndex(index), type, wireTypeToString(type), wireTypeToString(columnType));
+            }
             break;
         default:
             throw UnsupportedTypeException(wireTypeToString(columnType));
@@ -552,8 +559,14 @@ private:
         if (m_hasCalculatedOffsets == true) return;
         m_offsets[0] = m_data.position();
         for (int32_t i = 1; i < static_cast<ssize_t>(m_columns->size()); i++) {
+            //
+            // To calculate the offset at index i, given that the
+            // offset at i-1 is correct. we calculate the size of the
+            // data at offset i-1 and add it to the offset at index i-1,
+            // to get the index at i.
+            //
             WireType type = m_columns->at(static_cast<size_t>(i - 1)).m_type;
-            if (type == WIRE_TYPE_STRING || (type == WIRE_TYPE_VARBINARY)) {
+            if (isVariableSized(type)) {
                 int32_t length = m_data.getInt32(m_offsets[static_cast<size_t>(i - 1)]);
                 if (length == -1) {
                     m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + 4;
@@ -563,6 +576,9 @@ private:
                     m_offsets[static_cast<size_t>(i)] = m_offsets[static_cast<size_t>(i - 1)] + length + 4;
                 }
             } else {
+                //
+                // These are all fixed sized data values.
+                //
                 int32_t length = 0;
                 switch (type) {
                 case WIRE_TYPE_DECIMAL:
@@ -581,6 +597,9 @@ private:
                     break;
                 case WIRE_TYPE_TINYINT:
                     length = 1;
+                    break;
+                case WIRE_TYPE_GEOGRAPHY_POINT:
+                    length = 2 * sizeof(double);
                     break;
                 default:
                     throw UnsupportedTypeException(wireTypeToString(type));

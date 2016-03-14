@@ -1,13 +1,23 @@
+#
+# Set this to DEBUG on the command line if you want to build
+# with debugging.
+#
+BUILD=RELEASE
+ifeq (${BUILD},RELEASE)
+OPTIMIZATION=-O3
+endif
+
 CC=g++
-BOOST_INCLUDES=/usr/local/boost
-CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 -O3 -Wall
+BOOST_INCLUDES=/usr/local/include
+BOOST_LIBS=/usr/local/lib
+CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} -Wall -Wno-unused-local-typedef -Wno-gnu-static-float-init
 LIB_NAME=libvoltdbcpp
 KIT_NAME=voltdb-client-cpp-x86_64-5.2
 
 PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
 	THIRD_PARTY_DIR := third_party_libs/osx
-	SYSTEM_LIBS := -lc -lpthread -lboost_system-mt -lboost_thread-mt
+	SYSTEM_LIBS := -L$(BOOST_LIBS) -lc -lpthread -lboost_system-mt -lboost_thread-mt
 endif
 ifeq ($(PLATFORM),Linux)
 	THIRD_PARTY_DIR := third_party_libs/linux
@@ -27,12 +37,16 @@ OBJS := obj/Client.o \
 		obj/Table.o \
 		obj/WireType.o \
                 obj/Distributer.o \
-                obj/MurmurHash3.o
+                obj/MurmurHash3.o \
+		obj/GeographyPoint.o \
+		obj/Geography.o
 
 TEST_OBJS := test_obj/ByteBufferTest.o \
 			 test_obj/MockVoltDB.o \
 			 test_obj/ClientTest.o \
 			 test_obj/SerializationTest.o \
+			 test_obj/GeographyPointTest.o \
+			 test_obj/GeographyTest.o \
 			 test_obj/Tests.o
 
 CPTEST_OBJS := test_obj/ConnectionPoolTest.o \
@@ -49,21 +63,21 @@ all: $(KIT_NAME).tar.gz
 obj/%.o: src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	$(CC) $(CFLAGS) -c -o $@ $?
+	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MP
 	@echo 'Finished building: $<'
 	@echo ' '
 
 obj/%.o: src/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	$(CC) $(CFLAGS) -c -o $@ $?
+	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MP
 	@echo 'Finished building: $<'
 	@echo ' '
 
 test_obj/%.o: test_src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	$(CC) $(CFLAGS) -c -o $@ $?
+	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MP
 	@echo 'Finished building: $<'
 	@echo ' '
 
@@ -76,6 +90,9 @@ $(LIB_NAME).so: $(OBJS)
 	@echo 'Building libvoltdbcpp.so shared library'
 	$(CC) -shared -o $@ $? $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS)
 	@echo
+
+-include $(OBJS:.o=.d)
+-include $(TEST_OBJS:.o=.d)
 
 $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 	@echo 'Building distribution kit'
@@ -129,7 +146,9 @@ cptest: cptestbin
 # Other Targets
 clean:
 	-$(RM) $(OBJS)
+	-$(RM) $(OBJS:.o=.d);
 	-$(RM) $(TEST_OBJS)
+	-$(RM) $(TEST_OBJS:.o=.d);
 	-$(RM) $(CPTEST_OBJS)
 	-$(RM) testbin*
 	-$(RM) cptestbin*
