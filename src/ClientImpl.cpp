@@ -208,7 +208,7 @@ static void regularReadCallback(struct bufferevent *bev, void *ctx) {
 void wakeupPipeCallback(evutil_socket_t fd, short what, void *ctx) {
     ClientImpl *impl = reinterpret_cast<ClientImpl*>(ctx);
     char buf[64];
-    read(fd, buf, sizeof buf);
+    (void)read(fd, buf, sizeof buf);
     impl->eventBaseLoopBreak();
 }
 
@@ -1090,7 +1090,9 @@ void ClientImpl::wakeup() {
    if (m_wakeupPipe[1] != -1) {
         static unsigned char c = 'w';
         boost::mutex::scoped_lock lock(m_wakeupPipeLock, boost::try_to_lock);
-        if (lock) write(m_wakeupPipe[1], &c, 1);
+        if (lock) {
+            (void)write(m_wakeupPipe[1], &c, 1);
+        }
     } else {
       event_base_loopbreak(m_base);
     }

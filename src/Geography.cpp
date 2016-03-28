@@ -23,6 +23,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <stdint.h>
 #include "Geography.hpp"
 #include "ByteBuffer.hpp"
 
@@ -95,7 +96,7 @@ bool Geography::approximatelyEqual(const Geography &rhs, double epsilon) const {
     if (numRings() != rhs.numRings()) {
         return false;
     }
-    for (int idx = 0; idx < m_rings.size(); idx += 1) {
+    for (uint32_t idx = 0; idx < m_rings.size(); idx += 1) {
         if (!getRing(idx).approximatelyEqual(rhs.getRing(idx), epsilon)) {
             return false;
         }
