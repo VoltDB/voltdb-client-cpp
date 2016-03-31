@@ -23,6 +23,8 @@
 
 #ifndef INCLUDE_GEOGRAPHYPOINT_H_
 #define INCLUDE_GEOGRAPHYPOINT_H_
+#include <stdint.h>
+
 #include "Exception.hpp"
 namespace voltdb {
 

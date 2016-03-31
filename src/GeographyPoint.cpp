@@ -21,6 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdint.h>
 #include <string>
 #include <math.h>
 #include <sstream>

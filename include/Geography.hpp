@@ -87,7 +87,7 @@ public:
          * Get the point at a given index in the ring.
          */
         const GeographyPoint &getPoint(int idx) const {
-            if (0 <= idx && idx < m_points.size()) {
+            if (0 <= idx && idx < (int)m_points.size()) {
                 return m_points[idx];
             } else {
                 throw IndexOutOfBoundsException();
@@ -95,7 +95,7 @@ public:
         }
 
         GeographyPoint &getPoint(int idx) {
-            if (0 <= idx && idx < m_points.size()) {
+            if (0 <= idx && idx < (int) m_points.size()) {
                 return m_points[idx];
             } else {
                 throw IndexOutOfBoundsException();
@@ -200,7 +200,7 @@ public:
      * if idx is out of range.
      */
     const Ring &getRing(int idx) const {
-        if (0 <= idx && idx < m_rings.size()) {
+        if (0 <= idx && idx < (int)m_rings.size()) {
             return m_rings[idx];
         } else {
             throw IndexOutOfBoundsException();
@@ -212,7 +212,7 @@ public:
      * if idx is out of range.
      */
     Ring &getRing(int idx) {
-        if (0 <= idx && idx < m_rings.size()) {
+        if (0 <= idx && idx < (int)m_rings.size()) {
             return m_rings[idx];
         } else {
             throw IndexOutOfBoundsException();

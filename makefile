@@ -10,7 +10,7 @@ endif
 CC=g++
 BOOST_INCLUDES=/usr/local/include
 BOOST_LIBS=/usr/local/lib
-CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} -Wall -Wno-unused-local-typedef -Wno-gnu-static-float-init
+CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} 
 LIB_NAME=libvoltdbcpp
 KIT_NAME=voltdb-client-cpp-x86_64-5.2
 
@@ -21,7 +21,7 @@ ifeq ($(PLATFORM),Darwin)
 endif
 ifeq ($(PLATFORM),Linux)
 	THIRD_PARTY_DIR := third_party_libs/linux
-	SYSTEM_LIBS := -lc -lpthread -lrt -lboost_system -lboost_thread
+	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system -lboost_thread -Wl,-rpath,$(BOOST_LIBS)
 	CFLAGS += -fPIC
 endif
 
@@ -60,21 +60,21 @@ RM := rm -rf
 # All Target
 all: $(KIT_NAME).tar.gz
 
-obj/%.o: src/%.cpp
+obj/%.o: src/%.cpp | obj
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
 	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MP
 	@echo 'Finished building: $<'
 	@echo ' '
 
-obj/%.o: src/%.c
+obj/%.o: src/%.c | obj
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
 	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MP
 	@echo 'Finished building: $<'
 	@echo ' '
 
-test_obj/%.o: test_src/%.cpp
+test_obj/%.o: test_src/%.cpp | test_obj
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
 	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MP
@@ -143,6 +143,12 @@ cptest: cptestbin
 	./cptestbin
 	@echo ' '
 
+obj:
+	mkdir -p obj
+
+test_obj:
+	mkdir -p test_obj
+
 # Other Targets
 clean:
 	-$(RM) $(OBJS)
@@ -156,5 +162,6 @@ clean:
 	-$(RM) $(LIB_NAME).so
 	-$(RM) $(KIT_NAME)
 	-$(RM) $(KIT_NAME).tgz
+	-$(RM) obj test_obj
 	-@echo ' '
 # DO NOT DELETE
