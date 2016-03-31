@@ -74,7 +74,7 @@ obj/%.o: src/%.c | obj
 	@echo 'Finished building: $<'
 	@echo ' '
 
-test_obj/%.o: test_src/%.cpp
+test_obj/%.o: test_src/%.cpp | test_obj
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
 	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MP
@@ -146,6 +146,9 @@ cptest: cptestbin
 obj:
 	mkdir -p obj
 
+test_obj:
+	mkdir -p test_obj
+
 # Other Targets
 clean:
 	-$(RM) $(OBJS)
@@ -159,5 +162,6 @@ clean:
 	-$(RM) $(LIB_NAME).so
 	-$(RM) $(KIT_NAME)
 	-$(RM) $(KIT_NAME).tgz
+	-$(RM) obj test_obj
 	-@echo ' '
 # DO NOT DELETE
