@@ -24,4 +24,4 @@ voter: Voter.cpp ../libvoltdbcpp.a
 	$(CC) $(CFLAGS) Voter.cpp ../libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o voter
 
 clean:
-	rm asynchelloworld helloworld voter
+	rm -f asynchelloworld helloworld voter
