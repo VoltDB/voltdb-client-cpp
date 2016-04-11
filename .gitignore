@@ -9,3 +9,5 @@
 *.o
 /testbin
 /.settings
+*~
+*.dSYM
