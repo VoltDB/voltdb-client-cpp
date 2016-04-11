@@ -107,7 +107,7 @@ $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 		  include/Row.hpp include/RowBuilder.h include/StatusListener.h include/Table.h \
 		  include/TableIterator.h include/WireType.h include/TheHashinator.h \
                   include/ClientLogger.h include/Distributer.h include/ElasticHashinator.h \
-                  include/MurmurHash3.h $(KIT_NAME)/include/
+                  include/MurmurHash3.h include/Geography.hpp include/GeographyPoint.hpp $(KIT_NAME)/include/
 	cp -R include/ttmath/*.h $(KIT_NAME)/include/ttmath/
 	#cp -R include/boost $(KIT_NAME)/include/
 
@@ -164,4 +164,5 @@ clean:
 	-$(RM) $(KIT_NAME).tgz
 	-$(RM) obj test_obj
 	-@echo ' '
+	-cd examples; make clean
 # DO NOT DELETE
