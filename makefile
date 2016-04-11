@@ -164,4 +164,5 @@ clean:
 	-$(RM) $(KIT_NAME).tgz
 	-$(RM) obj test_obj
 	-@echo ' '
+	-cd examples; make clean
 # DO NOT DELETE
