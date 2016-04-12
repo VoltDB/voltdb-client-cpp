@@ -9,8 +9,20 @@ The Using VoltDB Guide explains how to use the CPP library in
 [Chapter 15.1: C++ Client Interface.]
 (http://docs.voltdb.com/UsingVoltDB/ChapOtherClientAPI.php)
 
-Binaries for 64-bit Linux and 64-bit OSX 10.5+ are provided. The linking
+Binaries for 64-bit Linux and 64-bit OSX are provided. The linking
 instructions below apply to the Linux binaries.
+
+The Linux binary was compiled with GCC 4.4.7 on Centos 6.7.
+The OSX binary was compiled with Xcode 7.2 on OSX 10.11.
+
+The source code is available in the [VoltDB Github repository]
+(https://github.com/VoltDB/voltdb-client-cpp). 
+
+New Features in V6.0
+==================
+
+Support for new geospatial datatypes: GEOGRAPHY and GEOGRAPHY_POINT. The client can fetch
+columns using getGeography() and getGeographyPoint().
 
 New Features in V5.2
 ==================
@@ -31,7 +43,8 @@ client affinity and can auto-reconnect to restarted nodes.
 Prerequisites
 =============
 
-- Boost C++ Library 1.53.0 or above.
+Boost C++ Library 1.53 if using the downloaded client library. If building from
+source, you may use 1.53 or above.
 
 Building
 ========
