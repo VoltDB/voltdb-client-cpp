@@ -206,7 +206,7 @@ private:
     boost::atomic<size_t> m_pendingConnectionSize;
     boost::mutex m_pendingConnectionLock;
 
-#if defined (WIN32)
+#if defined (_MSC_VER)
     evutil_socket_t m_wakeupPipe[2];
 #else
     int m_wakeupPipe[2];

@@ -15,13 +15,13 @@ C++ library 1.56 -http://sourceforge.net/projects/boost/files/boost/1.56.0/boost
 Switch to the directory location where boost libraries have been extracted.
 Run following steps to build and install 64 bit version of Boost libraries.
 1 - bootstrap.bat
-2 - b2.exe --libdir=c:\Boost\lib\i386 install
+2 - b2.exe --prefix=c:\Boost --libdir=c:\Boost\lib\i386 install
 
 64 Bit version:
 Switch to the directory location where boost libraries have been extracted.
 Run following steps to build and install 64 bit version of Boost libraries.
 1 - bootstrap.bat
-2 - b2.exe --prefix c:\Boost --libdir=c:\Boost\lib\x64 architecture=x64 address-model=64 install
+2 - b2.exe --prefix=c:\Boost --libdir=c:\Boost\lib\x64 architecture=x86 address-model=64 install
 
 Create the necessary BOOST environment variables for the VS project:
 - "BOOST_INCLUDE" set to path where the include boost directory that contains all the header files. 
@@ -29,7 +29,7 @@ For above installation, set the BOOST_INCLUDE to "C:\Boost\include\boost-1_56". 
 "echo %BOOST_INCLUDE%" will output "C:\Boost\include\boost-1_56"
 
 - "BOOST_LIB_32" set to path where the BOOST 32 libraries are located. For above installation, 
-set the BOOST_INCLUDE to "C:\Boost\lib\i386". If properly set, "echo %BOOST_LIB_32%" 
+set the BOOST_LIB_32 to "C:\Boost\lib\i386". If properly set, "echo %BOOST_LIB_32%"
 will output "C:\Boost\lib\i386"
 
 - "BOOST_LIB_64" set to path where the BOOST 64 libraries are located. For above installation, 
