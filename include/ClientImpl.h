@@ -23,6 +23,7 @@
 
 #ifndef VOLTDB_CLIENTIMPL_H_
 #define VOLTDB_CLIENTIMPL_H_
+#include "PlatformInterface.hpp"
 #include <event2/event.h>
 #include <event2/bufferevent.h>
 #include <map>
@@ -163,7 +164,8 @@ private:
      */
     void createPendingConnection(const std::string &hostname, const unsigned short port, const int64_t time=0);
     void erasePendingConnection(PendingConnection *);
-
+    bool createWakeupNotificationPipe();
+    
     /*
      * Method for sinking messages.
      * If a logger callback is not set then skip all messages
@@ -204,7 +206,11 @@ private:
     boost::atomic<size_t> m_pendingConnectionSize;
     boost::mutex m_pendingConnectionLock;
 
+#if defined (WIN32)
+    evutil_socket_t m_wakeupPipe[2];
+#else
     int m_wakeupPipe[2];
+#endif
     boost::mutex m_wakeupPipeLock;
 
     ClientLogger* m_pLogger;

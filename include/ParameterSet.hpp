@@ -95,7 +95,7 @@ public:
        int32_t totalByteSize = 0;
        for (typename std::vector<ItemType>::const_iterator i = vals.begin(); i != vals.end(); ++i) {
            //calculate total size of array of buffers
-           totalByteSize += i->size();
+           totalByteSize += static_cast<int32_t> (i->size());
        }
        const int32_t size = static_cast<int32_t>(vals.size());
        m_buffer.ensureRemaining(4 + totalByteSize + (4*size));
@@ -103,7 +103,7 @@ public:
        m_buffer.putInt8(T);
        m_buffer.putInt16(size);
        for (typename std::vector<ItemType>::const_iterator i = vals.begin(); i != vals.end(); ++i) {
-           m_buffer.putBytes(i->size(), (const uint8_t*)i->data());
+           m_buffer.putBytes(static_cast<int32_t> (i->size()), (const uint8_t*)i->data());
        }
        m_currentParam++;
        return *this;
@@ -387,7 +387,7 @@ public:
      */
     ParameterSet& addString(const std::string& val)
     throw (voltdb::ParamMismatchException) {
-        return addString(val.size(), val.data());
+        return addString(static_cast<int32_t> (val.size()), val.data());
     }
 
     /**

@@ -48,8 +48,11 @@
 #ifndef VOLTDB_BYTEBUFFER_H
 #define VOLTDB_BYTEBUFFER_H
 
+#include "PlatformInterface.hpp"
 #include <stdint.h>
+#if !defined (_MSC_VER) 
 #include <arpa/inet.h>
+#endif
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_array.hpp>
@@ -76,13 +79,7 @@ namespace voltdb {
 
 #ifdef __bswap_64 // recent linux
 
-#ifdef htonll
-    #undef htonll
-#endif
 #define htonll(x) static_cast<uint64_t>(__bswap_constant_64(x))
-#ifdef ntohll
-    #undef ntohll
-#endif
 #define ntohll(x) static_cast<uint64_t>(__bswap_constant_64(x))
 
 #else // unix in general again
