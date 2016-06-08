@@ -21,13 +21,15 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "ByteBuffer.hpp"
+
 #include <stdint.h>
 #include <string>
 #include <math.h>
 #include <sstream>
 #include <iostream>
 #include "GeographyPoint.hpp"
-#include "ByteBuffer.hpp"
+
 
 namespace voltdb {
 GeographyPoint::GeographyPoint()

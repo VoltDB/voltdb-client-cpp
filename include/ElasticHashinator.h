@@ -26,8 +26,10 @@
 
 #include <string>
 
+#include "PlatformInterface.hpp"
 #include "TheHashinator.h"
 #include "MurmurHash3.h"
+#include "boost/scoped_array.hpp"
 #include <map>
 
 namespace voltdb {

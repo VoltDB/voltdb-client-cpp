@@ -23,10 +23,13 @@
 
 #ifndef VOLTDB_EXCEPTION_HPP_
 #define VOLTDB_EXCEPTION_HPP_
+#include "PlatformInterface.hpp"
 #include <cstdio>
 #include <exception>
+#include <sstream>
 
 namespace voltdb {
+    using std::ostringstream;
 
 /*
  * Base class for all exceptions thrown by the VoltDB client API
@@ -62,9 +65,9 @@ public:
 
     explicit InvalidColumnException(const size_t index) :
         Exception() {
-        char msg[256];
-        snprintf(msg, sizeof msg, "Attempted to retrieve a column with an invalid index: %ld", index);
-        m_what = msg;
+        ostringstream strStream;
+        strStream << "Attempted to retrieve a column with an invalid index: " << index;
+        m_what = strStream.str();
     }
 
     explicit InvalidColumnException(const std::string& name) :
@@ -74,9 +77,9 @@ public:
 
     explicit InvalidColumnException(const std::string& columnName, const size_t type, const std::string& typeName, const std::string& expectedTypeName) :
         Exception() {
-        char msg[256];
-        snprintf(msg, sizeof msg, "Attempted to retrieve a column: %s with an invalid type: %s<%ld> expected: %s", columnName.c_str(), typeName.c_str(), type, expectedTypeName.c_str());
-        m_what = msg;
+        ostringstream strStream;
+        strStream << "Attempted to retrieve a column: " << columnName << " with an invalid type: " << typeName << "<" << type << "> expected: " <<expectedTypeName.c_str();
+        m_what = strStream.str();
     }
 
     virtual ~InvalidColumnException() throw() {}
@@ -148,9 +151,9 @@ public:
     }
     explicit ParamMismatchException(const size_t type, const std::string& typeName) :
         Exception() {
-        char msg[256];
-        snprintf(msg, sizeof msg, "Attempted to set a parameter using the wrong type: %s<%ld>", typeName.c_str(), type);
-        m_what = msg;
+        ostringstream strStream;
+        strStream << "Attempted to set a parameter using the wrong type: " << typeName << "<" << type << ">";
+        m_what = strStream.str();
     }
     virtual ~ParamMismatchException() throw() {}
     virtual const char* what() const throw() {
@@ -167,9 +170,9 @@ public:
 
     explicit UnsupportedTypeException(const std::string& typeName) :
         Exception() {
-        char msg[256];
-        snprintf(msg, sizeof msg, "Attempted to use a SQL type that is unsupported in the C++ client: %s", typeName.c_str());
-        m_what = msg;
+        ostringstream strStream;
+        strStream << "Attempted to use a SQL type that is unsupported in the C++ client: " << typeName;
+        m_what = strStream.str();
     }
 
     virtual ~UnsupportedTypeException() throw() {}

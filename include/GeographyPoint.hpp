@@ -95,6 +95,7 @@ public:
      * Return true iff this is a null GeographyPoint.
      */
     bool isNull() const {
+        static const double NULL_COORDINATE = 360.0;
         return m_longitude == NULL_COORDINATE && m_latitude == NULL_COORDINATE;
     }
     
@@ -162,8 +163,7 @@ public:
                             bool       &wasNull);
 private:
     double m_longitude;
-    double m_latitude;
-    static const double NULL_COORDINATE = 360.0;
+    double m_latitude;    
 };
 
 } /* namespace voltdb */
