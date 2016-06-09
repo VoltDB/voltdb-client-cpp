@@ -221,7 +221,7 @@ public:
 
 private:
     static std::ostream &writeString(std::ostream &ostream, const std::string &str) {
-        const int32_t size = str.size();
+        const int32_t size = static_cast <int> (str.size());
         ostream.write((const char*)&size, sizeof(size));
         if (size != 0) {
             ostream.write(str.data(), size);

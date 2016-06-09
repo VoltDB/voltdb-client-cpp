@@ -92,7 +92,7 @@ int Distributer::parseParameter(ByteBuffer &paramBuffer, int &index){
 
             if(wasNull)
                 return 0;
-            return m_hashinator->hashinate((strVal.data()), strVal.size());
+            return m_hashinator->hashinate((strVal.data()), static_cast<int>(strVal.size()));
         }
 
         default:
@@ -114,7 +114,7 @@ int Distributer::getHashedPartitionForParameter(ByteBuffer &paramBuffer, int par
     std::string name = paramBuffer.getString(index, wasNull);
 
     //Skip procedure name and size, client data
-    index += sizeof(int32_t) + name.size() + sizeof(int64_t);
+    index += static_cast <int> (sizeof(int32_t) + name.size() + sizeof(int64_t));
 
     //get number of parameters
     paramBuffer.getInt16(index);

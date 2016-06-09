@@ -41,12 +41,25 @@ namespace voltdb {
 static bool voltdb_clientimpl_debug_init_libevent = false;
 #endif
 
+#if defined (_MSC_VER)
+static const int64_t DELTA_EPOCH_IN_MICROSECS = 11644473600000000Ui64;
+int64_t get_sec_time() {
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    ULARGE_INTEGER t;
+    t.HighPart = ft.dwHighDateTime;
+    t.LowPart = ft.dwLowDateTime;
+    t.QuadPart = t.QuadPart / 10; // convert to micro seconds
+    return (t.QuadPart - DELTA_EPOCH_IN_MICROSECS) / 10000000;
+}
+#else
 int64_t get_sec_time() {
     struct timeval tp;
     int res = gettimeofday(&tp, NULL);
     assert(res == 0);
     return tp.tv_sec;
 }
+#endif
 
 class PendingConnection {
 public:
@@ -208,7 +221,11 @@ static void regularReadCallback(struct bufferevent *bev, void *ctx) {
 void wakeupPipeCallback(evutil_socket_t fd, short what, void *ctx) {
     ClientImpl *impl = reinterpret_cast<ClientImpl*>(ctx);
     char buf[64];
-    (void)read(fd, buf, sizeof buf);
+#if defined (_MSC_VER)
+    recv(fd, buf, sizeof(buf), 0);
+#else
+    (void)read(fd, buf, sizeof (buf));
+#endif
     impl->eventBaseLoopBreak();
 }
 
@@ -248,12 +265,33 @@ ClientImpl::~ClientImpl() {
     if (m_passwordHash != NULL) free(m_passwordHash);
     event_base_free(m_base);
     if (m_wakeupPipe[1] != -1) {
-       ::close(m_wakeupPipe[0]);
-       ::close(m_wakeupPipe[1]);
+#if defined (WIN32)
+        EVUTIL_CLOSESOCKET(m_wakeupPipe[0]);
+        EVUTIL_CLOSESOCKET(m_wakeupPipe[0]);
+#else
+        ::close(m_wakeupPipe[0]);
+        ::close(m_wakeupPipe[1]);
+#endif
+    }
+
+}
+
+// Initialization for the library that gets called only once
+#if defined (_MSC_VER)
+INIT_ONCE once_initLibevent= INIT_ONCE_STATIC_INIT;
+void initLibevent() {
+    WSADATA wsa_data;
+    WSAStartup(0x0201, &wsa_data);
+    if (evthread_use_windows_threads()) {
+        throw voltdb::LibEventException();
     }
 }
 
-// Initialization for the library that only gets called once
+BOOL CALLBACK CAllLibInitInternal(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *lpContext) {
+    initLibevent();
+    return TRUE;
+}
+#else
 pthread_once_t once_initLibevent = PTHREAD_ONCE_INIT;
 void initLibevent() {
     // try to run threadsafe libevent
@@ -261,6 +299,7 @@ void initLibevent() {
         throw voltdb::LibEventException();
     }
 }
+#endif
 
 const int64_t ClientImpl::VOLT_NOTIFICATION_MAGIC_NUMBER(9223372036854775806);
 
@@ -273,7 +312,12 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         m_pLogger(0)
 {
 
+#if defined (_MSC_VER)
+    InitOnceExecuteOnce(&once_initLibevent, CAllLibInitInternal, NULL, NULL);
+#else
     pthread_once(&once_initLibevent, initLibevent);
+#endif
+
 #ifdef DEBUG
     if (!voltdb_clientimpl_debug_init_libevent) {
         event_enable_debug_mode();
@@ -342,7 +386,7 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
         } else {
             ss.str("");
             ss << "!!!! ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port << " failed";
-            logMessage(ClientLogger::ERROR, ss.str());
+            logMessage(ClientLogger::ERR, ss.str());
 
             throw voltdb::LibEventException();
         }
@@ -354,8 +398,13 @@ void ClientImpl::close() {
     //drain before we close;
     drain();
     if (m_wakeupPipe[1] != -1) {
+#if defined (WIN32)
+       EVUTIL_CLOSESOCKET(m_wakeupPipe[0]);
+       EVUTIL_CLOSESOCKET(m_wakeupPipe[0]);
+#else
        ::close(m_wakeupPipe[0]);
        ::close(m_wakeupPipe[1]);
+#endif
     }
     if (m_bevs.empty()) return;
     for (std::vector<struct bufferevent *>::iterator i = m_bevs.begin(); i != m_bevs.end(); ++i) {
@@ -449,7 +498,7 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
         if (m_listener.get() != NULL) {
             try {
 
-                 m_listener->connectionActive( m_contexts[bev]->m_name, m_bevs.size() );
+                 m_listener->connectionActive( m_contexts[bev]->m_name, static_cast<int32_t> (m_bevs.size()) );
             } catch (const std::exception& e) {
                 std::cerr << "Status listener threw exception on connection active: " << e.what() << std::endl;
             }
@@ -463,20 +512,31 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
 
     	std::stringstream ss;
     	ss << "connection failed " << " " << pc->m_hostname << ":" << pc->m_port;
-    	logMessage(ClientLogger::ERROR, ss.str());
+        logMessage(ClientLogger::ERR, ss.str());
 
         throw ConnectException();
     }
             protector.success();
 }
 
+bool ClientImpl::createWakeupNotificationPipe() {
+#if defined (_MSC_VER)
+    if (evutil_socketpair(AF_INET, SOCK_STREAM, 0, m_wakeupPipe) != -1)
+#else
+    if (pipe(m_wakeupPipe) == 0)
+#endif
+    {
+        return true;
+    }
+    return false;
+}
 void ClientImpl::createConnection(const std::string& hostname, const unsigned short port, const bool keepConnecting) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
 
     std::stringstream ss;
     ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
     logMessage(ClientLogger::INFO, ss.str());
 
-    if (0 == pipe(m_wakeupPipe)) {
+    if (createWakeupNotificationPipe()) {
         struct event *ev = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
         event_add(ev, NULL);
     } else {
@@ -875,7 +935,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
     	std::stringstream ss;
     	const char* s_error = events & BEV_EVENT_ERROR ? "BEV_EVENT_ERROR" : "BEV_EVENT_EOF";
     	ss << "connectionLost: " << s_error;
-    	logMessage(ClientLogger::ERROR, ss.str());
+        logMessage(ClientLogger::ERR, ss.str());
 
         //Notify client that a connection was lost
         if (m_listener.get() != NULL) {
@@ -1088,10 +1148,15 @@ void ClientImpl::setClientAffinity(bool enable){
 
 void ClientImpl::wakeup() {
    if (m_wakeupPipe[1] != -1) {
-        static unsigned char c = 'w';
+        static const char c = 'w';
         boost::mutex::scoped_lock lock(m_wakeupPipeLock, boost::try_to_lock);
         if (lock) {
+#if defined (_MSC_VER)
+            send(m_wakeupPipe[1], &c, 1, 0);
+#else
             (void)write(m_wakeupPipe[1], &c, 1);
+#endif
+
         }
     } else {
       event_base_loopbreak(m_base);

@@ -21,9 +21,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#if !defined (__STDC_CONSTANT_MACROS)
 #define __STDC_CONSTANT_MACROS
+#endif
+#if !defined (__STDC_LIMIT_MACROS)
 #define __STDC_LIMIT_MACROS
-
+#endif
 #include <vector>
 #include <boost/shared_ptr.hpp>
 #include "Client.h"

@@ -80,7 +80,7 @@ public:
          * Return the number of points in the Ring.
          */
         int numPoints() const {
-            return m_points.size();
+            return static_cast<int> (m_points.size());
         }
 
         /**
@@ -192,7 +192,7 @@ public:
      * Return the number of rings in the polygon.
      */
     int numRings() const {
-        return m_rings.size();
+        return static_cast<int> (m_rings.size());
     }
 
     /**
