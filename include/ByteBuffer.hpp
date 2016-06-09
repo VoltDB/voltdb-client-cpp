@@ -79,7 +79,13 @@ namespace voltdb {
 
 #ifdef __bswap_64 // recent linux
 
+#ifdef htonll
+    #undef htonll
+#endif
 #define htonll(x) static_cast<uint64_t>(__bswap_constant_64(x))
+#ifdef ntohll
+    #undef ntohll
+#endif
 #define ntohll(x) static_cast<uint64_t>(__bswap_constant_64(x))
 
 #else // unix in general again
