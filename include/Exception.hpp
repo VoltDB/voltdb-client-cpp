@@ -28,8 +28,6 @@
 #include <exception>
 #include <sstream>
 
-
-
 namespace voltdb {
 using std::ostringstream;
 
@@ -67,8 +65,10 @@ public:
     virtual const char* what() const throw() {
         return "An unknown error occured in the VoltDB client API";
     }
+    const int getErrorCode() const { return m_errorCode; }
 protected:
     Exception(nativeErrorCode errCode) : m_errorCode(errCode){};
+private:
     nativeErrorCode m_errorCode;        // needed for ODBC driver
 };
 
