@@ -54,13 +54,10 @@ typedef SSIZE_T ssize_t;
 
 #include <Windows.h>
 
-#if !defined(_USE_MATH_DEFINES)
+#ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
 #endif
 
-#endif
+#endif  // _MSC_VER
 
-namespace voltdb {
-} // namespace voltdb
-
-#endif /* VOLTDB_PLATFORM_INTERFACE_H */
+#endif // VOLTDB_PLATFORM_INTERFACE_H

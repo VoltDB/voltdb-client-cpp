@@ -23,6 +23,7 @@
 
 #ifndef VOLTDB_EXCEPTION_HPP_
 #define VOLTDB_EXCEPTION_HPP_
+
 #include "PlatformInterface.hpp"
 #include <cstdio>
 #include <exception>
@@ -33,7 +34,7 @@ using std::ostringstream;
 
 // when adding new Exception, add it's corresponding error code to enum entry below
 enum nativeErrorCode{
-    errException = 0,
+    errException = 1,
     errNullPointerException,
     errInvalidColumnException,
     errOverflowUnderflowException,

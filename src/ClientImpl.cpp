@@ -266,8 +266,8 @@ ClientImpl::~ClientImpl() {
     event_base_free(m_base);
     if (m_wakeupPipe[1] != -1) {
 #if defined (WIN32)
-        EVUTIL_CLOSESOCKET(m_wakeupPipe[0]);
-        EVUTIL_CLOSESOCKET(m_wakeupPipe[0]);
+        evutil_closesocket(m_wakeupPipe[0]);
+        evutil_closesocket(m_wakeupPipe[1]);
 #else
         ::close(m_wakeupPipe[0]);
         ::close(m_wakeupPipe[1]);
@@ -291,7 +291,7 @@ BOOL CALLBACK CAllLibInitInternal(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *l
     initLibevent();
     return TRUE;
 }
-#else
+#else   // _MSC_VER
 pthread_once_t once_initLibevent = PTHREAD_ONCE_INIT;
 void initLibevent() {
     // try to run threadsafe libevent
@@ -399,8 +399,8 @@ void ClientImpl::close() {
     drain();
     if (m_wakeupPipe[1] != -1) {
 #if defined (WIN32)
-       EVUTIL_CLOSESOCKET(m_wakeupPipe[0]);
-       EVUTIL_CLOSESOCKET(m_wakeupPipe[0]);
+        evutil_closesocket(m_wakeupPipe[0]);
+        evutil_closesocket(m_wakeupPipe[1]);
 #else
        ::close(m_wakeupPipe[0]);
        ::close(m_wakeupPipe[1]);

@@ -23,6 +23,7 @@
 
 #ifndef VOLTDB_CLIENTIMPL_H_
 #define VOLTDB_CLIENTIMPL_H_
+
 #include "PlatformInterface.hpp"
 #include <event2/event.h>
 #include <event2/bufferevent.h>
@@ -31,7 +32,6 @@
 #include <list>
 #include <string>
 #include "ProcedureCallback.hpp"
-//#include "StatusListener.h"
 #include "Client.h"
 #include "Procedure.hpp"
 #include <boost/atomic.hpp>

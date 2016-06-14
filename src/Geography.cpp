@@ -148,7 +148,7 @@ int32_t Geography::serializeTo(ByteBuffer &buffer) const {
     buffer.putInt8(0);
     buffer.putInt8(1);
     buffer.putInt8(0);
-    buffer.putInt32(static_cast <int> (m_rings.size()));
+    buffer.putInt32(static_cast <int32_t> (m_rings.size()));
     bool reverseit = false;
     for (RingConstIterator idx = m_rings.begin();
          idx != m_rings.end();

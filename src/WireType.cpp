@@ -22,38 +22,43 @@
  */
 #include "WireType.h"
 #include <cassert>
+#include <sstream>
+
+using std::string;
 
 namespace voltdb {
-std::string wireTypeToString(WireType type) {
+string wireTypeToString(WireType type) {
     switch (type) {
     case WIRE_TYPE_ARRAY:
-        return std::string("ARRAY");
+        return string("ARRAY");
     case WIRE_TYPE_NULL:
-        return std::string("NULL");
+        return string("NULL");
     case WIRE_TYPE_TINYINT:
-        return std::string("TINYINT");
+        return string("TINYINT");
     case WIRE_TYPE_SMALLINT:
-        return std::string("SMALLINT");
+        return string("SMALLINT");
     case WIRE_TYPE_INTEGER:
-        return std::string("INTEGER");
+        return string("INTEGER");
     case WIRE_TYPE_BIGINT:
-        return std::string("BIGINT");
+        return string("BIGINT");
     case WIRE_TYPE_FLOAT:
-        return std::string("FLOAT");
+        return string("FLOAT");
     case WIRE_TYPE_STRING:
-        return std::string("STRING");
+        return string("STRING");
     case WIRE_TYPE_TIMESTAMP:
-        return std::string("TIMESTAMP");
+        return string("TIMESTAMP");
     case WIRE_TYPE_DECIMAL:
-        return std::string("DECIMAL");
+        return string("DECIMAL");
     case WIRE_TYPE_VARBINARY:
-        return std::string("VARBINARY");
+        return string("VARBINARY");
     case WIRE_TYPE_GEOGRAPHY_POINT:
-        return std::string("GEOGRAPHY_POINT");
+        return string("GEOGRAPHY_POINT");
     case WIRE_TYPE_GEOGRAPHY:
-        return std::string("GEOGRAPHY");
+        return string("GEOGRAPHY");
     default:
-        return std::string("<<Unknown Type>>");
+        std::ostringstream os;
+        os << "<<Unknown Type (" << type << ")>>";
+        return os.str();
     }
 }
 }

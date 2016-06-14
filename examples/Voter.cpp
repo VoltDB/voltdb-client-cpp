@@ -68,7 +68,6 @@ int64_t minAllowedOutstanding;
 int64_t maxAllowedOutstanding;
 
 #ifdef _MSC_VER
-// this version may not be correct
 int64_t millisec_time() {
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);
