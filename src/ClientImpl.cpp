@@ -246,7 +246,10 @@ ClientImpl::~ClientImpl() {
     m_contexts.clear();
     m_callbacks.clear();
     if (m_passwordHash != NULL) free(m_passwordHash);
+    
+    if ( m_ev ) event_free (m_ev);
     event_base_free(m_base);
+
     if (m_wakeupPipe[1] != -1) {
        ::close(m_wakeupPipe[0]);
        ::close(m_wakeupPipe[1]);
@@ -281,12 +284,18 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
     }
 #endif
     struct event_config *cfg = event_config_new();
+    if (!cfg)
+    {
+        throw voltdb::LibEventException();
+    }
     event_config_set_flag(cfg, EVENT_BASE_FLAG_NO_CACHE_TIME);//, EVENT_BASE_FLAG_NOLOCK);
     m_base = event_base_new_with_config(cfg);
     assert(m_base);
     if (!m_base) {
+	event_config_free(cfg);
         throw voltdb::LibEventException();
     }
+    event_config_free(cfg);
     m_enableAbandon = config.m_enableAbandon;
     m_hashScheme = config.m_hashScheme;
     if (m_hashScheme == HASH_SHA1) {
@@ -301,6 +310,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
     } else {
         throw voltdb::LibEventException();
     }
+    m_ev = NULL;
 
 }
 
@@ -477,8 +487,12 @@ void ClientImpl::createConnection(const std::string& hostname, const unsigned sh
     logMessage(ClientLogger::INFO, ss.str());
 
     if (0 == pipe(m_wakeupPipe)) {
-        struct event *ev = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
-        event_add(ev, NULL);
+        //struct event *ev = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
+	if ( m_ev ){
+	    event_free(m_ev);
+	}
+        m_ev = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
+        event_add(m_ev, NULL);
     } else {
         m_wakeupPipe[1] = -1;
     }

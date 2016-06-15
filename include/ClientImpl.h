@@ -172,6 +172,8 @@ private:
 
     Distributer  m_distributer;
     struct event_base *m_base;
+    //for holding the event till deletion
+    struct event * m_ev;
     int64_t m_nextRequestId;
     size_t m_nextConnectionIndex;
     std::vector<struct bufferevent*> m_bevs;
@@ -210,6 +212,7 @@ private:
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
+
 };
 }
 #endif /* VOLTDB_CLIENTIMPL_H_ */
