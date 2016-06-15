@@ -487,7 +487,6 @@ void ClientImpl::createConnection(const std::string& hostname, const unsigned sh
     logMessage(ClientLogger::INFO, ss.str());
 
     if (0 == pipe(m_wakeupPipe)) {
-        //struct event *ev = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
 	if ( m_ev ){
 	    event_free(m_ev);
 	}
