@@ -247,7 +247,8 @@ ClientImpl::~ClientImpl() {
     m_callbacks.clear();
     if (m_passwordHash != NULL) free(m_passwordHash);
     
-    if ( m_ev ) event_free (m_ev);
+    if ( m_cfg ) event_config_free(m_cfg);
+    if ( m_ev ) event_free(m_ev);
     event_base_free(m_base);
 
     if (m_wakeupPipe[1] != -1) {
@@ -283,19 +284,17 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         voltdb_clientimpl_debug_init_libevent = true;
     }
 #endif
-    struct event_config *cfg = event_config_new();
-    if (!cfg)
+    m_cfg = event_config_new();
+    if (!m_cfg)
     {
         throw voltdb::LibEventException();
     }
-    event_config_set_flag(cfg, EVENT_BASE_FLAG_NO_CACHE_TIME);//, EVENT_BASE_FLAG_NOLOCK);
-    m_base = event_base_new_with_config(cfg);
+    event_config_set_flag(m_cfg, EVENT_BASE_FLAG_NO_CACHE_TIME);//, EVENT_BASE_FLAG_NOLOCK);
+    m_base = event_base_new_with_config(m_cfg);
     assert(m_base);
     if (!m_base) {
-	event_config_free(cfg);
         throw voltdb::LibEventException();
     }
-    event_config_free(cfg);
     m_enableAbandon = config.m_enableAbandon;
     m_hashScheme = config.m_hashScheme;
     if (m_hashScheme == HASH_SHA1) {
