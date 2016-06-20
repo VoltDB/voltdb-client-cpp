@@ -21,18 +21,22 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "ByteBuffer.hpp"
+
 #include <stdint.h>
 #include <string>
 #include <math.h>
 #include <sstream>
 #include <iostream>
 #include "GeographyPoint.hpp"
-#include "ByteBuffer.hpp"
+
 
 namespace voltdb {
+const double GeographyPoint::NULL_COORDINATE = 360.0;
+
 GeographyPoint::GeographyPoint()
-    : m_longitude(360.0),
-      m_latitude(360.0) {
+    : m_longitude(NULL_COORDINATE),
+      m_latitude(NULL_COORDINATE) {
 }
 
 std::string GeographyPoint::toString() const
@@ -118,7 +122,7 @@ int32_t GeographyPoint::deserializeFrom(ByteBuffer &message,
 {
     double longitude = message.getDouble(offset);
     double latitude = message.getDouble(offset + sizeof(double));
-    if (longitude == 360.0 && latitude == 360.0) {
+    if (longitude == NULL_COORDINATE && latitude == NULL_COORDINATE) {
         wasNull = true;
     } else {
         wasNull = false;
@@ -126,5 +130,9 @@ int32_t GeographyPoint::deserializeFrom(ByteBuffer &message,
     m_longitude = longitude;
     m_latitude = latitude;
     return 2 * sizeof(double);
+}
+
+bool GeographyPoint::isNull() const {
+    return m_longitude == NULL_COORDINATE && m_latitude == NULL_COORDINATE;
 }
 }

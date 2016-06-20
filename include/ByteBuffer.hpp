@@ -48,8 +48,11 @@
 #ifndef VOLTDB_BYTEBUFFER_H
 #define VOLTDB_BYTEBUFFER_H
 
+#include "PlatformInterface.hpp"
 #include <stdint.h>
+#if !defined (_MSC_VER)
 #include <arpa/inet.h>
+#endif
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_array.hpp>

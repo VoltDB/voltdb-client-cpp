@@ -23,26 +23,60 @@
 
 #ifndef VOLTDB_EXCEPTION_HPP_
 #define VOLTDB_EXCEPTION_HPP_
+
+#include "PlatformInterface.hpp"
 #include <cstdio>
 #include <exception>
+#include <sstream>
 
 namespace voltdb {
+using std::ostringstream;
+
+// when adding new Exception, add it's corresponding error code to enum entry below
+enum nativeErrorCode{
+    errException = 1,
+    errNullPointerException,
+    errInvalidColumnException,
+    errOverflowUnderflowException,
+    errIndexOutOfBoundException,
+    errNonExpandableBufferException,
+    errUninitializedParamsException,
+    errParamMismatchException,
+    errNoMoreRowsException,
+    errStringToDecimalException,
+    errConnectException,
+    errNoConnectionException,
+    errLibEventException,
+    errClusterInstanceMismatchException,
+    errColumnMismatchException,
+    errMisplacedClientException,
+    errElasticModeMismatchException,
+    errUnknownProcedureException,
+    errCoordinateOutOfRangeException,
+    errUnsupportedTypeException,
+};
 
 /*
  * Base class for all exceptions thrown by the VoltDB client API
  */
 class Exception : public std::exception {
 public:
+    Exception() : m_errorCode(errException){};
     virtual ~Exception() throw() {}
     virtual const char* what() const throw() {
         return "An unknown error occured in the VoltDB client API";
     }
+    const int getErrorCode() const { return m_errorCode; }
+protected:
+    Exception(nativeErrorCode errCode) : m_errorCode(errCode){};
+private:
+    nativeErrorCode m_errorCode;        // needed for ODBC driver
 };
 
 class NullPointerException : public Exception {
 public:
     NullPointerException() :
-        Exception() {}
+        Exception(errNullPointerException) {}
     virtual const char* what() const throw() {
         return "Found a null pointer where an address was expected";
     }
@@ -56,27 +90,27 @@ class InvalidColumnException : public voltdb::Exception {
     std::string m_what;
 public:
     explicit InvalidColumnException() :
-        Exception() {
+        Exception(errInvalidColumnException) {
         m_what = "Attempted to retrieve a column with an invalid index or name, or an invalid type for the specified column";
     }
 
     explicit InvalidColumnException(const size_t index) :
-        Exception() {
-        char msg[256];
-        snprintf(msg, sizeof msg, "Attempted to retrieve a column with an invalid index: %ld", index);
-        m_what = msg;
+        Exception(errInvalidColumnException) {
+        ostringstream strStream;
+        strStream << "Attempted to retrieve a column with an invalid index: " << index;
+        m_what = strStream.str();
     }
 
     explicit InvalidColumnException(const std::string& name) :
-        Exception() {
+        Exception(errInvalidColumnException) {
         m_what = "Attempted to retrieve a column with an invalid name: " + name;
     }
 
     explicit InvalidColumnException(const std::string& columnName, const size_t type, const std::string& typeName, const std::string& expectedTypeName) :
-        Exception() {
-        char msg[256];
-        snprintf(msg, sizeof msg, "Attempted to retrieve a column: %s with an invalid type: %s<%ld> expected: %s", columnName.c_str(), typeName.c_str(), type, expectedTypeName.c_str());
-        m_what = msg;
+        Exception(errInvalidColumnException) {
+        ostringstream strStream;
+        strStream << "Attempted to retrieve a column: " << columnName << " with an invalid type: " << typeName << "<" << type << "> expected: " <<expectedTypeName.c_str();
+        m_what = strStream.str();
     }
 
     virtual ~InvalidColumnException() throw() {}
@@ -94,7 +128,7 @@ public:
  */
 class OverflowUnderflowException : public voltdb::Exception {
 public:
-    OverflowUnderflowException() : Exception() {}
+    OverflowUnderflowException() : Exception(errOverflowUnderflowException) {}
     virtual const char* what() const throw() {
         return "Overflow underflow exception";
     }
@@ -106,7 +140,7 @@ public:
  */
 class IndexOutOfBoundsException : public voltdb::Exception {
 public:
-    IndexOutOfBoundsException() : Exception() {}
+    IndexOutOfBoundsException() : Exception(errIndexOutOfBoundException) {}
     virtual const char* what() const throw() {
         return "Index out of bounds exception";
     }
@@ -118,7 +152,7 @@ public:
  */
 class NonExpandableBufferException : public voltdb::Exception {
 public:
-    NonExpandableBufferException() : Exception() {}
+    NonExpandableBufferException() : Exception(errNonExpandableBufferException) {}
     virtual const char* what() const throw() {
         return "Attempted to add/expand a nonexpandable buffer";
     }
@@ -130,7 +164,7 @@ public:
  */
 class UninitializedParamsException : public voltdb::Exception {
 public:
-    UninitializedParamsException() : Exception() {}
+    UninitializedParamsException() : Exception(errUninitializedParamsException) {}
     virtual const char* what() const throw() {
         return "Not all parameters were set";
     }
@@ -143,14 +177,14 @@ public:
 class ParamMismatchException : public voltdb::Exception {
     std::string m_what;
 public:
-    explicit ParamMismatchException() : Exception() {
+    explicit ParamMismatchException() : Exception(errParamMismatchException) {
         m_what = "Attempted to set a parameter using the wrong type";
     }
     explicit ParamMismatchException(const size_t type, const std::string& typeName) :
-        Exception() {
-        char msg[256];
-        snprintf(msg, sizeof msg, "Attempted to set a parameter using the wrong type: %s<%ld>", typeName.c_str(), type);
-        m_what = msg;
+        Exception(errParamMismatchException) {
+        ostringstream strStream;
+        strStream << "Attempted to set a parameter using the wrong type: " << typeName << "<" << type << ">";
+        m_what = strStream.str();
     }
     virtual ~ParamMismatchException() throw() {}
     virtual const char* what() const throw() {
@@ -166,10 +200,10 @@ class UnsupportedTypeException : public voltdb::Exception {
 public:
 
     explicit UnsupportedTypeException(const std::string& typeName) :
-        Exception() {
-        char msg[256];
-        snprintf(msg, sizeof msg, "Attempted to use a SQL type that is unsupported in the C++ client: %s", typeName.c_str());
-        m_what = msg;
+        Exception(errUnsupportedTypeException) {
+        ostringstream strStream;
+        strStream << "Attempted to use a SQL type that is unsupported in the C++ client: " << typeName;
+        m_what = strStream.str();
     }
 
     virtual ~UnsupportedTypeException() throw() {}
@@ -188,7 +222,7 @@ private:
  */
 class ElasticModeMismatchException : public voltdb::Exception {
 public:
-    ElasticModeMismatchException() : Exception() {}
+    ElasticModeMismatchException() : Exception(errElasticModeMismatchException) {}
    virtual const char* what() const throw() {
        return "LEGACY mode is not supported";
    }
@@ -199,7 +233,7 @@ public:
  */
 class NoMoreRowsException : public voltdb::Exception {
 public:
-    NoMoreRowsException() : Exception() {}
+    NoMoreRowsException() : Exception(errNoMoreRowsException) {}
     virtual const char* what() const throw() {
         return "Requests another row when there are no more";
     }
@@ -211,7 +245,7 @@ public:
  */
 class StringToDecimalException : public voltdb::Exception {
 public:
-    StringToDecimalException() : Exception() {}
+    StringToDecimalException() : Exception(errStringToDecimalException) {}
     virtual const char* what() const throw() {
         return "Parse error constructing decimal from string";
     }
@@ -223,7 +257,7 @@ public:
  */
 class ConnectException : public voltdb::Exception {
 public:
-    ConnectException() : Exception() {}
+    ConnectException() : Exception(errConnectException) {}
     virtual const char* what() const throw() {
         return "An error occured while attempting to create and authenticate a connection to VoltDB";
     }
@@ -235,7 +269,7 @@ public:
  */
 class NoConnectionsException : public voltdb::Exception {
 public:
-    NoConnectionsException() : Exception() {}
+    NoConnectionsException() : Exception(errNoConnectionException) {}
     virtual const char* what() const throw() {
         return "Attempted to invoke a procedure while there are no connections";
     }
@@ -247,7 +281,7 @@ public:
  */
 class MisplacedClientException : public voltdb::Exception {
 public:
-    MisplacedClientException() : Exception() {}
+    MisplacedClientException() : Exception(errMisplacedClientException) {}
     virtual const char* what() const throw() {
         return "Attempted to return a client that does not belong to this thread";
     }
@@ -259,7 +293,7 @@ public:
  */
 class LibEventException : public voltdb::Exception {
 public:
-    LibEventException() : Exception() {}
+    LibEventException() : Exception(errLibEventException) {}
     virtual const char* what() const throw() {
         return "Lib event generated an unexpected error";
     }
@@ -267,7 +301,7 @@ public:
 
 class ClusterInstanceMismatchException : public voltdb::Exception {
 public:
-    ClusterInstanceMismatchException() : Exception() {}
+    ClusterInstanceMismatchException() : Exception(errClusterInstanceMismatchException) {}
     virtual const char* what() const throw() {
         return "Attempted to connect a client to two separate VoltDB clusters";
     }
@@ -276,10 +310,10 @@ public:
 class UnknownProcedureException : public voltdb::Exception {
     std::string m_what;
 public:
-    explicit UnknownProcedureException() : Exception() {
+    explicit UnknownProcedureException() : Exception(errUnknownProcedureException) {
         m_what = "Unknown procedure invoked";
     }
-    explicit UnknownProcedureException(const std::string& name) : Exception() {
+    explicit UnknownProcedureException(const std::string& name) : Exception(errUnknownProcedureException) {
         m_what = "Unknown procedure invoked: " + name;
     }
     virtual ~UnknownProcedureException() throw() {}
@@ -291,10 +325,10 @@ public:
 class CoordinateOutOfRangeException : public voltdb::Exception {
     std::string m_what;
 public:
-    explicit CoordinateOutOfRangeException() : Exception() {
+    explicit CoordinateOutOfRangeException() : Exception(errCoordinateOutOfRangeException) {
         m_what = "Coordinate out of Range";
     }
-    explicit CoordinateOutOfRangeException(const std::string& name) : Exception() {
+    explicit CoordinateOutOfRangeException(const std::string& name) : Exception(errCoordinateOutOfRangeException) {
         m_what = name + " coordinate out of range.";
     }
     virtual ~CoordinateOutOfRangeException() throw() {}

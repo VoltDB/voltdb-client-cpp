@@ -285,6 +285,7 @@ public:
             int out_len;
             getVarbinary(column, 0, NULL, &out_len); break;
         default:
+            assert(false);
             throw UnsupportedTypeException(wireTypeToString(columnType));
         }
         return wasNull();
@@ -397,7 +398,7 @@ public:
      * @throws UnsupportedTypeException always
      * @return never returns
      */
-    GeographyPoint getGeographyPoint(const std::string& cname) throw(UnsupportedTypeException) {
+    GeographyPoint getGeographyPoint(const std::string& cname) throw(InvalidColumnException) {
         return getGeographyPoint(getColumnIndexByName(cname));
     }
 
@@ -408,7 +409,7 @@ public:
      * @throws UnsupportedTypeException always
      * @return never returns
      */
-    Geography getGeography(const std::string& cname) throw(UnsupportedTypeException) {
+    Geography getGeography(const std::string& cname) throw(InvalidColumnException) {
         return getGeography(getColumnIndexByName(cname));
     }
 

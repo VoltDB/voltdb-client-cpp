@@ -37,7 +37,7 @@ public:
 * @brief   Values that represent logging levels.
 */
     enum CLIENT_LOG_LEVEL {
-        ERROR    = 1,
+        ERR      = 1,
         WARNING  = 2, 
         INFO     = 4,
         DEBUG    = 8,

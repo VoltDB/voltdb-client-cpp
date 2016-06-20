@@ -67,9 +67,9 @@ std::string Geography::Ring::toString() const {
 
 void Geography::Ring::serializeTo(ByteBuffer &buffer, bool reverseit) const {
     buffer.putInt8(0);
-    buffer.putInt32(m_points.size() - 1);
-    int start = (reverseit ? m_points.size() - 1 : 0);
-    int end   = (reverseit ? 0 : m_points.size() - 1);
+    buffer.putInt32(static_cast<int32_t> (m_points.size() - 1));
+    int start = (reverseit ? static_cast<int> (m_points.size()) - 1 : 0);
+    int end   = (reverseit ? 0 : static_cast <int> (m_points.size()) - 1);
     int delta = (reverseit ? -1 : 1);
     for (int idx = start; idx != end; idx += delta) {
         double x, y, z;
@@ -148,7 +148,7 @@ int32_t Geography::serializeTo(ByteBuffer &buffer) const {
     buffer.putInt8(0);
     buffer.putInt8(1);
     buffer.putInt8(0);
-    buffer.putInt32(m_rings.size());
+    buffer.putInt32(static_cast <int32_t> (m_rings.size()));
     bool reverseit = false;
     for (RingConstIterator idx = m_rings.begin();
          idx != m_rings.end();

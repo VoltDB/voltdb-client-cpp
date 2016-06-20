@@ -21,8 +21,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#ifndef __STDC_CONSTANT_MACROS
 #define __STDC_CONSTANT_MACROS
+#endif
+#ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
+#endif
 
 #include <vector>
 #include <string>
@@ -31,7 +35,9 @@
 #include <stdio.h>
 #include <time.h>
 #include <algorithm>
+#ifndef _MSC_VER
 #include <sys/time.h>
+#endif
 #include <boost/shared_ptr.hpp>
 #include "Client.h"
 #include "Table.h"
@@ -61,12 +67,23 @@ int64_t numSPCalls;
 int64_t minAllowedOutstanding;
 int64_t maxAllowedOutstanding;
 
+#ifdef _MSC_VER
+int64_t millisec_time() {
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    ULARGE_INTEGER t;
+    t.HighPart = ft.dwHighDateTime;
+    t.LowPart = ft.dwLowDateTime;
+    return t.QuadPart / 10000;
+}
+#else
 int64_t millisec_time() {
     struct timeval tp;
     int res = gettimeofday(&tp, NULL);
     assert(res == 0);
     return (tp.tv_sec * 1000) + (tp.tv_usec / 1000);
 }
+#endif
 
 class VoterCallback : public voltdb::ProcedureCallback
 {
@@ -242,7 +259,7 @@ int main(int argc, char* argv[])
 			if (totExecutionsLatency == 0)
 				totExecutionsLatency = 1;
 
-			float percentComplete = 100 * elapsedTimeMillis2 / runTimeMillis;
+			float percentComplete = static_cast<float> (100 * elapsedTimeMillis2) / runTimeMillis;
 			if (percentComplete > 100.)
 				percentComplete = 100.;
 
