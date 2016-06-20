@@ -13,7 +13,7 @@ C++ library 1.56 -http://sourceforge.net/projects/boost/files/boost/1.56.0/boost
 
 32 Bit version:
 Switch to the directory location where boost libraries have been extracted.
-Run following steps to build and install 64 bit version of Boost libraries.
+Run following steps to build and install 32 bit version of Boost libraries.
 1 - bootstrap.bat
 2 - b2.exe --prefix=c:\Boost --libdir=c:\Boost\lib\i386 install
 
