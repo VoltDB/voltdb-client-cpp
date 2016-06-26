@@ -36,14 +36,7 @@
 #include "Geography.hpp"
 #include "GeographyPoint.hpp"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 #include "libbson-1.0/bson.h"
-
-#ifdef __cplusplus
-}
-#endif
 
 namespace voltdb {
 
