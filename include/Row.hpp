@@ -36,6 +36,15 @@
 #include "Geography.hpp"
 #include "GeographyPoint.hpp"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "libbson-1.0/bson.h"
+
+#ifdef __cplusplus
+}
+#endif
+
 namespace voltdb {
 
 /*
@@ -483,6 +492,64 @@ public:
             }
         }
     }
+
+    /*
+     * Returns a string representation of this row with the specified level of indentation
+     * before each line
+     */
+    void toString(bson_t & pobson, uint64_t ii ) {
+
+    	bson_init(&pobson);
+
+
+        const int32_t size = static_cast<int32_t>(m_columns->size());
+        for (int32_t ii = 0; ii < size; ii++) {
+            switch(m_columns->at(ii).m_type) {
+            case WIRE_TYPE_TINYINT:
+                BSON_APPEND_INT32(&pobson, m_columns->at(ii).m_name.c_str(), static_cast<int32_t>(getInt8(ii)));
+                break;
+            case WIRE_TYPE_SMALLINT:
+            	BSON_APPEND_INT32(&pobson, m_columns->at(ii).m_name.c_str(),static_cast<int32_t>(getInt16(ii)));
+            	break;
+            case WIRE_TYPE_INTEGER:
+            	BSON_APPEND_INT32(&pobson, m_columns->at(ii).m_name.c_str(),getInt32(ii));
+                break;
+            case WIRE_TYPE_BIGINT:
+            	BSON_APPEND_INT32(&pobson, m_columns->at(ii).m_name.c_str(),getInt64(ii));
+            	break;
+            case WIRE_TYPE_FLOAT:
+            	BSON_APPEND_DOUBLE(&pobson, m_columns->at(ii).m_name.c_str(), getDouble(ii));
+            	break;
+            case WIRE_TYPE_STRING:
+                BSON_APPEND_UTF8(&pobson, m_columns->at(ii).m_name.c_str(), getString(ii).c_str());
+                break;
+            case WIRE_TYPE_TIMESTAMP://epoch
+            	 BSON_APPEND_TIME_T(&pobson, m_columns->at(ii).m_name.c_str(), getTimestamp(ii));
+            	 break;
+            case WIRE_TYPE_DECIMAL://decimal is mapped to UTF8 as no other type is available, advised to used SUB TYPE
+            	BSON_APPEND_UTF8(&pobson, m_columns->at(ii).m_name.c_str(), getDecimal(ii).toString().c_str());
+            	break;
+            case WIRE_TYPE_VARBINARY://lacks proper implemetation as allocation should happen from getVarbinary
+            {
+            	uint8_t *out_value = new uint8_t[MAX_VARBINARY_SIZE];
+            	int32_t out_len = 0;
+            	assert (true == getVarbinary(ii, BUFSIZ, out_value, &out_len));
+            	BSON_APPEND_BINARY(&pobson, m_columns->at(ii).m_name.c_str(), BSON_SUBTYPE_BINARY, out_value, out_len);
+            	delete out_value;
+                break;
+            }
+            case WIRE_TYPE_GEOGRAPHY_POINT:
+            	assert(false);
+                break;
+            case WIRE_TYPE_GEOGRAPHY:
+            	assert(false);
+                break;
+            default:
+                assert(false);
+            }
+        }
+    }
+
 
     int32_t columnCount() {
         return static_cast<int32_t>(m_columns->size());

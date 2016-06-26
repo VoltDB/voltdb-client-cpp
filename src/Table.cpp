@@ -104,6 +104,50 @@ namespace voltdb {
         }
     }
 
+    void Table::toString(bson_t &obson ) const {
+
+    	std::ostringstream ostream;
+    	ostream.str("");
+		uint64_t index = 0;
+
+    	bson_init (&obson);
+    	bson_t child;
+
+    	BSON_APPEND_DOCUMENT_BEGIN (&obson, "Output", &child);
+
+        ostream << m_buffer.capacity();
+        BSON_APPEND_UTF8 (&child, "Table size", (const char*)ostream.str().c_str());
+        ostream.str("");
+
+
+        ostream << static_cast<int32_t>(getStatusCode());
+        BSON_APPEND_UTF8 (&child, "Status Code", (const char*)ostream.str().c_str());
+        ostream.str("");
+
+        //create the array from the rows
+        bson_t rows;
+        bson_init (&rows);
+        TableIterator iter = iterator();
+        while (iter.hasNext()) {
+
+        	bson_t gchild;
+
+            Row row = iter.next();
+            row.toString( gchild, index );
+            ostream << index;
+
+            BSON_APPEND_DOCUMENT(&rows, ostream.str().c_str(), &gchild);
+            bson_destroy(&gchild);
+            ostream.str("");
+            index ++;
+        }
+        BSON_APPEND_ARRAY(&child, "rows", &rows);
+        bson_destroy(&rows);
+        bson_append_document_end (&obson, &child);
+    }
+
+
+
     void Table::operator >> (std::ostream &ostream) const {
 
         int32_t size = m_buffer.limit();

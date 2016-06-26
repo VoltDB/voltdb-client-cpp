@@ -31,6 +31,12 @@ Client Client::create(ClientConfig config) throw(voltdb::Exception, voltdb::LibE
     return client;
 }
 
+Client* Client::create(bool dynamic, ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException) {
+    Client*  client = new Client((new ClientImpl(config)));
+    return client;
+}
+
+
 Client::Client(ClientImpl *impl) : m_impl(impl) {}
 
 Client::~Client() {

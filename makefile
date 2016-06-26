@@ -10,7 +10,7 @@ endif
 CC=g++
 BOOST_INCLUDES=/usr/local/include
 BOOST_LIBS=/usr/local/lib
-CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} 
+CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -Iinclude/libbson-1.0 -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} 
 LIB_NAME=libvoltdbcpp
 KIT_NAME=voltdb-client-cpp-x86_64-5.2
 
@@ -53,7 +53,7 @@ CPTEST_OBJS := test_obj/ConnectionPoolTest.o \
 			 test_obj/Tests.o
 
 
-THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a $(THIRD_PARTY_DIR)/libevent_pthreads.a
+THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a $(THIRD_PARTY_DIR)/libevent_pthreads.a $(THIRD_PARTY_DIR)/libbson-1.0/libbson-1.0.so
 
 RM := rm -rf
 

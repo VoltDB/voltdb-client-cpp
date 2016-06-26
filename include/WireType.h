@@ -49,6 +49,8 @@ enum WireType {
     WIRE_TYPE_GEOGRAPHY = 27,
 };
 
+#define MAX_VARBINARY_SIZE 2056 //in bytes
+
 inline bool isVariableSized(WireType type) {
     return ((type == WIRE_TYPE_VARBINARY)
             || (type == WIRE_TYPE_STRING)
