@@ -2,13 +2,16 @@
 #include "stdlib.h"
 #include "voltdb_helper.h"
 
+
+#define false 0
+#define true 1
 int main()
 {
 	int rc = 0;
 	void* cc = vdb_create_client_config( (char*)"admin", (char*)"superman", 0);
 	//EXPECT_TRUE( NULL != cc);
 
-	void * c = vdb_create_client( cc, (char*)"localhost" );
+	void * c = vdb_create_client( cc, (char*)"localhost", 21212, false );
 	if ( NULL == c)
 	{
 		printf("failed to create client");

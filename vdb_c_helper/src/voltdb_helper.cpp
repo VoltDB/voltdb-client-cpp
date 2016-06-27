@@ -45,7 +45,7 @@
 
 static void fire ( void * client,  char * query, voltdb::InvocationResponse* resp);
 
-void * vdb_create_client_config( char* uname, char* passwd, unsigned int conn_type )
+void * vdb_create_client_config( char* uname, char* passwd, unsigned int auth_type )
 {
 	voltdb::ClientConfig* cc = NULL;
 
@@ -62,13 +62,13 @@ void * vdb_create_client_config( char* uname, char* passwd, unsigned int conn_ty
 }
 
 
-void * vdb_create_client( void * cc, char* host )
+void * vdb_create_client( void * cc, char* host, unsigned short port, unsigned keepconnecting )
 {
 	voltdb::Client* c = NULL;
 	try
 	{
 		 c = voltdb::Client::create(true, *(voltdb::ClientConfig*)cc);
-		(*c).createConnection(host);
+		(*c).createConnection(host, port, keepconnecting);
 	}
 	catch(...)
 	{

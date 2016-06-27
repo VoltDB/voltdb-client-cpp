@@ -17,7 +17,7 @@ INCLUDES = -I./ \
 	   -I$(TOP_DIR)/../include
 
 LIBS = -lvoltdbcpp  -lcvh -lbson-1.0 -lpthread
-STATIC_LIBS = -levent 
+STATIC_LIBS = -levent  -levent_pthreads
 
 LIBPATHS = -L$(TOP_DIR)/../third_party_libs/linux/ \
 	   -L$(TOP_DIR)/../third_party_libs/linux/libbson-1.0/ \
