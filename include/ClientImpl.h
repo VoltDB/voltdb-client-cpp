@@ -172,6 +172,8 @@ private:
 
     Distributer  m_distributer;
     struct event_base *m_base;
+    struct event * m_ev;
+    struct event_config * m_cfg;
     int64_t m_nextRequestId;
     size_t m_nextConnectionIndex;
     std::vector<struct bufferevent*> m_bevs;
