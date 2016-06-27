@@ -1,0 +1,68 @@
+export MAKE = make
+export SHELL = bash
+export MKDIR = mkdir
+export CP = cp -P
+export TAR = tar
+
+REVISION:=$(shell git rev-parse --abbrev-ref HEAD)-$(shell git rev-parse --short HEAD)
+ifeq ($(REVISION),)
+    REVISION:=0-0
+endif
+
+ifeq ($(OS),centos)
+        export CC=gcc
+        export CXX=g++
+        export AR=ar
+        export LD=ld
+        export SHR=$(CXX) -shared
+        export RANLIB=ranlib
+        DEFINES += -DCENTOS_BUILD
+endif
+
+ifeq ($(OS),ubuntu)
+        export CC=gcc
+        export CXX=g++
+        export AR=ar
+        export LD=ld
+        export SHR=$(CXX) -shared
+        export RANLIB=ranlib
+        DEFINES += -DCENTOS_BUILD
+endif
+
+DEFINES+=-DREVISION=$(REVISION) -DVERSION=$(VERSION) -DRELEASE=$(RELEASE) $(EXTRA_DEFINES)
+LDFLAGS += $(EXTRA_LDFLAGS)
+CFLAGS += -W -Wall -fPIC
+
+ifeq ($(ISDEBUG),1)
+	CFLAGS += -ggdb -O0
+else ifeq ($(ISDEBUG),2)
+	CFLAGS += -ggdb -O0 -fprofile-arcs -ftest-coverage 
+	LDFLAGS += -fprofile-arcs -ftest-coverage
+	STATIC_LIBS += -lgcov
+else
+	CFLAGS += -ggdb -O2
+endif
+
+ifeq ($(NBIT),32)
+        CFLAGS += -m32
+        LDFLAGS += -m32
+else
+        CFLAGS += -m64
+        LDFLAGS += -m64
+endif
+
+ifdef OBJECTS
+ SOURCES := $(OBJECTS:.o=.c) $(OBJECTS:.o=.cpp)
+else
+ OBJECTS := $(SOURCES:.c=.o) $(SOURCESPP:.cpp=.o)
+endif
+
+OBJECTS_WITH_PATH := $(foreach obj_name, $(OBJECTS), $(BUILD_CONFIG)/obj/$(obj_name))
+#SRCDEPS_WITH_PATH := $(OBJECTS_WITH_PATH:.o=.sd)
+
+ALL_LIBS := $(LIBS) $(STATIC_LIBS) $(LIBS)
+ALL_WSTATIC_LIBS := -Wl,-Bdynamic $(LIBS) -Wl,-Bstatic $(STATIC_LIBS) -Wl,-Bdynamic $(LIBS)
+
+REQUIRED_DIRS := $(BUILD_CONFIG)/obj
+MKDIRBUILD := $(shell for d in $(REQUIRED_DIRS);  do test -d $$d || $(MKDIR) -vp $$d; done )
+

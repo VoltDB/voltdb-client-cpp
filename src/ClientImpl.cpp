@@ -246,7 +246,11 @@ ClientImpl::~ClientImpl() {
     m_contexts.clear();
     m_callbacks.clear();
     if (m_passwordHash != NULL) free(m_passwordHash);
+    
+    if ( m_cfg ) event_config_free(m_cfg);
+    if ( m_ev ) event_free(m_ev);
     event_base_free(m_base);
+
     if (m_wakeupPipe[1] != -1) {
        ::close(m_wakeupPipe[0]);
        ::close(m_wakeupPipe[1]);
@@ -273,20 +277,25 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         m_pLogger(0)
 {
 
-    pthread_once(&once_initLibevent, initLibevent);
+	pthread_once(&once_initLibevent, initLibevent);
 #ifdef DEBUG
     if (!voltdb_clientimpl_debug_init_libevent) {
         event_enable_debug_mode();
         voltdb_clientimpl_debug_init_libevent = true;
     }
 #endif
-    struct event_config *cfg = event_config_new();
-    event_config_set_flag(cfg, EVENT_BASE_FLAG_NO_CACHE_TIME);//, EVENT_BASE_FLAG_NOLOCK);
-    m_base = event_base_new_with_config(cfg);
+    m_cfg = event_config_new();
+    if (!m_cfg)
+    {
+        throw voltdb::LibEventException();
+    }
+    event_config_set_flag(m_cfg, EVENT_BASE_FLAG_NO_CACHE_TIME);//, EVENT_BASE_FLAG_NOLOCK);
+    m_base = event_base_new_with_config(m_cfg);
     assert(m_base);
     if (!m_base) {
         throw voltdb::LibEventException();
     }
+
     m_enableAbandon = config.m_enableAbandon;
     m_hashScheme = config.m_hashScheme;
     if (m_hashScheme == HASH_SHA1) {
@@ -301,6 +310,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
     } else {
         throw voltdb::LibEventException();
     }
+    m_ev = NULL;
 
 }
 
@@ -477,8 +487,11 @@ void ClientImpl::createConnection(const std::string& hostname, const unsigned sh
     logMessage(ClientLogger::INFO, ss.str());
 
     if (0 == pipe(m_wakeupPipe)) {
-        struct event *ev = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
-        event_add(ev, NULL);
+	if ( m_ev ){
+	    event_free(m_ev);
+	}
+        m_ev = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
+        event_add(m_ev, NULL);
     } else {
         m_wakeupPipe[1] = -1;
     }

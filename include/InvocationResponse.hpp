@@ -29,6 +29,7 @@
 #include <boost/shared_ptr.hpp>
 #include "ByteBuffer.hpp"
 #include "Table.h"
+
 #include <iostream>
 namespace voltdb {
 
@@ -188,6 +189,24 @@ public:
         }
         return ostream.str();
     }
+
+    /*
+     * Generate a string representation of the contents of the message in json format
+     */
+    std::string toJSON() const {
+    	bson_t obson;
+    	bson_init(&obson);
+        for (size_t ii = 0; ii < m_results.size(); ii++) {
+            m_results[ii].toString(obson);
+        }
+
+        char * basj = bson_as_json(&obson, NULL);
+        std::string s = basj;
+        free(basj);
+        bson_destroy(&obson);
+        return s;
+    }
+
 
 
     void operator >> (std::ostream &ostream) const {

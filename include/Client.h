@@ -151,6 +151,7 @@ public:
      * Create a client with the specified configuration
      */
     static Client create(voltdb::ClientConfig config = voltdb::ClientConfig()) throw(voltdb::LibEventException, voltdb::Exception);
+    static Client* create(bool dynamic, voltdb::ClientConfig config = voltdb::ClientConfig()) throw(voltdb::LibEventException, voltdb::Exception);
 
     /*
      * API to be called to enable client affinity (transaction homing)

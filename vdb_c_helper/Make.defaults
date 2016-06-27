@@ -1,0 +1,41 @@
+
+export OS ?= centos
+export ISDEBUG ?= 1
+export VERSION ?= 0
+export RELEASE ?= 1
+export NBIT ?= 64
+
+ifeq ($(ISDEBUG),1)
+	DEBUG_TOKEN = Debug
+else ifeq ($(ISDEBUG),2)
+	DEBUG_TOKEN = Gcov
+else
+	DEBUG_TOKEN = Release
+endif
+export BUILD_CONFIG := $(OS)$(DEBUG_TOKEN)$(NBIT)
+
+#default dir for build pkg
+export RPM_ROOT_DIR ?=/tmp/rpmdir
+export INSTALL_BASEDIR ?=/home/bdis
+export DIST_BASEDIR ?= $(TOP_DIR)/Dist-$(BUILD_CONFIG)
+
+CLEAN_PRIVATE ?=
+
+NCPUS:=$(shell grep -c processor /proc/cpuinfo)
+
+export DIST_DIR := $(DIST_BASEDIR)/$(PACKAGE)/$(INSTALL_BASEDIR)
+export DIST_BIN_DIR := $(DIST_DIR)/bin
+export DIST_SCRIPT_DIR := $(DIST_BIN_DIR)/scripts
+export DIST_LIB_DIR := $(DIST_DIR)/lib
+export DIST_CONF_DIR := $(DIST_DIR)/etc
+export DIST_SERVICE_DIR := $(DIST_CONF_DIR)/service
+export DIST_CONFIG_DIR := $(DIST_CONF_DIR)/config
+export DIST_VAR_DIR := $(DIST_DIR)/var
+export DIST_LICENSE_DIR := $(DIST_VAR_DIR)/licenses
+export DIST_TMP_DIR := $(DIST_DIR)/tmp
+export DIST_ENV_DIR := $(DIST_DIR)/env
+export DIST_RPM_DIR := $(DIST_DIR)/$(PACKAGE)/tmp
+export DIST_TCLI_DIR := $(DIST_DIR)/tcli
+
+ALL_DIST_DIR := $(DIST_DIR) $(DIST_BIN_DIR) $(DIST_SCRIPT_DIR) $(DIST_LIB_DIR) $(DIST_CONF_DIR) $(DIST_SERVICE_DIR) $(DIST_CONFIG_DIR) $(DIST_VAR_DIR) $(DIST_LICENSE_DIR) $(DIST_TMP_DIR) $(DIST_ENV_DIR) $(DIST_RPM_DIR) $(DIST_TCLI_DIR)
+
