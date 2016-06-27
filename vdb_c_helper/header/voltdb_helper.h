@@ -8,9 +8,9 @@ extern "C" {
 
 
 
-void * vdb_create_client_config( char* uname, char* passwd, unsigned int conn_type );
+void * vdb_create_client_config( char* uname, char* passwd, unsigned int auth_type );
 
-void * vdb_create_client( void * cc, char* host );
+void * vdb_create_client( void * cc, char* host, unsigned short port, unsigned keepconnecting );
 
 //Supports : C=Create U=Update D=Delete
 int vdb_fire_upsert_query( void * client,  char * query, char ** response );

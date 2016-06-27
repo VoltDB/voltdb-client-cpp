@@ -277,7 +277,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         m_pLogger(0)
 {
 
-    pthread_once(&once_initLibevent, initLibevent);
+	pthread_once(&once_initLibevent, initLibevent);
 #ifdef DEBUG
     if (!voltdb_clientimpl_debug_init_libevent) {
         event_enable_debug_mode();
@@ -295,6 +295,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
     if (!m_base) {
         throw voltdb::LibEventException();
     }
+
     m_enableAbandon = config.m_enableAbandon;
     m_hashScheme = config.m_hashScheme;
     if (m_hashScheme == HASH_SHA1) {
