@@ -584,9 +584,13 @@ private:
 };
 
 InvocationResponse ClientImpl::invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
+    // Before making a synchronous request, process any existing requests.
+    while (! drain()) {}
+
     if (m_bevs.empty()) {
         throw voltdb::NoConnectionsException();
     }
+
     int32_t messageSize = proc.getSerializedSize();
     ScopedByteBuffer sbb(messageSize);
     int64_t clientData = m_nextRequestId++;
@@ -600,9 +604,11 @@ InvocationResponse ClientImpl::invoke(Procedure &proc) throw (voltdb::Exception,
     }
     m_outstandingRequests++;
     (*m_callbacks[bev])[clientData] = callback;
+
     if (event_base_dispatch(m_base) == -1) {
         throw voltdb::LibEventException();
     }
+
     m_loopBreakRequested = false;
     return response;
 }

@@ -88,6 +88,7 @@ CPPUNIT_TEST( testCallbackThrows );
 CPPUNIT_TEST( testBackpressure );
 CPPUNIT_TEST( testDrain );
 CPPUNIT_TEST( testLostConnectionDuringDrain );
+CPPUNIT_TEST( testSynchronousInvocations );
 CPPUNIT_TEST_EXCEPTION( testLostConnection, voltdb::NoConnectionsException );
 CPPUNIT_TEST_SUITE_END();
 
@@ -541,6 +542,33 @@ public:
         (m_client)->drain();
         CPPUNIT_ASSERT(cb->m_success == 2);
         CPPUNIT_ASSERT(cb->m_connectionLost == 3);
+    }
+
+    void testSynchronousInvocations() {
+        // Regression test for ENG-10480
+
+        m_voltdb->filenameForNextResponse("invocation_response_success.msg");
+        m_client->createConnection("localhost");
+
+        std::vector<Parameter> signature;
+        Procedure proc("Insert", signature);
+
+        CountingSuccessAndConnectionLost *cb = new CountingSuccessAndConnectionLost();
+        boost::shared_ptr<ProcedureCallback> callback(cb);
+
+        // Queue up two async SP invocations
+        for (int ii = 0; ii < 2; ii++) {
+            m_client->invoke(proc, callback);
+        }
+
+        // Now do a synchronized invocation
+        InvocationResponse response = m_client->invoke(proc);
+        CPPUNIT_ASSERT(response.responseReceived() == true);
+        CPPUNIT_ASSERT(response.statusCode() == STATUS_CODE_SUCCESS);
+
+        // Queued invocations will have been processed before the synchronous invocation.
+        CPPUNIT_ASSERT(cb->m_success == 2);
+        CPPUNIT_ASSERT(cb->m_connectionLost == 0);
     }
 
 private:
