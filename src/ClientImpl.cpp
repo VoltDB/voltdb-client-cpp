@@ -584,6 +584,7 @@ private:
 };
 
 InvocationResponse ClientImpl::invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
+
     // Before making a synchronous request, process any existing requests.
     while (! drain()) {}
 
@@ -861,6 +862,7 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
 
             //If the client is draining and it just drained the last request, break the loop
             if (m_isDraining && m_outstandingRequests == 0) {
+                m_isDraining = false;
                 breakEventLoop = true;
             } else if (m_loopBreakRequested && (m_outstandingRequests <= m_maxOutstandingRequests)) {
                 // ignore break requested until we have too many outstanding requests
@@ -927,6 +929,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         }
 
         if (m_isDraining && m_outstandingRequests == 0) {
+            m_isDraining = false;
             breakEventLoop = true;
         }
 

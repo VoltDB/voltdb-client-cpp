@@ -508,6 +508,7 @@ public:
         }
         (m_client)->drain();
         CPPUNIT_ASSERT(cb->m_count == 0);
+        CPPUNIT_ASSERT(! m_client->isDraining());
     }
 
     class CountingSuccessAndConnectionLost : public voltdb::ProcedureCallback {
@@ -563,8 +564,8 @@ public:
 
         // Now do a synchronized invocation
         InvocationResponse response = m_client->invoke(proc);
-        CPPUNIT_ASSERT(response.responseReceived() == true);
         CPPUNIT_ASSERT(response.statusCode() == STATUS_CODE_SUCCESS);
+        CPPUNIT_ASSERT(! m_client->isDraining());
 
         // Queued invocations will have been processed before the synchronous invocation.
         CPPUNIT_ASSERT(cb->m_success == 2);

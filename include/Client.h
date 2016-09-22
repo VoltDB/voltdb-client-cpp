@@ -125,6 +125,12 @@ public:
     bool drain() throw (voltdb::NoConnectionsException, voltdb::LibEventException, voltdb::Exception);
 
     /*
+     * Returns true if this client is draining; i.e., still processing
+     * requests after receiving a call to drain().
+     */
+    bool isDraining() const;
+
+    /*
      * If one of the run family of methods is running on another thread, this
      * method will instruct it to exit as soon as it finishes it's current
      * immediate task. If the thread in the run method is blocked/idle, then
@@ -164,8 +170,10 @@ public:
     void setLoggerCallback(ClientLogger *pLogger);
 
     int32_t outstandingRequests() const;
+
     ~Client();
 private:
+
     /*
      * Disable various constructors and assignment
      */
