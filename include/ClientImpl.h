@@ -91,6 +91,7 @@ public:
     * @return true if all requests were drained and false otherwise
     */
     bool drain() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
+    bool isDraining() const { return m_isDraining; }
     ~ClientImpl();
 
     void regularReadCallback(struct bufferevent *bev);

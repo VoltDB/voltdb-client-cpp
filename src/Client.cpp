@@ -93,6 +93,11 @@ throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventExcept
     return m_impl->drain();
 }
 
+bool
+Client::isDraining() const {
+    return m_impl->isDraining();
+}
+
 void Client::interrupt() {
     return m_impl->interrupt();
 }
