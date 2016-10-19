@@ -403,10 +403,10 @@ void testAuthenticationResponse() {
     original.position(4);//skip length prefix
     AuthenticationResponse response(original);
     CPPUNIT_ASSERT(response.success());
-    CPPUNIT_ASSERT(response.hostId()           == 0);
-    CPPUNIT_ASSERT(response.clusterStartTime() == FAKE_CLUSTER_START_TIME);
-    CPPUNIT_ASSERT(response.leaderAddress()    == FAKE_LEADER_IP_ADDRESS);
-    CPPUNIT_ASSERT(response.buildString()      == FAKE_BUILD_STRING);
+    CPPUNIT_ASSERT(response.getHostId()           == 0);
+    CPPUNIT_ASSERT(response.getClusterStartTime() == FAKE_CLUSTER_START_TIME);
+    CPPUNIT_ASSERT(response.getLeaderAddress()    == FAKE_LEADER_IP_ADDRESS);
+    CPPUNIT_ASSERT(response.getBuildString()      == FAKE_BUILD_STRING);
 }
 
 /**

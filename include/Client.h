@@ -162,7 +162,7 @@ public:
      * API to be called to enable client affinity (transaction homing)
      */
     void setClientAffinity(bool enable);
-    bool getClientAffinity();
+    bool getClientAffinity() const;
 
     /*
      * API to set Logger callback. Must be called while Client is not running

@@ -50,20 +50,32 @@ int64_t get_sec_time() {
 
 class PendingConnection {
 public:
-    PendingConnection(const std::string& hostname,const unsigned short port, const bool keepConnecting, struct event_base *base, ClientImpl* ci)
-        :  m_hostname(hostname), m_port(port), m_keepConnecting(keepConnecting), m_base(base), m_authenticationResponseLength(-1),
-           m_status(true), m_loginExchangeCompleted(false), m_startPending(-1), m_ci(ci) {
+    PendingConnection(const std::string& hostname, const unsigned short port, const bool keepConnecting,
+                      struct event_base *base, ClientImpl* ci) : m_hostname(hostname),
+                                                                 m_port(port),
+                                                                 m_keepConnecting(keepConnecting),
+                                                                 m_base(base),
+                                                                 m_authenticationResponseLength(-1),
+                                                                 m_status(true),
+                                                                 m_loginExchangeCompleted(false),
+                                                                 m_startPending(-1),
+                                                                 m_clientImpl(ci),
+                                                                 destructed(false) {
     }
 
     void initiateAuthentication(struct bufferevent *bev) {
-       m_ci->initiateAuthentication(this, bev);
+       m_clientImpl->initiateAuthentication(bev);
     }
 
-    void finalizeAuthentication(struct bufferevent *bev) {
-        m_ci->finalizeAuthentication(this, bev);
+    bool finalizeAuthentication(struct bufferevent *bev) {
+        return m_clientImpl->finalizeAuthentication(this, bev);
     }
 
-    ~PendingConnection() {}
+    ~PendingConnection() {
+        std::cout << "hostname: " << m_hostname << ", port: " << m_port << std::endl;
+        destructed = true;
+    }
+
 
     /*
      * Host and port of pending connection
@@ -81,7 +93,8 @@ public:
     bool m_status;
     bool m_loginExchangeCompleted;
     int64_t m_startPending;
-    ClientImpl* m_ci;
+    ClientImpl* m_clientImpl;
+    bool destructed;
 };
 
 typedef boost::shared_ptr<PendingConnection> PendingConnectionSPtr;
@@ -135,16 +148,20 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
     ScopedByteBuffer buffer(pc->m_authenticationResponseLength);
     int read = evbuffer_remove(evbuf, buffer.bytes(), static_cast<size_t>(pc->m_authenticationResponseLength));
     assert(read == pc->m_authenticationResponseLength);
-    AuthenticationResponse r = AuthenticationResponse(buffer);
-    if (!r.success()) {
+    AuthenticationResponse response = AuthenticationResponse(buffer);
+    if (!response.success()) {
         pc->m_authenticationResponseLength =-1;
         return;
     }
-    pc->m_response = r;
+    pc->m_response = response;
     pc->m_loginExchangeCompleted = true;
 
-    bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
-    pc->finalizeAuthentication(bev);
+    bufferevent_setwatermark(bev, EV_READ, 4, HIGH_WATERMARK);
+    if (pc->finalizeAuthentication(bev)) {
+        return;
+    }
+
+    std::cout << __FUNCTION__ << " hostname: " << pc->m_hostname << std::endl;
 
     if (pc->m_startPending < 0) {
         //connection is pending from regular createConeection API
@@ -180,7 +197,8 @@ static void authenticationEventCallback(struct bufferevent *bev, short events, v
     }
 
     if (pc->m_startPending < 0) {
-        //connection is pending from regular createConeection API
+        //connection is pending from regular createConnection API
+        std::cout << __FUNCTION__ << " connection is pending" << std::endl;
         event_base_loopexit(pc->m_base, NULL);
     } else {
         pc->m_startPending = get_sec_time();
@@ -271,6 +289,7 @@ void initLibevent() {
 }
 
 const int64_t ClientImpl::VOLT_NOTIFICATION_MAGIC_NUMBER(9223372036854775806);
+const std::string ClientImpl::SERVICE("database");
 
 ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException) :
         m_base(NULL), m_ev(NULL), m_cfg(NULL), m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
@@ -332,13 +351,15 @@ private:
     struct bufferevent *m_bev;
 };
 
-void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException, voltdb::LibEventException){
+void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException,
+                                                                                     voltdb::LibEventException) {
     std::stringstream ss;
     ss << "ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port;
     logMessage(ClientLogger::INFO, ss.str());
     struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
     if (bev == NULL) {
         if (pc->m_keepConnecting) {
+            std::cout << __FUNCTION__ << "bev null" << std::endl;
             createPendingConnection(pc->m_hostname, pc->m_port);
         } else {
             throw ConnectException();
@@ -349,6 +370,7 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
 
     if (bufferevent_socket_connect_hostname(bev, NULL, AF_INET, pc->m_hostname.c_str(), pc->m_port) != 0) {
         if (pc->m_keepConnecting) {
+            std::cout << __FUNCTION__ << "socket connect return non-zero" << std::endl;
             createPendingConnection(pc->m_hostname, pc->m_port);
         } else {
             ss.str("");
@@ -358,6 +380,7 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
             throw voltdb::LibEventException();
         }
     }
+    std::cout << __FUNCTION__ << " use_count " << pc.use_count() << "event buffer: " << bev << std::endl;
     protector.success();
 }
 
@@ -377,7 +400,7 @@ void ClientImpl::close() {
     m_bevs.clear();
 }
 
-void ClientImpl::initiateAuthentication(PendingConnection* pc, struct bufferevent *bev)throw (voltdb::LibEventException) {
+void ClientImpl::initiateAuthentication(struct bufferevent *bev) throw (voltdb::LibEventException) {
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::initiateAuthentication");
 
@@ -388,7 +411,7 @@ void ClientImpl::initiateAuthentication(PendingConnection* pc, struct buffereven
     if (bufferevent_enable(bev, EV_READ)) {
         throw voltdb::LibEventException();
     }
-    AuthenticationRequest authRequest( m_username, "database", m_passwordHash, m_hashScheme );
+    AuthenticationRequest authRequest(m_username, SERVICE, m_passwordHash, m_hashScheme );
     ScopedByteBuffer bb(authRequest.getSerializedSize());
     authRequest.serializeTo(&bb);
 
@@ -399,8 +422,10 @@ void ClientImpl::initiateAuthentication(PendingConnection* pc, struct buffereven
     protector.success();
 }
 
-void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::Exception, voltdb::ConnectException){
+bool ClientImpl::finalizeAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::Exception,
+                                                                                               voltdb::ConnectException){
 
+    bool pcCleaned = false;
     logMessage(ClientLogger::DEBUG, "ClientImpl::finalizeAuthentication");
 
     FreeBEVOnFailure protector(bev);
@@ -410,37 +435,41 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
 
         if (!m_instanceIdIsSet) {
             m_instanceIdIsSet = true;
-            m_clusterStartTime = pc->m_response.clusterStartTime();
-            m_leaderAddress = pc->m_response.leaderAddress();
+            m_clusterStartTime = pc->m_response.getClusterStartTime();
+            m_leaderAddress = pc->m_response.getLeaderAddress();
         } else {
-            if (m_clusterStartTime != pc->m_response.clusterStartTime() ||
-                m_leaderAddress != pc->m_response.leaderAddress()) {
+            if (m_clusterStartTime != pc->m_response.getClusterStartTime() ||
+                m_leaderAddress != pc->m_response.getLeaderAddress()) {
                 throw ClusterInstanceMismatchException();
             }
         }
         //save event for host id
-        m_hostIdToEvent[pc->m_response.hostId()] = bev;
+        m_hostIdToEvent[pc->m_response.getHostId()] = bev;
         bufferevent_setwatermark( bev, EV_READ, 4, HIGH_WATERMARK);
         m_bevs.push_back(bev);
 
         m_contexts[bev] =
-               boost::shared_ptr<CxnContext>(
-                   new CxnContext(pc->m_hostname, pc->m_port));
+               boost::shared_ptr<CxnContext>(new CxnContext(pc->m_hostname, pc->m_port));
         boost::shared_ptr<CallbackMap> callbackMap(new CallbackMap());
         m_callbacks[bev] = callbackMap;
 
-        bufferevent_setcb(
-               bev,
-               voltdb::regularReadCallback,
-               voltdb::regularWriteCallback,
-               voltdb::regularEventCallback, this);
+        bufferevent_setcb(bev,
+                          voltdb::regularReadCallback,
+                          voltdb::regularWriteCallback,
+                          voltdb::regularEventCallback,
+                          this);
 
         {
             boost::mutex::scoped_lock lock(m_pendingConnectionLock);
-            for (std::list<PendingConnectionSPtr>::iterator i = m_pendingConnectionList.begin(); i != m_pendingConnectionList.end(); ++i) {
+            for (std::list<PendingConnectionSPtr>::iterator i = m_pendingConnectionList.begin();
+                 i != m_pendingConnectionList.end();
+                 ++i) {
                 if (i->get() == pc) {
                     m_pendingConnectionList.erase(i);
                     m_pendingConnectionSize.store(m_pendingConnectionList.size(), boost::memory_order_release);
+                    std::cout << "remove pending connection: " << pc->destructed <<
+                            ", # pending connections: " << m_pendingConnectionSize.load(boost::memory_order_consume)<< std::endl;
+                    pcCleaned = true;
                     break;
                 }
             }
@@ -459,7 +488,6 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
         //Notify client that a connection was active
         if (m_listener.get() != NULL) {
             try {
-
                  m_listener->connectionActive( m_contexts[bev]->m_name, m_bevs.size() );
             } catch (const std::exception& e) {
                 std::cerr << "Status listener threw exception on connection active: " << e.what() << std::endl;
@@ -468,8 +496,6 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
 
     }
     else {
-
-
         logMessage(ClientLogger::DEBUG, "ClientImpl::finalizeAuthentication Fail");
 
     	std::stringstream ss;
@@ -478,10 +504,15 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
 
         throw ConnectException();
     }
-            protector.success();
+    protector.success();
+    return pcCleaned;
 }
 
-void ClientImpl::createConnection(const std::string& hostname, const unsigned short port, const bool keepConnecting) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+void ClientImpl::createConnection(const std::string& hostname,
+                                  const unsigned short port,
+                                  const bool keepConnecting) throw (voltdb::Exception,
+                                                                    voltdb::ConnectException,
+                                                                    voltdb::LibEventException) {
 
     std::stringstream ss;
     ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
@@ -496,6 +527,7 @@ void ClientImpl::createConnection(const std::string& hostname, const unsigned sh
     } else {
         m_wakeupPipe[1] = -1;
     }
+    std::cout << __FUNCTION__ << "initiate pending connection hostname: " << hostname << ", port: " << port << std::endl;
     PendingConnectionSPtr pc(new PendingConnection(hostname, port, keepConnecting, m_base, this));
     initiateConnection(pc);
 
@@ -513,10 +545,12 @@ void ClientImpl::createConnection(const std::string& hostname, const unsigned sh
         }
     }
     if (keepConnecting) {
+        std::cout << __FUNCTION__ << "::"<<__LINE__ << "create pending connection" << std::endl;
         createPendingConnection(hostname, port);
     } else {
         throw ConnectException();
     }
+    std::cout << __FUNCTION__ << ", use count " << pc.use_count() << std::endl;
 }
 
 static void reconnectCallback(evutil_socket_t fd, short events, void *clientData) {
@@ -530,8 +564,8 @@ void ClientImpl::reconnectEventCallback() {
     boost::mutex::scoped_lock lock(m_pendingConnectionLock);
     const int64_t now = get_sec_time();
     BOOST_FOREACH( PendingConnectionSPtr& pc, m_pendingConnectionList ) {
-        if ((now - pc->m_startPending) > RECONNECT_INTERVAL){
-            //pc->m_startPending = now;
+        if ((now - pc->m_startPending) > RECONNECT_INTERVAL) {
+            pc->m_startPending = now;
             initiateConnection(pc);
         }
     }
@@ -548,6 +582,7 @@ void ClientImpl::createPendingConnection(const std::string &hostname, const unsi
     logMessage(ClientLogger::DEBUG, "ClientImpl::createPendingConnection");
 
     PendingConnectionSPtr pc(new PendingConnection(hostname, port, false, m_base, this));
+    std::cout << __FUNCTION__ << " use_count: " << pc.use_count() ;
     pc->m_startPending = time;
     {
         boost::mutex::scoped_lock lock(m_pendingConnectionLock);
@@ -555,6 +590,7 @@ void ClientImpl::createPendingConnection(const std::string &hostname, const unsi
         m_pendingConnectionSize.store(m_pendingConnectionList.size(), boost::memory_order_release);
     }
 
+    std::cout << " Updated use_count: " << pc.use_count()  << " # of pendingConnections: " << m_pendingConnectionSize.load(boost::memory_order_consume) << std::endl;
     struct timeval tv;
     tv.tv_sec = (time > 0)? RECONNECT_INTERVAL: 0;
     tv.tv_usec = 0;

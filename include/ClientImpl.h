@@ -124,17 +124,17 @@ public:
      * API to be called to enable client affinity (transaction homing)
      */
     void setClientAffinity(bool enable);
-    bool getClientAffinity(){return m_useClientAffinity;}
+    bool getClientAffinity() const {return m_useClientAffinity;}
 
     int32_t outstandingRequests() const {return m_outstandingRequests;}
 
     void setLoggerCallback(ClientLogger *pLogger) { m_pLogger = pLogger;}
 
 private:
-    ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException);
+    ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::LibEventException);
 
-    void initiateAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::LibEventException);
-    void finalizeAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::Exception, voltdb::ConnectException);
+    void initiateAuthentication(struct bufferevent *bev) throw (voltdb::LibEventException);
+    bool finalizeAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::Exception, voltdb::ConnectException);
 
     /*
      * Updates procedures and topology information for transaction routing algorithm
@@ -213,6 +213,7 @@ private:
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
+    static const std::string SERVICE;
 };
 }
 #endif /* VOLTDB_CLIENTIMPL_H_ */
