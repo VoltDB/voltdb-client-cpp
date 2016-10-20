@@ -134,7 +134,7 @@ private:
     ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::LibEventException);
 
     void initiateAuthentication(struct bufferevent *bev) throw (voltdb::LibEventException);
-    bool finalizeAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::Exception, voltdb::ConnectException);
+    void finalizeAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::Exception, voltdb::ConnectException);
 
     /*
      * Updates procedures and topology information for transaction routing algorithm
