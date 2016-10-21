@@ -71,7 +71,7 @@ int64_t millisec_time() {
 class VoterCallback : public voltdb::ProcedureCallback
 {
 public:
-	bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception)
+	bool callback(const voltdb::InvocationResponse &response) throw (voltdb::Exception)
 	{
 		bool retVal = false;
 		if (response.failure())

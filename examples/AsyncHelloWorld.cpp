@@ -44,7 +44,7 @@ class CountingCallback : public voltdb::ProcedureCallback {
 public:
     CountingCallback(int32_t count) : m_count(count) {}
 
-    bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
+    bool callback(const voltdb::InvocationResponse &response) throw (voltdb::Exception) {
         m_count--;
 
         //Print the error response if there was a problem
@@ -69,7 +69,7 @@ private:
  */
 class PrintingCallback : public voltdb::ProcedureCallback {
 public:
-    bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
+    bool callback(const voltdb::InvocationResponse &response) throw (voltdb::Exception) {
         std::cout << response.toString();
         return true;
     }

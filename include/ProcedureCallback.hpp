@@ -45,7 +45,7 @@ public:
      * and passes any caught exceptions to the status listener.
      * @return true if the event loop should break after invoking this callback, false otherwise
      */
-    virtual bool callback(InvocationResponse response) throw (voltdb::Exception) = 0;
+    virtual bool callback(const InvocationResponse &response) throw (voltdb::Exception) = 0;
     virtual void abandon(AbandonReason reason) {}
     virtual ~ProcedureCallback() {}
 };

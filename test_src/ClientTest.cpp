@@ -167,7 +167,7 @@ public:
         InvocationResponse m_response;
         bool m_hasResponse;
         SyncCallback() : m_hasResponse(false) {}
-        virtual bool callback(InvocationResponse response) throw (voltdb::Exception) {
+        virtual bool callback(const InvocationResponse &response) throw (voltdb::Exception) {
             m_response = response;
             m_hasResponse = true;
             return false;
@@ -365,7 +365,7 @@ public:
     class BreakingSyncCallback : public ProcedureCallback {
     public:
         InvocationResponse m_response;
-        virtual bool callback(InvocationResponse response) throw (voltdb::Exception) {
+        virtual bool callback(const InvocationResponse &response) throw (voltdb::Exception) {
             m_response = response;
             return true;
         }
@@ -382,8 +382,7 @@ public:
         params->addString("Hello").addString("World").addString("English");
         m_voltdb->filenameForNextResponse("invocation_response_success.msg");
 
-        BreakingSyncCallback *cb = new BreakingSyncCallback();
-        boost::shared_ptr<ProcedureCallback> callback(cb);
+        boost::shared_ptr<ProcedureCallback> callback(new BreakingSyncCallback());
         (m_client)->invoke(proc, callback);
 
         (m_client)->run();
@@ -391,7 +390,7 @@ public:
 
     class ThrowingCallback : public ProcedureCallback {
     public:
-        virtual bool callback(InvocationResponse response) throw (voltdb::Exception) {
+        virtual bool callback(const InvocationResponse &response) throw (voltdb::Exception) {
             throw voltdb::Exception();
         }
     };
@@ -436,8 +435,7 @@ public:
         params->addString("Hello").addString("World").addString("English");
         m_voltdb->filenameForNextResponse("invocation_response_success.msg");
 
-        ThrowingCallback *cb = new ThrowingCallback();
-        boost::shared_ptr<ProcedureCallback> callback(cb);
+        boost::shared_ptr<ProcedureCallback> callback(new ThrowingCallback());
         (m_client)->invoke(proc, callback);
 
         (m_client)->run();
@@ -486,7 +484,7 @@ public:
     public:
         CountingCallback(int32_t count) : m_count(count) {}
 
-        bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
+        bool callback(const voltdb::InvocationResponse &response) throw (voltdb::Exception) {
             m_count--;
 
             CPPUNIT_ASSERT(response.success());
@@ -515,7 +513,7 @@ public:
     public:
         CountingSuccessAndConnectionLost() : m_success(0), m_connectionLost(0) {}
 
-        bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
+        bool callback(const voltdb::InvocationResponse &response) throw (voltdb::Exception) {
             if (response.success()) {
                 m_success++;
             } else {

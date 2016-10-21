@@ -593,7 +593,7 @@ public:
     SyncCallback(InvocationResponse *responseOut) : m_responseOut(responseOut) {
     }
 
-    bool callback(InvocationResponse response) throw (voltdb::Exception) {
+    bool callback(const InvocationResponse &response) throw (voltdb::Exception) {
         (*m_responseOut) = response;
         return true;
     }
@@ -639,7 +639,7 @@ class DummyCallback : public ProcedureCallback {
 public:
     ProcedureCallback *m_callback;
     DummyCallback(ProcedureCallback *callback) : m_callback(callback) {}
-    bool callback(InvocationResponse response) throw (voltdb::Exception) {
+    bool callback(const InvocationResponse &response) throw (voltdb::Exception) {
         return m_callback->callback(response);
     }
 
@@ -911,9 +911,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
     if (events & BEV_EVENT_CONNECTED) {
         assert(false);
     } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
-        /*
-         * First drain anything in the read buffer
-         */
+        // First drain anything in the read buffer
         regularReadCallback(bev);
 
         bool breakEventLoop = false;
@@ -933,10 +931,9 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
                 std::cerr << "Status listener threw exception on connection lost: " << e.what() << std::endl;
             }
         }
-        /*
-         * Iterate the list of callbacks for this connection and invoke them
-         * with the appropriate error response
-         */
+
+        // Iterate the list of callbacks for this connection and invoke them
+        // with the appropriate error response
         BEVToCallbackMap::iterator callbackMapIter = m_callbacks.find(bev);
         boost::shared_ptr<CallbackMap> callbackMap = callbackMapIter->second;
         for (CallbackMap::iterator i =  callbackMap->begin();
@@ -1037,10 +1034,10 @@ class TopoUpdateCallback : public voltdb::ProcedureCallback
 {
 public:
     TopoUpdateCallback(Distributer *dist):m_dist(dist){}
-    bool callback(InvocationResponse response) throw (voltdb::Exception)
+    bool callback(const InvocationResponse &response) throw (voltdb::Exception)
     {
-        if (response.failure()){
-            //TODO:log
+        if (response.failure()) {
+            std::cerr  << __FUNCTION__ << ": " << response.statusCode() << " (" << response.statusCode() << ")";
             return false;
         }
         m_dist->updateAffinityTopology(response.results());
@@ -1054,11 +1051,10 @@ class SubscribeCallback : public voltdb::ProcedureCallback
 {
 public:
     SubscribeCallback(){}
-    bool callback(InvocationResponse response) throw (voltdb::Exception)
+    bool callback(const InvocationResponse &response) throw (voltdb::Exception)
     {
-        if (response.failure()){
-            //TODO:log
-            std::cout << "subscribeToTopoNotifications FAILED" << std::endl;
+        if (response.failure()) {
+            std::cerr << __FUNCTION__ << ": " << response.statusCode() << " (" << response.statusCode() << ")";
             return false;
         }
         return true;
@@ -1072,10 +1068,10 @@ class ProcUpdateCallback : public voltdb::ProcedureCallback
 {
 public:
     ProcUpdateCallback(Distributer *dist):m_dist(dist){}
-    bool callback(InvocationResponse response) throw (voltdb::Exception)
+    bool callback(const InvocationResponse &response) throw (voltdb::Exception)
     {
-        if (response.failure()){
-            //TODO:log
+        if (response.failure()) {
+            std::cerr << __FUNCTION__ << ": " << response.statusCode() << " (" << response.statusCode() << ")";
             return false;
         }
         m_dist->updateProcedurePartitioning(response.results());
