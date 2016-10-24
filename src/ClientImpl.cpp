@@ -911,9 +911,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
     if (events & BEV_EVENT_CONNECTED) {
         assert(false);
     } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
-        /*
-         * First drain anything in the read buffer
-         */
+        // First drain anything in the read buffer
         regularReadCallback(bev);
 
         bool breakEventLoop = false;
@@ -933,10 +931,8 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
                 std::cerr << "Status listener threw exception on connection lost: " << e.what() << std::endl;
             }
         }
-        /*
-         * Iterate the list of callbacks for this connection and invoke them
-         * with the appropriate error response
-         */
+        // Iterate the list of callbacks for this connection and invoke them
+        // with the appropriate error response
         BEVToCallbackMap::iterator callbackMapIter = m_callbacks.find(bev);
         boost::shared_ptr<CallbackMap> callbackMap = callbackMapIter->second;
         for (CallbackMap::iterator i =  callbackMap->begin();
@@ -1040,7 +1036,8 @@ public:
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()){
-            //TODO:log
+            if (response.failure())
+                std::cerr  << __FUNCTION__ << ": " << response.statusCode() << " (" << response.statusCode() << ")";
             return false;
         }
         m_dist->updateAffinityTopology(response.results());
@@ -1057,8 +1054,8 @@ public:
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()){
-            //TODO:log
-            std::cout << "subscribeToTopoNotifications FAILED" << std::endl;
+            if (response.failure())
+                std::cerr  << __FUNCTION__ << ": " << response.statusCode() << " (" << response.statusCode() << ")";
             return false;
         }
         return true;
@@ -1075,7 +1072,8 @@ public:
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()){
-            //TODO:log
+            if (response.failure())
+                std::cerr  << __FUNCTION__ << ": " << response.statusCode() << " (" << response.statusCode() << ")";
             return false;
         }
         m_dist->updateProcedurePartitioning(response.results());
