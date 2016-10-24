@@ -10,4 +10,7 @@
 /testbin
 /.settings
 *~
+/examples/asynchelloworld
+/examples/helloworld
+/examples/voter
 *.dSYM
