@@ -26,12 +26,15 @@
 #include "ByteBuffer.hpp"
 
 namespace voltdb {
-
     class AuthenticationRequest {
     public:
-
-        AuthenticationRequest(std::string username, std::string service, unsigned char* passwordHash, ClientAuthHashScheme hashScheme) :
-        m_username(username), m_service(service), m_passwordHash(passwordHash), m_hashScheme(hashScheme)  {
+        AuthenticationRequest(const std::string &username,
+                              const std::string &service,
+                              unsigned char* passwordHash,
+                              ClientAuthHashScheme hashScheme) : m_username(username),
+                                                                 m_service(service),
+                                                                 m_passwordHash(passwordHash),
+                                                                 m_hashScheme(hashScheme)  {
         }
 
         int32_t getSerializedSize() {
@@ -56,8 +59,8 @@ namespace voltdb {
             buffer->putInt32(0, buffer->limit() - 4);
         }
     private:
-        std::string m_username;
-        std::string m_service;
+        const std::string m_username;
+        const std::string m_service;
         unsigned char* m_passwordHash;
         ClientAuthHashScheme m_hashScheme;
     };
