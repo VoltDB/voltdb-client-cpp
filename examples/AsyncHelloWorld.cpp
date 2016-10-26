@@ -36,31 +36,48 @@
 #include "ProcedureCallback.hpp"
 #include "ClientConfig.h"
 
+
+int64_t requests = 10000000;
+int64_t numSPCalls = 0;
+int64_t processed = 0;
 /*
  * A callback that counts the number of times that it is invoked and returns true
  * when the counter reaches zero to instruct the client library to break out of the event loop.
  */
 class CountingCallback : public voltdb::ProcedureCallback {
 public:
-    CountingCallback(int32_t count) : m_count(count) {}
+    CountingCallback(int64_t count) : m_count(count), m_success(0), m_failure(0) {}
 
     bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
         m_count--;
 
         //Print the error response if there was a problem
         if (response.failure()) {
-            std::cout << response.toString();
+            ++m_failure;
+        }
+        else {
+            ++m_success;
         }
 
         //If the callback has been invoked count times, return true to break event loop
         if (m_count == 0) {
-            return true;
+            std::cout<< "Invocations "<< m_count << ", success " << m_success << "; failure " << m_failure << std::endl;
+            //return true;
         } else {
-            return false;
+            //return false;
         }
+        bool status = false;
+        processed++;
+
+        if (numSPCalls - processed < 1000) {
+            status = true;
+        }
+        return status;
     }
 private:
-    int32_t m_count;
+    int64_t m_count;
+    int64_t m_success;
+    int64_t m_failure;
 };
 
 /*
@@ -70,56 +87,142 @@ private:
 class PrintingCallback : public voltdb::ProcedureCallback {
 public:
     bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
-        std::cout << response.toString();
+        std::cout << response.toString() << std::endl;
+
         return true;
     }
 };
+
+class ConnectionListener : public voltdb::StatusListener {
+    public:
+
+    ConnectionListener() : m_connectionActive(false), m_printRateLimited(1000), m_connectionLst(0), m_bpCount(0) {}
+    virtual bool uncaughtException(std::exception exception,
+                                   boost::shared_ptr<voltdb::ProcedureCallback> callback,
+                                   voltdb::InvocationResponse response) {
+        std::cout << "uncaught exception: " << exception.what() << std::endl;
+        return true;
+    }
+    virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
+        m_connectionActive = false;
+        if (m_connectionLst % m_printRateLimited == 0) {
+            std::cout << "Connection Lost reported: hostname " << hostname << ", connections left: " << connectionsLeft <<", # lost" << m_connectionLst << std::endl;
+        }
+        ++m_connectionLst;
+        return false;
+    }
+    virtual bool connectionActive(std::string hostname, int32_t connectionsLeft) {
+        m_connectionActive = true;
+        std::cout << "Connection Active hostname " << hostname << ", connections left: " << connectionsLeft <<", # active " << m_connectionLst << std::endl;
+        return true;
+    }
+    virtual bool backpressure(bool hasBackpressure) {
+        if (m_bpCount % (m_printRateLimited*1000) == 0) {
+            std::cout << "backpressure: " << m_bpCount << " " << hasBackpressure << std::endl;
+        }
+        m_bpCount++;
+        return true;
+    }
+    bool isConnectionActive() const { return m_connectionActive; }
+
+private:
+    bool m_connectionActive;
+    const int64_t m_printRateLimited;
+    int64_t m_connectionLst;
+    int64_t m_bpCount;
+};
+
+void waitForClusterTobeActive(voltdb::Client &client, ConnectionListener &listner) {
+    while (!listner.isConnectionActive()) {
+        try {
+            client.runOnce();
+        }
+        catch (const voltdb::NoConnectionsException &excp) {
+            std::cout << excp.what() << std::endl;
+            assert(false);
+            exit(-1);
+        }
+        catch (const voltdb::Exception &excp) {
+            std::cout << "!!!" << excp.what() << std::endl;
+            exit(-1);
+        }
+    }
+}
 
 int main(int argc, char **argv) {
     /*
      * Instantiate a client and connect to the database.
      * SHA-256 can be used as of VoltDB5.2 by specifying voltdb::HASH_SHA256
      */
-    voltdb::ClientConfig config("myusername", "mypassword", voltdb::HASH_SHA1);
+    ConnectionListener listner;
+    voltdb::ClientConfig config("myusername", "mypassword", &listner, voltdb::HASH_SHA1);
     voltdb::Client client = voltdb::Client::create(config);
-    client.createConnection("localhost");
+    for (int i = 0; i < 2; i++) {
+        client.createConnection("10.10.183.169", 10002 + (i*1000), true);
+        //client.createConnection("localhost", 10002 + (i*1000), true);
+    }
+    client.setClientAffinity(true);
+
+    waitForClusterTobeActive(client, listner);
+    std::cout << "client connection establish" << std::endl;
 
     /*
      * Describe the stored procedure to be invoked
      */
+
+    if (listner.isConnectionActive()) {
+    const std::string lang = "dialect";
+    std::ostringstream os;
     std::vector<voltdb::Parameter> parameterTypes(3);
     parameterTypes[0] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
     parameterTypes[1] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
     parameterTypes[2] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
     voltdb::Procedure procedure("Insert", parameterTypes);
-
-    boost::shared_ptr<CountingCallback> callback(new CountingCallback(5));
+    boost::shared_ptr<CountingCallback> callback(new CountingCallback(requests));
 
     /*
      * Load the database.
      */
-    voltdb::ParameterSet* params = procedure.params();
-    params->addString("English").addString("Hello").addString("World");
-    client.invoke(procedure, callback);
+    int64_t i = 0;
+    bool printed = false;
+    while ( numSPCalls < requests ) {
+    //while ( true ) {
+        voltdb::ParameterSet* params = procedure.params();
+        os.str(lang); os << numSPCalls;
+        params->addString(os.str()).addString("Hello").addString("World");
 
-    params->addString("French").addString("Bonjour").addString("Monde");
-    client.invoke(procedure, callback);
-
-    params->addString("Spanish").addString("Hola").addString("Mundo");
-    client.invoke(procedure, callback);
-
-    params->addString("Danish").addString("Hej").addString("Verden");
-    client.invoke(procedure, callback);
-
-    params->addString("Italian").addString("Ciao").addString("Mondo");
-    client.invoke(procedure, callback);
+        printed = false;
+        while (numSPCalls - processed > 10000) {
+            if(!printed) {
+                std::cout<<"block; generated: " << numSPCalls << ", processed: " << processed << std::endl;
+            }
+            client.runOnce();
+            if (!printed) {
+                std::cout<<"ready for invocation; generated: " << numSPCalls << ", processed: " << processed << std::endl;
+                printed = true;
+            }
+        }
+        try {
+            client.invoke(procedure, callback);
+            numSPCalls++;
+            //std::cout<< i << " " <<std::flush;
+        }
+        catch (const voltdb::NoConnectionsException &excp) {
+            waitForClusterTobeActive(client, listner);
+        }
+        if (numSPCalls * 10 == requests) {
+            std::cout <<"\n\n\nquarter way\n\n" << std::endl;
+            sleep(2);
+        }
+    }
 
     /*
      * Run the client event loop to poll the network and invoke callbacks.
      * The event loop will break on an error or when a callback returns true
      */
     client.run();
-
+    std::cout << "DONE"<<std::endl;
+#if 1
     /*
      * Describe procedure to retrieve message
      */
@@ -130,13 +233,19 @@ int main(int argc, char **argv) {
      * Retrieve the message
      */
     selectProc.params()->addString("Spanish");
-    client.invoke(selectProc, boost::shared_ptr<PrintingCallback>(new PrintingCallback()));
+    try {
+        client.invoke(selectProc, boost::shared_ptr<PrintingCallback>(new PrintingCallback()));
+    }
+    catch (const voltdb::NoConnectionsException &excp) {
+        waitForClusterTobeActive(client, listner);
+    }
 
     /*
      * Invoke event loop
      */
     client.run();
-
+#endif
+    }
     return 0;
 }
 
