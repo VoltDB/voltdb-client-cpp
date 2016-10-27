@@ -14,8 +14,10 @@ ifeq ($(PLATFORM),Darwin)
     SYSTEM_LIBS := -lpthread $(BOOST_LIBS) -lboost_system-mt -lboost_thread-mt
 endif
 ifeq ($(PLATFORM),Linux)
+    BOOST_INCLUDES=-I/usr/local/include
+    BOOST_LIBS=-L/usr/local/lib
     THIRD_PARTY_LIBS := $(VOLT_LIBS)/third_party_libs/linux/libevent.a $(VOLT_LIBS)/third_party_libs/linux/libevent_pthreads.a
-    SYSTEM_LIBS := -lpthread -lrt -lboost_system -lboost_thread
+    SYSTEM_LIBS := -lpthread $(BOOST_LIBS) -lrt -lboost_system-mt -lboost_thread-mt
 endif
 
 all: helloworld asynchelloworld voter

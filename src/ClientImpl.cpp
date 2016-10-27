@@ -500,10 +500,10 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
 }
 
 void ClientImpl::createConnection(const std::string& hostname,
-                                  const unsigned short port,
-                                  const bool keepConnecting) throw (voltdb::Exception,
-                                                                    voltdb::ConnectException,
-                                                                    voltdb::LibEventException) {
+                                  unsigned short port,
+                                  bool keepConnecting) throw (voltdb::Exception,
+                                                              voltdb::ConnectException,
+                                                              voltdb::LibEventException) {
 
     std::stringstream ss;
     ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
@@ -744,13 +744,13 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
         if (m_outstandingRequests <= m_maxOutstandingRequests) {
             for (size_t ii = 0; ii < m_bevs.size(); ii++) {
                 bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
-        	if (m_backpressuredBevs.find(bev) != m_backpressuredBevs.end()) {
-        	    bev = NULL;
-        	} else {
-        	    break;
-        	}
+                if (m_backpressuredBevs.find(bev) != m_backpressuredBevs.end()) {
+                    bev = NULL;
+                } else {
+                    break;
+                }
             }
-	}
+        }
 
     	if (bev) {
     	    break;
@@ -1036,8 +1036,9 @@ public:
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()){
-            if (response.failure())
-                std::cerr  << __FUNCTION__ << ": " << response.statusCode() << " (" << response.statusCode() << ")";
+            if (response.failure()) {
+                std::cerr  << "Failure response TopoUpdateCallback::callback: " << response.statusString() << std::endl;
+            }
             return false;
         }
         m_dist->updateAffinityTopology(response.results());
@@ -1054,8 +1055,9 @@ public:
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()){
-            if (response.failure())
-                std::cerr  << __FUNCTION__ << ": " << response.statusCode() << " (" << response.statusCode() << ")";
+            if (response.failure()) {
+                std::cerr  << "Failure response SubscribeCallback::callback: " << response.statusString() << std::endl;
+            }
             return false;
         }
         return true;
@@ -1072,8 +1074,9 @@ public:
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()){
-            if (response.failure())
-                std::cerr  << __FUNCTION__ << ": " << response.statusCode() << " (" << response.statusCode() << ")";
+            if (response.failure()) {
+                std::cerr  << "Failure response ProcUpdateCallback::callback: " << response.statusString() << std::endl;
+            }
             return false;
         }
         m_dist->updateProcedurePartitioning(response.results());

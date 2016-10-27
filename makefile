@@ -21,7 +21,7 @@ ifeq ($(PLATFORM),Darwin)
 endif
 ifeq ($(PLATFORM),Linux)
 	THIRD_PARTY_DIR := third_party_libs/linux
-	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system -lboost_thread -Wl,-rpath,$(BOOST_LIBS)
+	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system-mt -lboost_thread-mt -Wl,-rpath,$(BOOST_LIBS)
 	CFLAGS += -fPIC
 endif
 
