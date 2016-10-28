@@ -36,10 +36,6 @@
 #include "ProcedureCallback.hpp"
 #include "ClientConfig.h"
 
-
-int64_t requests = 10000000;
-int64_t numSPCalls = 0;
-int64_t processed = 0;
 bool debugEnabled = false;
 
 /*
@@ -51,7 +47,7 @@ public:
     CountingCallback(int64_t count) : m_count(count), m_success(0), m_failure(0) {}
 
     bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
-        m_count--;
+        //m_count--;
 
         //Print the error response if there was a problem
         if (response.failure()) {
@@ -60,7 +56,7 @@ public:
         else {
             ++m_success;
         }
-
+/*
         //If the callback has been invoked count times, return true to break event loop
         if (m_count == 0) {
             std::cout<< "Invocations "<< m_count << ", success " << m_success << "; failure " << m_failure << std::endl;
@@ -75,6 +71,8 @@ public:
             status = true;
         }
         return status;
+        */
+        return true;
     }
 private:
     int64_t m_count;
@@ -107,7 +105,8 @@ class ConnectionListener : public voltdb::StatusListener {
     }
     virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
         m_connectionActive = false;
-        if ((m_connectionLst % m_printRateLimited == 0) && debugEnabled) {
+        //if ((m_connectionLst % m_printRateLimited == 0) && debugEnabled)
+        {
             std::cout << "Connection Lost reported: hostname " << hostname << ", connections left: " << connectionsLeft <<", # lost" << m_connectionLst << std::endl;
         }
         ++m_connectionLst;
@@ -115,7 +114,7 @@ class ConnectionListener : public voltdb::StatusListener {
     }
     virtual bool connectionActive(std::string hostname, int32_t connectionsLeft) {
         m_connectionActive = true;
-        if (debugEnabled)
+        //if (debugEnabled)
             std::cout << "Connection Active hostname " << hostname << ", connections left: " << connectionsLeft <<", # active " << m_connectionLst << std::endl;
         return true;
     }
@@ -160,9 +159,21 @@ int main(int argc, char **argv) {
     ConnectionListener listner;
     voltdb::ClientConfig config("myusername", "mypassword", &listner, voltdb::HASH_SHA1);
     voltdb::Client client = voltdb::Client::create(config);
-    for (int i = 0; i < 2; i++) {
-        client.createConnection("10.10.183.169", 10002 + (i*1000), true);
+    config.m_enableAbandon = true;
+    config.m_maxOutstandingRequests = 1000000;
+    struct timespec tv, rem;
+    int64_t numSPCalls = 0;
+    int64_t requests = config.m_maxOutstandingRequests * 100;
+    tv.tv_nsec = 500;
+    tv.tv_sec = 0;
+    memset(&rem, 0, sizeof(rem));
+
+    //for (int i = 0; i < 1; i++)
+    {
+        //client.createConnection("10.10.183.169", 10002 + (i*1000), true);
         //client.createConnection("localhost", 10002 + (i*1000), true);
+        client.createConnection("10.10.183.237", 21212, true);
+        client.createConnection("10.10.183.242", 21212, true);
     }
     client.setClientAffinity(true);
 
@@ -188,31 +199,36 @@ int main(int argc, char **argv) {
      */
     int64_t i = 0;
     bool printed = false;
-    while ( numSPCalls < requests ) {
-    //while ( true ) {
+    //while ( numSPCalls < requests ) {
+    while ( true ) {
+        nanosleep(&tv, &rem);
         voltdb::ParameterSet* params = procedure.params();
         os.str(lang); os << numSPCalls;
         params->addString(os.str()).addString("Hello").addString("World");
 
         printed = false;
         //while (numSPCalls - processed > 10000) {
-        while (client.outstandingRequests()> 10000) {
+#if 0
+        //while (client.outstandingRequests()> 10000)
+        {
             if(!printed && debugEnabled) {
-                std::cout<<"block; generated: " << numSPCalls << ", processed: " << processed << std::endl;
+                //std::cout<<"block; generated: " << numSPCalls << ", processed: " << processed << std::endl;
             }
-            client.runOnce();
+            //client.runOnce();
             if (!printed && debugEnabled) {
                 std::cout<<"ready for invocation; generated: " << numSPCalls << ", processed: " << processed << std::endl;
                 printed = true;
             }
         }
+#endif
         try {
+            client.runOnce();
             client.invoke(procedure, callback);
             numSPCalls++;
             //std::cout<< i << " " <<std::flush;
         }
         catch (const voltdb::NoConnectionsException &excp) {
-            waitForClusterTobeActive(client, listner);
+            //waitForClusterTobeActive(client, listner);
         }
         if (numSPCalls * 10 == requests) {
             std::cout <<"\n\n\nquarter way\n\n" << std::endl;
