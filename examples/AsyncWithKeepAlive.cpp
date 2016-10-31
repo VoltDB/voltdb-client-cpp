@@ -35,6 +35,7 @@
 #include "ParameterSet.hpp"
 #include "ProcedureCallback.hpp"
 #include "ClientConfig.h"
+#include "ClientLogger.h"
 
 bool debugEnabled = false;
 
@@ -66,7 +67,6 @@ public:
         }
         bool status = false;
         processed++;
-
         if (numSPCalls - processed < 1000) {
             status = true;
         }
@@ -151,7 +151,7 @@ void waitForClusterTobeActive(voltdb::Client &client, ConnectionListener &listne
     }
 }
 
-int main(int argc, char **argv) {
+static void *clientThread(void *seedData) {
     /*
      * Instantiate a client and connect to the database.
      * SHA-256 can be used as of VoltDB5.2 by specifying voltdb::HASH_SHA256
@@ -164,7 +164,7 @@ int main(int argc, char **argv) {
     struct timespec tv, rem;
     int64_t numSPCalls = 0;
     int64_t requests = config.m_maxOutstandingRequests * 100;
-    tv.tv_nsec = 500;
+    tv.tv_nsec = 10;
     tv.tv_sec = 0;
     memset(&rem, 0, sizeof(rem));
 
@@ -177,15 +177,16 @@ int main(int argc, char **argv) {
     }
     client.setClientAffinity(true);
 
-    waitForClusterTobeActive(client, listner);
-    std::cout << "client connection establish" << std::endl;
+    //waitForClusterTobeActive(client, listner);
+
 
     /*
      * Describe the stored procedure to be invoked
      */
 
-    if (listner.isConnectionActive()) {
-    const std::string lang = "dialect";
+    //if (listner.isConnectionActive())
+    {
+    const std::string lang = std::string((char *)seedData);
     std::ostringstream os;
     std::vector<voltdb::Parameter> parameterTypes(3);
     parameterTypes[0] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
@@ -194,6 +195,8 @@ int main(int argc, char **argv) {
     voltdb::Procedure procedure("Insert", parameterTypes);
     boost::shared_ptr<CountingCallback> callback(new CountingCallback(requests));
 
+    os << "client connection establish: seed: " << lang << " " << lang.length();
+    std::cout << os.str() <<std::endl;
     /*
      * Load the database.
      */
@@ -203,7 +206,7 @@ int main(int argc, char **argv) {
     while ( true ) {
         nanosleep(&tv, &rem);
         voltdb::ParameterSet* params = procedure.params();
-        os.str(lang); os << numSPCalls;
+        os.str(""); os << lang << ++numSPCalls;
         params->addString(os.str()).addString("Hello").addString("World");
 
         printed = false;
@@ -224,15 +227,13 @@ int main(int argc, char **argv) {
         try {
             client.runOnce();
             client.invoke(procedure, callback);
-            numSPCalls++;
-            //std::cout<< i << " " <<std::flush;
         }
         catch (const voltdb::NoConnectionsException &excp) {
             //waitForClusterTobeActive(client, listner);
         }
         if (numSPCalls * 10 == requests) {
             std::cout <<"\n\n\nquarter way\n\n" << std::endl;
-            sleep(2);
+            //sleep(2);
         }
     }
 
@@ -269,3 +270,34 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+
+#define CLIENT_THREADS 4
+int main(int argc, char **argv) {
+    std::string dialect[CLIENT_THREADS];
+    std::ostringstream os;
+    pthread_t thread[CLIENT_THREADS];
+    pthread_attr_t attr;
+
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+    for (int i = 0; i < CLIENT_THREADS; i++) {
+        os.str("eupt");
+        os << i;
+        dialect[i] = os.str();
+        std::cout << dialect[i] <<" ";
+    }
+    std::cout << std::endl;
+
+    for (int i = 0; i < CLIENT_THREADS; i++) {
+        pthread_create(&thread[i], &attr, clientThread, (void *) dialect[i].c_str());
+    }
+
+    pthread_attr_destroy(&attr);
+    for (int i = 0; i < CLIENT_THREADS; i++) {
+        pthread_join(thread[i], NULL);
+    }
+    pthread_exit(NULL);
+
+    return 0;
+}

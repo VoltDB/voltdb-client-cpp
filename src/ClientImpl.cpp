@@ -70,7 +70,11 @@ public:
         return m_clientImpl->finalizeAuthentication(this, bev);
     }
 
-    ~PendingConnection() {}
+    ~PendingConnection() {
+        std::ostringstream os;
+        os << "~PC thread_self: " << static_cast <signed long> (pthread_self());
+        std::cout << os.str() << std::endl;
+    }
 
     /*
      * Host and port of pending connection
@@ -123,6 +127,7 @@ public:
 static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
     PendingConnection *pc = reinterpret_cast<PendingConnection*>(ctx);
     struct evbuffer *evbuf = bufferevent_get_input(bev);
+    //std::cout << " authenticationReadCallback called for, pending connection:  " << pc << ", thread id: " << static_cast<unsigned long>(pthread_self()) << std::endl;
 
     if (pc->m_authenticationResponseLength < 0) {
         char messageLengthBytes[4];
@@ -170,15 +175,24 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
 */
 static void authenticationEventCallback(struct bufferevent *bev, short events, void *ctx) {
     PendingConnection *pc = reinterpret_cast<PendingConnection*>(ctx);
+    std::ostringstream os;
 
+    const int err = events;
     if (events & BEV_EVENT_CONNECTED) {
         pc->initiateAuthentication(bev);
-    } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
+    } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF | BEV_EVENT_TIMEOUT)) {
+        os << "AEC event: " << err << ", thread id: " << static_cast<unsigned long>(pthread_self());
         pc->m_status = false;
         //pc->m_loginExchangeCompleted = true;
         if (bev) {
+            os << ", free bev: "<< bev;
             bufferevent_free(bev);
         }
+        std::cout << os.str() << std::endl;
+    }
+    else {
+        os << " AEC UNHANDLED , event:" << err << ", thread id: " << static_cast<unsigned long>(pthread_self());
+        std::cout << os.str() << std::endl;
     }
 
     if (pc->m_startPending < 0) {
@@ -351,13 +365,19 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
     FreeBEVOnFailure protector(bev);
     bufferevent_setcb(bev, authenticationReadCallback, NULL, authenticationEventCallback, pc.get());
 
-    if (bufferevent_socket_connect_hostname(bev, NULL, AF_INET, pc->m_hostname.c_str(), pc->m_port) != 0) {
+    int status = bufferevent_socket_connect_hostname(bev, NULL, AF_INET, pc->m_hostname.c_str(), pc->m_port);
+    if ( status != 0) {
         if (pc->m_keepConnecting) {
+            ss.str(""); ss << "CI:IC PC";
+            //std::cout << ss.str() << std::endl;
+
             createPendingConnection(pc->m_hostname, pc->m_port);
         } else {
             ss.str("");
-            ss << "!!!! ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port << " failed";
+            ss << "!!!! ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port <<
+                    " failed (" << status << ")" << std::endl;
             logMessage(ClientLogger::ERROR, ss.str());
+            //std::cout << ss.str() << std::endl;
 
             throw voltdb::LibEventException();
         }
@@ -454,6 +474,9 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
                  i != m_pendingConnectionList.end();
                  ++i) {
                 if (i->get() == pc) {
+                    //std::ostringstream os;
+                    //os << "FA ~pc:" << i->get() << ", thread id: " << static_cast<unsigned long>(pthread_self());
+                    //std::cout << os.str();
                     m_pendingConnectionList.erase(i);
                     m_pendingConnectionSize.store(m_pendingConnectionList.size(), boost::memory_order_release);
                     pcRemoved = true;
@@ -535,6 +558,9 @@ void ClientImpl::createConnection(const std::string& hostname,
         }
     }
     if (keepConnecting) {
+        //ss.str("");
+        //ss << "CI::CC PC for - " << hostname <<":" << port;
+        //std::cout << ss.str() << std::endl;
         createPendingConnection(hostname, port);
     } else {
         throw ConnectException();
@@ -574,6 +600,9 @@ void ClientImpl::createPendingConnection(const std::string &hostname, const unsi
         boost::mutex::scoped_lock lock(m_pendingConnectionLock);
         m_pendingConnectionList.push_back(pc);
         m_pendingConnectionSize.store(m_pendingConnectionList.size(), boost::memory_order_release);
+        //std::ostringstream os;
+        //os << "CreatPendingConnection pc: " << pc.get() << ", thread id: " << static_cast<unsigned long>(pthread_self()) << std::endl;
+        //std::cout << os.str() << std::endl;
     }
 
     struct timeval tv;
@@ -910,16 +939,17 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
 void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
     if (events & BEV_EVENT_CONNECTED) {
         assert(false);
-    } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
+    } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF | BEV_EVENT_TIMEOUT)) {
         // First drain anything in the read buffer
         regularReadCallback(bev);
 
         bool breakEventLoop = false;
 
-    	std::stringstream ss;
-    	const char* s_error = events & BEV_EVENT_ERROR ? "BEV_EVENT_ERROR" : "BEV_EVENT_EOF";
-    	ss << "connectionLost: " << s_error;
-    	logMessage(ClientLogger::ERROR, ss.str());
+        std::stringstream ss;
+        const char* s_error = events & BEV_EVENT_ERROR ? "BEV_EVENT_ERROR" : "BEV_EVENT_EOF";
+        ss << "connectionLost: " << s_error;
+        logMessage(ClientLogger::ERROR, ss.str());
+        std::cout << ss.str() << ", event:" << static_cast<int>(events) <<std::endl;
 
         //Notify client that a connection was lost
         if (m_listener.get() != NULL) {
