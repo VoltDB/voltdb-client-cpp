@@ -96,42 +96,69 @@ public:
 class ConnectionListener : public voltdb::StatusListener {
     public:
 
-    ConnectionListener() : m_connectionActive(false), m_printRateLimited(1000), m_connectionLst(0), m_bpCount(0) {}
+    ConnectionListener() : m_connectionActive(false),
+                           m_printRateLimited(1000),
+                           m_connectionLst(0),
+                           m_hasBackpressure(false),
+                           m_bpCount(0) {}
+
     virtual bool uncaughtException(std::exception exception,
                                    boost::shared_ptr<voltdb::ProcedureCallback> callback,
                                    voltdb::InvocationResponse response) {
         std::cout << "uncaught exception: " << exception.what() << std::endl;
         return true;
     }
-    virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
+
+    virtual bool connectionLost(std::string hostname, unsigned short port, int32_t connectionsLeft) {
         m_connectionActive = false;
         //if ((m_connectionLst % m_printRateLimited == 0) && debugEnabled)
         {
-            std::cout << "Connection Lost reported: hostname " << hostname << ", connections left: " << connectionsLeft <<", # lost" << m_connectionLst << std::endl;
+            std::cout << "Connection Lost - hostname: " << hostname << ", port: " << static_cast <unsigned int>(port)
+                    << ", # left: " << connectionsLeft <<", # lost: " << m_connectionLst << std::endl;
         }
         ++m_connectionLst;
         return false;
     }
-    virtual bool connectionActive(std::string hostname, int32_t connectionsLeft) {
+
+    virtual bool connectionActive(std::string hostname, unsigned short port, int32_t connectionsLeft) {
         m_connectionActive = true;
         //if (debugEnabled)
-            std::cout << "Connection Active hostname " << hostname << ", connections left: " << connectionsLeft <<", # active " << m_connectionLst << std::endl;
+            std::cout << "Connection Active host: " << hostname << ", port: " << static_cast <int>(port)
+                    << ", # left: " << connectionsLeft <<", # active: " << m_connectionLst << std::endl;
         return true;
     }
-    virtual bool backpressure(bool hasBackpressure) {
-        if ((m_bpCount % (m_printRateLimited*1000) == 0) && debugEnabled) {
-            std::cout << "backpressure: " << m_bpCount << " " << hasBackpressure << std::endl;
+
+    virtual bool backpressure(bool hasBackpressure, int32_t outstandingRequests, int32_t maxOutstandingRequests) {
+        //if (hasBackpressure != m_hasBackpressure)
+        {
+            std::ostringstream os;
+            ++m_bpCount;
+            if (hasBackpressure) {
+                if ( (m_bpCount % (m_printRateLimited*1000)) == 0) {
+                    os << "BP on: " << hasBackpressure << ", Pend Reqs: " << outstandingRequests <<
+                            ", MaxPendReqs: " << maxOutstandingRequests;
+                    std::cout << os.str() << std::endl;
+                }
+            }
+            else {
+                os << "BP off: " << hasBackpressure << ", Pend Reqs: " << outstandingRequests <<
+                        ", MaxPendReqs: " << maxOutstandingRequests;
+                std::cout << os.str() << std::endl;
+            }
+
+            m_hasBackpressure = hasBackpressure;
         }
-        m_bpCount++;
         return true;
     }
+
     bool isConnectionActive() const { return m_connectionActive; }
 
 private:
     bool m_connectionActive;
     const int64_t m_printRateLimited;
     int64_t m_connectionLst;
-    int64_t m_bpCount;
+    bool m_hasBackpressure;
+    int32_t m_bpCount;
 };
 
 void waitForClusterTobeActive(voltdb::Client &client, ConnectionListener &listner) {
@@ -151,6 +178,24 @@ void waitForClusterTobeActive(voltdb::Client &client, ConnectionListener &listne
     }
 }
 
+
+void processReq(voltdb::Client& client, voltdb::Procedure &proc, boost::shared_ptr<CountingCallback>& callback, const std::string &seed) {
+    std::ostringstream os;
+    int invokeCnt = 0;
+    while (++invokeCnt < 10) {
+        os.str(""); os << seed << "_" << invokeCnt;
+        voltdb::ParameterSet* params = proc.params();
+        params->addString(os.str()).addString("Hello").addString("World");
+        try {
+            client.invoke(proc, callback);
+        }
+        catch (const voltdb::NoConnectionsException &excp) {
+            //waitForClusterTobeActive(client, listner);
+        }
+    }
+    //std::cout << "invoke count " << invokeCnt << " " << static_cast<unsigned long> (pthread_self()) << std::endl;
+}
+
 static void *clientThread(void *seedData) {
     /*
      * Instantiate a client and connect to the database.
@@ -158,15 +203,20 @@ static void *clientThread(void *seedData) {
      */
     ConnectionListener listner;
     voltdb::ClientConfig config("myusername", "mypassword", &listner, voltdb::HASH_SHA1);
-    voltdb::Client client = voltdb::Client::create(config);
-    config.m_enableAbandon = true;
+    config.m_enableAbandon = false;
     config.m_maxOutstandingRequests = 1000000;
+    voltdb::Client client = voltdb::Client::create(config);
     struct timespec tv, rem;
     int64_t numSPCalls = 0;
-    int64_t requests = config.m_maxOutstandingRequests * 100;
+    int64_t requests = config.m_maxOutstandingRequests * 10;
     tv.tv_nsec = 10;
     tv.tv_sec = 0;
     memset(&rem, 0, sizeof(rem));
+
+    const std::string lang = std::string((char *)seedData);
+    std::ostringstream os;
+    os << "THREAD: " << static_cast<unsigned long> (pthread_self()) << ", seed: " << lang << " " << lang.length() <<"\n";
+    std::cout << os.str() <<std::endl;
 
     //for (int i = 0; i < 1; i++)
     {
@@ -177,17 +227,8 @@ static void *clientThread(void *seedData) {
     }
     client.setClientAffinity(true);
 
-    //waitForClusterTobeActive(client, listner);
-
-
-    /*
-     * Describe the stored procedure to be invoked
-     */
-
     //if (listner.isConnectionActive())
     {
-    const std::string lang = std::string((char *)seedData);
-    std::ostringstream os;
     std::vector<voltdb::Parameter> parameterTypes(3);
     parameterTypes[0] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
     parameterTypes[1] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
@@ -195,13 +236,11 @@ static void *clientThread(void *seedData) {
     voltdb::Procedure procedure("Insert", parameterTypes);
     boost::shared_ptr<CountingCallback> callback(new CountingCallback(requests));
 
-    os << "client connection establish: seed: " << lang << " " << lang.length();
-    std::cout << os.str() <<std::endl;
+
     /*
      * Load the database.
      */
     int64_t i = 0;
-    bool printed = false;
     //while ( numSPCalls < requests ) {
     while ( true ) {
         nanosleep(&tv, &rem);
@@ -209,24 +248,10 @@ static void *clientThread(void *seedData) {
         os.str(""); os << lang << ++numSPCalls;
         params->addString(os.str()).addString("Hello").addString("World");
 
-        printed = false;
-        //while (numSPCalls - processed > 10000) {
-#if 0
-        //while (client.outstandingRequests()> 10000)
-        {
-            if(!printed && debugEnabled) {
-                //std::cout<<"block; generated: " << numSPCalls << ", processed: " << processed << std::endl;
-            }
-            //client.runOnce();
-            if (!printed && debugEnabled) {
-                std::cout<<"ready for invocation; generated: " << numSPCalls << ", processed: " << processed << std::endl;
-                printed = true;
-            }
-        }
-#endif
         try {
             client.runOnce();
-            client.invoke(procedure, callback);
+            //client.invoke(procedure, callback);
+            processReq(client, procedure, callback, os.str());
         }
         catch (const voltdb::NoConnectionsException &excp) {
             //waitForClusterTobeActive(client, listner);
@@ -282,8 +307,8 @@ int main(int argc, char **argv) {
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
     for (int i = 0; i < CLIENT_THREADS; i++) {
-        os.str("eupt");
-        os << i;
+        os.str("");
+        os << "eupt" << i;
         dialect[i] = os.str();
         std::cout << dialect[i] <<" ";
     }

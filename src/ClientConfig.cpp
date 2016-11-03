@@ -40,25 +40,25 @@ public:
             return false;
         }
     }
-    bool connectionLost(std::string hostname, int32_t connectionsLeft) {
+    bool connectionLost(std::string hostname, unsigned short port, int32_t connectionsLeft) {
         if (m_listener != NULL) {
-            bool retval = m_listener->connectionLost(hostname, connectionsLeft);
+            bool retval = m_listener->connectionLost(hostname, port, connectionsLeft);
             return retval;
         } else {
             return false;
         }
     }
-    bool connectionActive(std::string hostname, int32_t connectionsActive) {
+    bool connectionActive(std::string hostname, unsigned short port, int32_t connectionsActive) {
         if (m_listener != NULL) {
-            bool retval = m_listener->connectionActive(hostname, connectionsActive);
+            bool retval = m_listener->connectionActive(hostname, port, connectionsActive);
             return retval;
         } else {
             return false;
         }
     }
-    bool backpressure(bool hasBackpressure) {
+    bool backpressure(bool hasBackpressure, int32_t outstandingRequests, int32_t maxOutstandingRequests) {
         if (m_listener != NULL) {
-            return m_listener->backpressure(hasBackpressure);
+            return m_listener->backpressure(hasBackpressure, outstandingRequests, maxOutstandingRequests);
         } else {
             return false;
         }

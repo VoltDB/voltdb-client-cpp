@@ -20,7 +20,8 @@ ifeq ($(PLATFORM),Linux)
     SYSTEM_LIBS := -lpthread $(BOOST_LIBS) -lrt -lboost_system-mt -lboost_thread-mt
 endif
 
-all: helloworld asynchelloworld voter
+all: helloworld asynchelloworld voter keepalive
+#all: helloworld asynchelloworld voter helloworldmt
 
 asynchelloworld: AsyncHelloWorld.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 	$(CC) $(CFLAGS) AsyncHelloWorld.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o asynchelloworld
@@ -30,6 +31,9 @@ helloworld: HelloWorld.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 
 voter: Voter.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 	$(CC) $(CFLAGS) Voter.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o voter
+
+keepalive: AsyncWithKeepAlive.cpp $(VOLT_LIBS)/libvoltdbcpp.a
+	$(CC) $(CFLAGS) AsyncWithKeepAlive.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o keepalive
 
 clean:
 	$(RM) asynchelloworld helloworld voter *.dSYM *~

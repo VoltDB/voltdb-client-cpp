@@ -51,21 +51,21 @@ public:
        }
        return false;
    }
-   virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
+   virtual bool connectionLost(std::string hostname, unsigned short port, int32_t connectionsLeft) {
        if (m_listener != NULL) {
-           return m_listener->connectionLost(hostname, connectionsLeft);
+           return m_listener->connectionLost(hostname, port, connectionsLeft);
        }
        return false;
    }
-   virtual bool connectionActive(std::string hostname, int32_t connectionsActive) {
+   virtual bool connectionActive(std::string hostname, unsigned short port, int32_t connectionsActive) {
        if (m_listener != NULL) {
-           return m_listener->connectionActive(hostname, connectionsActive);
+           return m_listener->connectionActive(hostname, port, connectionsActive);
        }
        return false;
    }
-   virtual bool backpressure(bool hasBackpressure) {
+   virtual bool backpressure(bool hasBackpressure, int32_t outstandingRequests, int32_t maxOutstandingRequests) {
        if (m_listener != NULL) {
-           return m_listener->backpressure(hasBackpressure);
+           return m_listener->backpressure(hasBackpressure, outstandingRequests, maxOutstandingRequests);
        }
        return false;
    }
@@ -258,16 +258,16 @@ public:
                 CPPUNIT_ASSERT(false);
                 return false;
             }
-            virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
+            virtual bool connectionLost(std::string hostname,  unsigned short port, int32_t connectionsLeft) {
                 lostReported = true;
                 CPPUNIT_ASSERT(connectionsLeft == 0);
                 return false;
             }
-            virtual bool connectionActive(std::string hostname, int32_t connectionsLeft) {
+            virtual bool connectionActive(std::string hostname,  unsigned short port, int32_t connectionsLeft) {
                 activeReported = true;
                 return true;
             }
-            virtual bool backpressure(bool hasBackpressure) {
+            virtual bool backpressure(bool hasBackpressure, int32_t outstandingRequests, int32_t maxOutstandingRequests) {
                 CPPUNIT_ASSERT(false);
                 return false;
             }
@@ -333,14 +333,14 @@ public:
                 CPPUNIT_ASSERT(false);
                 return false;
             }
-            virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
+            virtual bool connectionLost(std::string hostname,  unsigned short port, int32_t connectionsLeft) {
                 CPPUNIT_ASSERT(connectionsLeft == 1);
                 return true;
             }
-            virtual bool connectionActive(std::string hostname, int32_t connectionsLeft) {
+            virtual bool connectionActive(std::string hostname,  unsigned short port, int32_t connectionsLeft) {
                 return true;
             }
-            virtual bool backpressure(bool hasBackpressure) {
+            virtual bool backpressure(bool hasBackpressure, int32_t outstandingRequests, int32_t maxOutstandingRequests) {
                 CPPUNIT_ASSERT(false);
                 return false;
             }
@@ -409,16 +409,16 @@ public:
                 lostReported = true;
                 return true;
             }
-            virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
+            virtual bool connectionLost(std::string hostname,  unsigned short port, int32_t connectionsLeft) {
                 lostReported = true;
                 CPPUNIT_ASSERT(connectionsLeft == 0);
                 return false;
             }
-            virtual bool connectionActive(std::string hostname, int32_t connectionsLeft) {
+            virtual bool connectionActive(std::string hostname,  unsigned short port, int32_t connectionsLeft) {
                 activeReported = true;
                 return true;
             }
-            virtual bool backpressure(bool hasBackpressure) {
+            virtual bool backpressure(bool hasBackpressure, int32_t outstandingRequests, int32_t maxOutstandingRequests) {
                 CPPUNIT_ASSERT(false);
                 return false;
             }
@@ -455,14 +455,14 @@ public:
                 CPPUNIT_ASSERT(false);
                 return true;
             }
-            virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
+            virtual bool connectionLost(std::string hostname,  unsigned short port, int32_t connectionsLeft) {
                 CPPUNIT_ASSERT(false);
                 return false;
             }
-            virtual bool connectionActive(std::string hostname, int32_t connectionsLeft) {
+            virtual bool connectionActive(std::string hostname,  unsigned short port, int32_t connectionsLeft) {
                 return true;
             }
-            virtual bool backpressure(bool hasBackpressure) {
+            virtual bool backpressure(bool hasBackpressure, int32_t outstandingRequests, int32_t maxOutstandingRequests) {
                 CPPUNIT_ASSERT(hasBackpressure);
                 reported = true;
                 return true;

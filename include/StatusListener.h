@@ -42,26 +42,27 @@ public:
      * @param The response from the server that caused the exception
      * @return true if the event loop should terminate and false otherwise
      */
-    virtual bool uncaughtException(
-            std::exception exception,
-            boost::shared_ptr<voltdb::ProcedureCallback> callback,
-            voltdb::InvocationResponse response) = 0;
+    virtual bool uncaughtException(std::exception exception,
+                                   boost::shared_ptr<voltdb::ProcedureCallback> callback,
+                                   voltdb::InvocationResponse response) = 0;
 
     /*
      * Notify the client application that a connection to the database was lost
      * @param hostname Name of the host that the connection was lost to
+     * @param port : Host port that the connection was established to
      * @param connectionsLeft Number of connections to the database remaining
      * @return true if the event loop should terminate and false otherwise
      */
-    virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) = 0;
+    virtual bool connectionLost(std::string hostname, unsigned short port, int32_t connectionsLeft) = 0;
 
     /*
      * Notify the client application that a connection to the database was established
      * @param hostname Name of the host that the connection was established to
+     * @param port : Host port that the connection was established to
      * @param connectionsActive Number of connections to the database remaining
      * @return true if the event loop should terminate and false otherwise
      */
-    virtual bool connectionActive(std::string hostname, int32_t connectionsActive) = 0;
+    virtual bool connectionActive(std::string hostname, unsigned short port, int32_t connectionsActive) = 0;
    
     /*
      * Notify the client application that backpressure occured
@@ -69,7 +70,8 @@ public:
      * @return true if the client library should queue the invocation and return from invoke()
      * or false if the library should wait until there is a connection without backpressure and then queue it.
      */
-    virtual bool backpressure(bool hasBackpressure) = 0;
+    //virtual bool backpressure(bool hasBackpressure) = 0;
+    virtual bool backpressure(bool hasBackpressure, int32_t outstandingRequests, int32_t maxOutstandingRequests) = 0;
 
     virtual ~StatusListener() {}
 };

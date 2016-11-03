@@ -339,6 +339,7 @@ public:
     }
     ~FreeBEVOnFailure() {
         if (m_bev) {
+            std::cout << "FBE: free bev: " << m_bev << std::endl;
             bufferevent_free(m_bev);
         }
     }
@@ -357,28 +358,29 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
     struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
     if (bev == NULL) {
         if (pc->m_keepConnecting) {
-            createPendingConnection(pc->m_hostname, pc->m_port);
+            ss.str(""); ss << "IC PC bev null" << ", thread id: " << static_cast<unsigned long>(pthread_self());
+            std::cout << ss.str() << std::endl;
+            //createPendingConnection(pc->m_hostname, pc->m_port);
         } else {
             throw ConnectException();
         }
     }
+    std::cout << "IC: allocated bev: " << bev <<std::endl;
     FreeBEVOnFailure protector(bev);
     bufferevent_setcb(bev, authenticationReadCallback, NULL, authenticationEventCallback, pc.get());
 
     int status = bufferevent_socket_connect_hostname(bev, NULL, AF_INET, pc->m_hostname.c_str(), pc->m_port);
     if ( status != 0) {
         if (pc->m_keepConnecting) {
-            ss.str(""); ss << "CI:IC PC";
-            //std::cout << ss.str() << std::endl;
+            ss.str(""); ss << "IC PC, socket_connect";
+            std::cout << ss.str() << std::endl;
 
-            createPendingConnection(pc->m_hostname, pc->m_port);
+            //createPendingConnection(pc->m_hostname, pc->m_port);
         } else {
             ss.str("");
             ss << "!!!! ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port <<
                     " failed (" << status << ")" << std::endl;
             logMessage(ClientLogger::ERROR, ss.str());
-            //std::cout << ss.str() << std::endl;
-
             throw voltdb::LibEventException();
         }
     }
@@ -498,7 +500,7 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
         //Notify client that a connection was active
         if (m_listener.get() != NULL) {
             try {
-                 m_listener->connectionActive( m_contexts[bev]->m_name, m_bevs.size() );
+                 m_listener->connectionActive( m_contexts[bev]->m_name, m_contexts[bev]->m_port, m_bevs.size() );
             } catch (const std::exception& e) {
                 std::cerr << "Status listener threw exception on connection active: " << e.what() << std::endl;
             }
@@ -558,9 +560,9 @@ void ClientImpl::createConnection(const std::string& hostname,
         }
     }
     if (keepConnecting) {
-        //ss.str("");
-        //ss << "CI::CC PC for - " << hostname <<":" << port;
-        //std::cout << ss.str() << std::endl;
+        ss.str("");
+        ss << "CI::CC PC for - " << hostname <<":" << port;
+        std::cout << ss.str() << std::endl;
         createPendingConnection(hostname, port);
     } else {
         throw ConnectException();
@@ -573,12 +575,18 @@ static void reconnectCallback(evutil_socket_t fd, short events, void *clientData
 }
 
 void ClientImpl::reconnectEventCallback() {
-    if (m_pendingConnectionSize.load(boost::memory_order_consume) <= 0)  return;
+    if (m_pendingConnectionSize.load(boost::memory_order_consume) <= 0) {
+        return;
+    }
 
+    std::ostringstream os;
     boost::mutex::scoped_lock lock(m_pendingConnectionLock);
     const int64_t now = get_sec_time();
     BOOST_FOREACH( PendingConnectionSPtr& pc, m_pendingConnectionList ) {
         if ((now - pc->m_startPending) > RECONNECT_INTERVAL) {
+            os << "size: " << m_pendingConnectionList.size() << ", host: " << pc->m_hostname <<
+                    ", port: " << static_cast<int> (pc->m_port);
+            std::cout << os.str() <<std::endl;
             pc->m_startPending = now;
             initiateConnection(pc);
         }
@@ -600,9 +608,9 @@ void ClientImpl::createPendingConnection(const std::string &hostname, const unsi
         boost::mutex::scoped_lock lock(m_pendingConnectionLock);
         m_pendingConnectionList.push_back(pc);
         m_pendingConnectionSize.store(m_pendingConnectionList.size(), boost::memory_order_release);
-        //std::ostringstream os;
-        //os << "CreatPendingConnection pc: " << pc.get() << ", thread id: " << static_cast<unsigned long>(pthread_self()) << std::endl;
-        //std::cout << os.str() << std::endl;
+        std::ostringstream os;
+        os << "createPC: " << pc.get() << ", thread id: " << static_cast<unsigned long>(pthread_self()) << std::endl;
+        std::cout << os.str() << std::endl;
     }
 
     struct timeval tv;
@@ -720,7 +728,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
     if (m_outstandingRequests >= m_maxOutstandingRequests) {
     	if (m_listener.get() != NULL) {
             try {
-                m_listener->backpressure(true);
+                m_listener->backpressure(true, m_outstandingRequests, m_maxOutstandingRequests);
             } catch (const std::exception& e) {
                 std::cerr << "Exception thrown on invocation of backpressure callback: " << e.what() << std::endl;
             }
@@ -788,7 +796,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
     	    if (m_listener.get() != NULL) {
     	        try {
     	            m_ignoreBackpressure = true;
-    	            callEventLoop = !m_listener->backpressure(true);
+    	            callEventLoop = !m_listener->backpressure(true, m_outstandingRequests, m_maxOutstandingRequests);
     	            m_ignoreBackpressure = false;
                 } catch (const std::exception& e) {
     	            std::cerr << "Exception thrown on invocation of backpressure callback: " << e.what() << std::endl;
@@ -955,7 +963,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         if (m_listener.get() != NULL) {
             try {
                 m_ignoreBackpressure = true;
-                breakEventLoop |= m_listener->connectionLost( m_contexts[bev]->m_name, m_bevs.size() - 1);
+                breakEventLoop |= m_listener->connectionLost( m_contexts[bev]->m_name, m_contexts[bev]->m_port, m_bevs.size() - 1);
                 m_ignoreBackpressure = false;
             } catch (const std::exception& e) {
                 std::cerr << "Status listener threw exception on connection lost: " << e.what() << std::endl;
@@ -993,19 +1001,24 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         //Remove the connection context
         m_contexts.erase(bev);
 
+        size_t bevSize = m_bevs.size();
         for (std::vector<struct bufferevent *>::iterator i = m_bevs.begin(); i != m_bevs.end(); ++i) {
             if (*i == bev) {
                 m_bevs.erase(i);
+                std::cout << "deleted bev:" << bev <<" from bev list. size before erase " << bevSize <<", after "
+                        << m_bevs.size() << std::endl;
                 break;
             }
         }
 
+        std::cout << "REC: free bev: " << bev <<std::endl;
         bufferevent_free(bev);
         //Reset cluster Id as no more connections left
         if (m_bevs.empty())
             m_instanceIdIsSet = false;
 
         if (breakEventLoop || m_bevs.size() == 0) {
+            std::cout << "REC: break event loop" << breakEventLoop << ", bev size: " << m_bevs.size() << std::endl;
             event_base_loopbreak( m_base );
         }
 
@@ -1014,6 +1027,9 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
             updateHashinator();
         }
     }
+    else {
+        std::cout << "REC: unhandled event: " << static_cast<int> (events) << std::endl;
+    }
 }
 
 void ClientImpl::regularWriteCallback(struct bufferevent *bev) {
@@ -1021,6 +1037,13 @@ void ClientImpl::regularWriteCallback(struct bufferevent *bev) {
             m_backpressuredBevs.find(bev);
     if (iter != m_backpressuredBevs.end()) {
         m_backpressuredBevs.erase(iter);
+        if (m_listener != NULL) {
+            try {
+                m_listener->backpressure(false, m_outstandingRequests, m_maxOutstandingRequests);
+            } catch (const std::exception& excp) {
+                std::cerr << "Caught exception while reporting backpressure off. " << excp.what() << std::endl;
+            }
+        }
     }
     if (m_invocationBlockedOnBackpressure) {
         m_invocationBlockedOnBackpressure = false;
