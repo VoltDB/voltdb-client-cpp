@@ -127,6 +127,12 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
     struct evbuffer *evbuf = bufferevent_get_input(bev);
 
     assert(pc->m_bufferEvent == bev);
+    if (pc->m_bufferEvent != bev) {
+        std::ostringstream os;
+        os << "authenticationReadCallback, PC buffer event: " << pc->m_bufferEvent
+                << ", bev: " << bev;
+        std::cerr << os.str() << std::endl;
+    }
     if (pc->m_authenticationResponseLength < 0) {
         char messageLengthBytes[4];
         int read = evbuffer_remove(evbuf, messageLengthBytes, 4);
