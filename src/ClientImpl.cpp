@@ -55,6 +55,7 @@ public:
                                                                  m_port(port),
                                                                  m_keepConnecting(keepConnecting),
                                                                  m_base(base),
+                                                                 m_bufferEvent(NULL),
                                                                  m_authenticationResponseLength(-1),
                                                                  m_status(true),
                                                                  m_loginExchangeCompleted(false),
@@ -66,8 +67,8 @@ public:
        m_clientImpl->initiateAuthentication(bev);
     }
 
-    void finalizeAuthentication(struct bufferevent *bev) {
-        return m_clientImpl->finalizeAuthentication(this, bev);
+    void finalizeAuthentication() {
+        return m_clientImpl->finalizeAuthentication(this);
     }
 
     ~PendingConnection() {}
@@ -83,6 +84,7 @@ public:
      *Event and event base associated with connection
      */
     struct event_base *m_base;
+    struct bufferevent *m_bufferEvent;
     int32_t m_authenticationResponseLength;
     AuthenticationResponse m_response;
     bool m_status;
@@ -124,6 +126,13 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
     PendingConnection *pc = reinterpret_cast<PendingConnection*>(ctx);
     struct evbuffer *evbuf = bufferevent_get_input(bev);
 
+    assert(pc->m_bufferEvent == bev);
+    if (pc->m_bufferEvent != bev) {
+        std::ostringstream os;
+        os << "authenticationReadCallback, PC buffer event: " << pc->m_bufferEvent
+                << ", bev: " << bev;
+        std::cerr << os.str() << std::endl;
+    }
     if (pc->m_authenticationResponseLength < 0) {
         char messageLengthBytes[4];
         int read = evbuffer_remove(evbuf, messageLengthBytes, 4);
@@ -151,7 +160,7 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
     pc->m_loginExchangeCompleted = true;
 
     bufferevent_setwatermark(bev, EV_READ, 4, HIGH_WATERMARK);
-    pc->finalizeAuthentication(bev);
+    pc->finalizeAuthentication();
 }
 
 /**
@@ -173,11 +182,13 @@ static void authenticationEventCallback(struct bufferevent *bev, short events, v
 
     if (events & BEV_EVENT_CONNECTED) {
         pc->initiateAuthentication(bev);
-    } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
+    } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF | BEV_EVENT_TIMEOUT)) {
         pc->m_status = false;
         //pc->m_loginExchangeCompleted = true;
         if (bev) {
+            //std::cout << "AEC: free bev: " << bev <<std::endl;;
             bufferevent_free(bev);
+            pc->m_bufferEvent = NULL;
         }
     }
 
@@ -316,22 +327,28 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         throw voltdb::LibEventException();
     }
 
+    m_wakeupPipe[0] = -1;
+    m_wakeupPipe[1] = -1;
 }
 
 class FreeBEVOnFailure {
 public:
-    FreeBEVOnFailure(struct bufferevent *bev) : m_bev(bev) {
+    FreeBEVOnFailure(struct bufferevent *bev) : m_pc(NULL), m_bev(bev) {}
 
-    }
+    FreeBEVOnFailure(PendingConnection *pc) : m_pc(pc), m_bev(pc->m_bufferEvent) {}
     ~FreeBEVOnFailure() {
         if (m_bev) {
             bufferevent_free(m_bev);
+            if (m_pc) {
+                m_pc->m_bufferEvent = NULL;
+            }
         }
     }
     void success() {
         m_bev = NULL;
     }
 private:
+    PendingConnection *m_pc;
     struct bufferevent *m_bev;
 };
 
@@ -339,20 +356,36 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
                                                                                      voltdb::LibEventException) {
     std::stringstream ss;
     ss << "ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port;
-    logMessage(ClientLogger::INFO, ss.str());
-    struct bufferevent *bev = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
-    if (bev == NULL) {
+
+    if (pc->m_bufferEvent != NULL) {
+        ss << ", clean up existing bev: " << pc->m_bufferEvent;
+        bufferevent_free(pc->m_bufferEvent);
+        pc->m_bufferEvent = NULL;
+    }
+
+    pc->m_bufferEvent = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+    if (pc->m_bufferEvent == NULL) {
         if (pc->m_keepConnecting) {
             createPendingConnection(pc->m_hostname, pc->m_port);
         } else {
+            ss.str("");
+            ss << "!!!! ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port << " failed getting socket";
+            logMessage(ClientLogger::ERROR, ss.str());
+
             throw ConnectException();
         }
     }
-    FreeBEVOnFailure protector(bev);
-    bufferevent_setcb(bev, authenticationReadCallback, NULL, authenticationEventCallback, pc.get());
+    ss << ", new bev: " <<  pc->m_bufferEvent;
+    logMessage(ClientLogger::INFO, ss.str());
+    FreeBEVOnFailure protector(pc.get());
+    bufferevent_setcb(pc->m_bufferEvent, authenticationReadCallback, NULL, authenticationEventCallback, pc.get());
 
-    if (bufferevent_socket_connect_hostname(bev, NULL, AF_INET, pc->m_hostname.c_str(), pc->m_port) != 0) {
+    if (bufferevent_socket_connect_hostname(pc->m_bufferEvent, NULL, AF_INET, pc->m_hostname.c_str(), pc->m_port) != 0) {
         if (pc->m_keepConnecting) {
+            //std::cout << "CI::free bev: " << pc->m_bufevent <<std::endl;
+            bufferevent_free(pc->m_bufferEvent);
+            pc->m_bufferEvent = NULL;
+            protector.success();
             createPendingConnection(pc->m_hostname, pc->m_port);
         } else {
             ss.str("");
@@ -403,14 +436,15 @@ void ClientImpl::initiateAuthentication(struct bufferevent *bev) throw (voltdb::
     protector.success();
 }
 
-void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::Exception,
-                                                                                               voltdb::ConnectException) {
+void ClientImpl::finalizeAuthentication(PendingConnection* pc) throw (voltdb::Exception,
+                                                                      voltdb::ConnectException) {
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::finalizeAuthentication");
 
-    FreeBEVOnFailure protector(bev);
+    FreeBEVOnFailure protector(pc);
     bool pcRemoved = false;
     bool exitEventLoop = false;
+    struct bufferevent *bev = pc->m_bufferEvent;
 
     event_base *evBasePtr = pc->m_base;
     if (pc->m_startPending < 0) {
@@ -441,6 +475,7 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
                boost::shared_ptr<CxnContext>(new CxnContext(pc->m_hostname, pc->m_port));
         boost::shared_ptr<CallbackMap> callbackMap(new CallbackMap());
         m_callbacks[bev] = callbackMap;
+        pc->m_bufferEvent = NULL;
 
         bufferevent_setcb(bev,
                           voltdb::regularReadCallback,
@@ -468,25 +503,28 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
             subscribeToTopologyNotifications();
         }
 
-    	std::stringstream ss;
-    	ss << "connectionActive " << m_contexts[bev]->m_name << ":" << m_contexts[bev]->m_port ;
-    	logMessage(ClientLogger::INFO, ss.str());
+        std::ostringstream ss;
+        ss << "connectionActive " << m_contexts[bev]->m_name << ":" << m_contexts[bev]->m_port ;
+        logMessage(ClientLogger::INFO, ss.str());
 
         //Notify client that a connection was active
         if (m_listener.get() != NULL) {
             try {
                  m_listener->connectionActive( m_contexts[bev]->m_name, m_bevs.size() );
             } catch (const std::exception& e) {
-                std::cerr << "Status listener threw exception on connection active: " << e.what() << std::endl;
+                ss.str("");
+                ss << "Status listener threw exception on connection active: " << e.what() << std::endl;
+                logMessage(ClientLogger::ERROR, ss.str());
+                std::cerr << ss.str() << std::endl;
             }
         }
     }
     else {
         logMessage(ClientLogger::DEBUG, "ClientImpl::finalizeAuthentication Fail");
 
-    	std::stringstream ss;
-    	ss << "connection failed " << " " << pc->m_hostname << ":" << pc->m_port;
-    	logMessage(ClientLogger::ERROR, ss.str());
+        std::ostringstream ss;
+        ss << "connection failed " << " " << pc->m_hostname << ":" << pc->m_port;
+        logMessage(ClientLogger::ERROR, ss.str());
 
         throw ConnectException();
     }
@@ -494,6 +532,7 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc, struct buffereven
         event_base_loopexit(evBasePtr, NULL);
     }
     else if (!pcRemoved) {
+        logMessage(ClientLogger::INFO, "ClientImpl::finalizeAuthentication, update start pending time");
         pc->m_startPending = get_sec_time();
     }
     protector.success();
@@ -744,40 +783,40 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
         if (m_outstandingRequests <= m_maxOutstandingRequests) {
             for (size_t ii = 0; ii < m_bevs.size(); ii++) {
                 bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
-        	if (m_backpressuredBevs.find(bev) != m_backpressuredBevs.end()) {
-        	    bev = NULL;
-        	} else {
-        	    break;
-        	}
+                if (m_backpressuredBevs.find(bev) != m_backpressuredBevs.end()) {
+                    bev = NULL;
+                } else {
+                    break;
+                }
             }
-	}
+        }
 
-    	if (bev) {
-    	    break;
-    	} else {
-    	    bool callEventLoop = true;
-    	    if (m_listener.get() != NULL) {
-    	        try {
-    	            m_ignoreBackpressure = true;
-    	            callEventLoop = !m_listener->backpressure(true);
-    	            m_ignoreBackpressure = false;
+        if (bev) {
+            break;
+        } else {
+            bool callEventLoop = true;
+            if (m_listener.get() != NULL) {
+                try {
+                    m_ignoreBackpressure = true;
+                    callEventLoop = !m_listener->backpressure(true);
+                    m_ignoreBackpressure = false;
                 } catch (const std::exception& e) {
-    	            std::cerr << "Exception thrown on invocation of backpressure callback: " << e.what() << std::endl;
-    	        }
-    	    }
+                    std::cerr << "Exception thrown on invocation of backpressure callback: " << e.what() << std::endl;
+                }
+            }
             if (callEventLoop) {
-    	        m_invocationBlockedOnBackpressure = true;
-    	        if (event_base_dispatch(m_base) == -1) {
-    	            throw voltdb::LibEventException();
-    	        }
-    	        if (m_loopBreakRequested) {
-    	            m_loopBreakRequested = false;
-    	            m_invocationBlockedOnBackpressure = false;
-    	            bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
-    	        }
-    	    } else {
-    	        bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
-    	        break;
+                m_invocationBlockedOnBackpressure = true;
+                if (event_base_dispatch(m_base) == -1) {
+                    throw voltdb::LibEventException();
+                }
+                if (m_loopBreakRequested) {
+                    m_loopBreakRequested = false;
+                    m_invocationBlockedOnBackpressure = false;
+                    bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+                }
+            } else {
+                bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+                break;
             }
         }
     }
@@ -910,16 +949,17 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
 void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
     if (events & BEV_EVENT_CONNECTED) {
         assert(false);
-    } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
+    } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF | BEV_EVENT_TIMEOUT)) {
         // First drain anything in the read buffer
         regularReadCallback(bev);
 
         bool breakEventLoop = false;
 
-    	std::stringstream ss;
-    	const char* s_error = events & BEV_EVENT_ERROR ? "BEV_EVENT_ERROR" : "BEV_EVENT_EOF";
-    	ss << "connectionLost: " << s_error;
-    	logMessage(ClientLogger::ERROR, ss.str());
+        std::stringstream ss;
+        const char* s_error = (events & BEV_EVENT_ERROR) ? "BEV_EVENT_ERROR" :
+                ((events & BEV_EVENT_EOF) ? "BEV_EVENT_EOF" : "BEV_EVENT_TIMEOUT");
+        ss << "connectionLost: " << s_error;
+        logMessage(ClientLogger::ERROR, ss.str());
 
         //Notify client that a connection was lost
         if (m_listener.get() != NULL) {
@@ -970,6 +1010,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
             }
         }
 
+        //std::cout <<"REC::free bev: " << bev <<std::endl;
         bufferevent_free(bev);
         //Reset cluster Id as no more connections left
         if (m_bevs.empty())
@@ -991,6 +1032,11 @@ void ClientImpl::regularWriteCallback(struct bufferevent *bev) {
             m_backpressuredBevs.find(bev);
     if (iter != m_backpressuredBevs.end()) {
         m_backpressuredBevs.erase(iter);
+        try {
+            m_listener->backpressure(false);
+        } catch (const std::exception& excp) {
+            std::cerr << "Caught exception while reporting backpressure off. " << excp.what() << std::endl;
+        }
     }
     if (m_invocationBlockedOnBackpressure) {
         m_invocationBlockedOnBackpressure = false;
@@ -1036,8 +1082,7 @@ public:
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()){
-            if (response.failure())
-                std::cerr  << __FUNCTION__ << ": " << response.statusCode() << " (" << response.statusCode() << ")";
+            std::cerr  << "Failure response TopoUpdateCallback::callback: " << response.statusString() << std::endl;
             return false;
         }
         m_dist->updateAffinityTopology(response.results());
@@ -1053,9 +1098,8 @@ public:
     SubscribeCallback(){}
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
-        if (response.failure()){
-            if (response.failure())
-                std::cerr  << __FUNCTION__ << ": " << response.statusCode() << " (" << response.statusCode() << ")";
+        if (response.failure()) {
+            std::cerr  << "Failure response SubscribeCallback::callback: " << response.statusString() << std::endl;
             return false;
         }
         return true;
@@ -1071,9 +1115,8 @@ public:
     ProcUpdateCallback(Distributer *dist):m_dist(dist){}
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
-        if (response.failure()){
-            if (response.failure())
-                std::cerr  << __FUNCTION__ << ": " << response.statusCode() << " (" << response.statusCode() << ")";
+        if (response.failure()) {
+            std::cerr  << "Failure response SubscribeCallback::callback: " << response.statusString() << std::endl;
             return false;
         }
         m_dist->updateProcedurePartitioning(response.results());
