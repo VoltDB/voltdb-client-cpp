@@ -184,6 +184,7 @@ private:
     BEVToCallbackMap m_callbacks;
     boost::shared_ptr<voltdb::StatusListener> m_listener;
     bool m_invocationBlockedOnBackpressure;
+    bool m_backPressuredForOutstandingRequests;
     boost::atomic<bool> m_loopBreakRequested;
     bool m_isDraining;
     bool m_instanceIdIsSet;
