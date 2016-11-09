@@ -685,8 +685,8 @@ public:
 
     void abandon(AbandonReason reason) {}
 
-    bool honorDoAbandon() const {
-        return m_callback->honorDoAbandon();
+    bool allowAbandon() const {
+        return m_callback->allowAbandon();
     }
 
 };
@@ -742,7 +742,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
             }
         }
     	// We are overloaded, we need to reject traffic and notify the caller
-        if (m_enableAbandon && callback->honorDoAbandon()) {
+        if (m_enableAbandon && callback->allowAbandon()) {
             callback->abandon(ProcedureCallback::TOO_BUSY);
             return;
         }
@@ -1139,7 +1139,7 @@ public:
         return true;
     }
 
-    bool honorDoAbandon() const {return false;}
+    bool allowAbandon() const {return false;}
 };
 
 /*
@@ -1160,7 +1160,7 @@ public:
         return true;
     }
 
-    bool honorDoAbandon() const {return false;}
+    bool allowAbandon() const {return false;}
 
  private:
     Distributer *m_dist;
