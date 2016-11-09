@@ -288,7 +288,8 @@ const std::string ClientImpl::SERVICE("database");
 
 ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException) :
         m_base(NULL), m_ev(NULL), m_cfg(NULL), m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
-        m_listener(config.m_listener), m_invocationBlockedOnBackpressure(false), m_loopBreakRequested(false),
+        m_listener(config.m_listener), m_invocationBlockedOnBackpressure(false),
+        m_backPressuredForOutstandingRequests(false), m_loopBreakRequested(false),
         m_isDraining(false), m_instanceIdIsSet(false), m_outstandingRequests(0), m_leaderAddress(-1),
         m_clusterStartTime(-1), m_username(config.m_username), m_maxOutstandingRequests(config.m_maxOutstandingRequests),
         m_ignoreBackpressure(false), m_useClientAffinity(false),m_updateHashinator(false), m_pendingConnectionSize(0),
@@ -684,6 +685,10 @@ public:
 
     void abandon(AbandonReason reason) {}
 
+    bool allowAbandon() const {
+        return m_callback->allowAbandon();
+    }
+
 };
 
 void ClientImpl::invoke(Procedure &proc, ProcedureCallback *callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::ElasticModeMismatchException) {
@@ -729,6 +734,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
 
     if (m_outstandingRequests >= m_maxOutstandingRequests) {
     	if (m_listener.get() != NULL) {
+            m_backPressuredForOutstandingRequests = true;
             try {
                 m_listener->backpressure(true);
             } catch (const std::exception& e) {
@@ -736,9 +742,13 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
             }
         }
     	// We are overloaded, we need to reject traffic and notify the caller
-        if (m_enableAbandon) {
+        if (m_enableAbandon && callback->allowAbandon()) {
             callback->abandon(ProcedureCallback::TOO_BUSY);
             return;
+        }
+        else if (m_enableAbandon) {
+            // report to client the request was not abandoned
+            callback->abandon(ProcedureCallback::NOT_ABANDONED);
         }
     }
 
@@ -795,6 +805,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
             break;
         } else {
             bool callEventLoop = true;
+
             if (m_listener.get() != NULL) {
                 try {
                     m_ignoreBackpressure = true;
@@ -806,8 +817,14 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
             }
             if (callEventLoop) {
                 m_invocationBlockedOnBackpressure = true;
-                if (event_base_dispatch(m_base) == -1) {
+                int loopRunStatus = event_base_dispatch(m_base);
+                if (loopRunStatus == -1) {
                     throw voltdb::LibEventException();
+                }
+                else if (loopRunStatus == 1) {
+                    if (m_pLogger) {
+                        logMessage(ClientLogger::DEBUG, "No events queued for processing");
+                    }
                 }
                 if (m_loopBreakRequested) {
                     m_loopBreakRequested = false;
@@ -942,6 +959,17 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
         }
     }
 
+    if ((m_outstandingRequests < m_maxOutstandingRequests) && m_backPressuredForOutstandingRequests) {
+        if (m_listener.get() != NULL) {
+            m_backPressuredForOutstandingRequests = false;
+            try {
+                m_listener->backpressure(false);
+            }
+            catch (std::exception &excp) {
+                std::cerr << "Caught exception when notifying for backpressure gone: " << excp.what() << std::endl;
+            }
+        }
+    }
     if (breakEventLoop) {
         event_base_loopbreak( m_base );
     }
@@ -998,6 +1026,10 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
 
         //remove the entry for the backpressured connection set
         m_backpressuredBevs.erase(bev);
+        if (m_outstandingRequests < m_maxOutstandingRequests) {
+            m_backPressuredForOutstandingRequests = false;
+        }
+
         createPendingConnection(m_contexts[bev]->m_name, m_contexts[bev]->m_port, get_sec_time());
 
         //Remove the connection context
@@ -1032,10 +1064,12 @@ void ClientImpl::regularWriteCallback(struct bufferevent *bev) {
             m_backpressuredBevs.find(bev);
     if (iter != m_backpressuredBevs.end()) {
         m_backpressuredBevs.erase(iter);
-        try {
-            m_listener->backpressure(false);
-        } catch (const std::exception& excp) {
-            std::cerr << "Caught exception while reporting backpressure off. " << excp.what() << std::endl;
+        if (m_listener.get() != NULL) {
+            try {
+                m_listener->backpressure(false);
+            } catch (const std::exception& excp) {
+                std::cerr << "Caught exception while reporting backpressure off. " << excp.what() << std::endl;
+            }
         }
     }
     if (m_invocationBlockedOnBackpressure) {
@@ -1104,6 +1138,8 @@ public:
         }
         return true;
     }
+
+    bool allowAbandon() const {return false;}
 };
 
 /*
@@ -1112,7 +1148,8 @@ public:
 class ProcUpdateCallback : public voltdb::ProcedureCallback
 {
 public:
-    ProcUpdateCallback(Distributer *dist):m_dist(dist){}
+    ProcUpdateCallback(Distributer *dist):m_dist(dist) {}
+
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()) {
@@ -1122,6 +1159,8 @@ public:
         m_dist->updateProcedurePartitioning(response.results());
         return true;
     }
+
+    bool allowAbandon() const {return false;}
 
  private:
     Distributer *m_dist;
