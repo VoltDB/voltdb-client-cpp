@@ -62,7 +62,7 @@ public:
      * @return true if the event loop should terminate and false otherwise
      */
     virtual bool connectionActive(std::string hostname, int32_t connectionsActive) = 0;
-   
+
     /*
      * Notify the client application that backpressure occured
      * @param hasBackpressure True if backpressure is beginning and false if it is ending

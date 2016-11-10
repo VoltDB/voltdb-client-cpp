@@ -47,6 +47,10 @@ public:
      */
     virtual bool callback(InvocationResponse response) throw (voltdb::Exception) = 0;
     virtual void abandon(AbandonReason reason) {}
+    // Mechanism for procedure to over-ride abandon property set in client in event of backpressure.
+    // @return true: allow abandoning of requests in case of back pressure
+    //         false: don't abandon the requests in back pressure scenario.
+    virtual bool allowAbandon() const {return true;}
     virtual ~ProcedureCallback() {}
 };
 }

@@ -134,7 +134,7 @@ private:
     ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::LibEventException);
 
     void initiateAuthentication(struct bufferevent *bev) throw (voltdb::LibEventException);
-    void finalizeAuthentication(PendingConnection* pc, struct bufferevent *bev) throw (voltdb::Exception, voltdb::ConnectException);
+    void finalizeAuthentication(PendingConnection* pc) throw (voltdb::Exception, voltdb::ConnectException);
 
     /*
      * Updates procedures and topology information for transaction routing algorithm
@@ -184,6 +184,7 @@ private:
     BEVToCallbackMap m_callbacks;
     boost::shared_ptr<voltdb::StatusListener> m_listener;
     bool m_invocationBlockedOnBackpressure;
+    bool m_backPressuredForOutstandingRequests;
     boost::atomic<bool> m_loopBreakRequested;
     bool m_isDraining;
     bool m_instanceIdIsSet;
