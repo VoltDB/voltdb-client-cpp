@@ -26,44 +26,49 @@
 #include "ByteBuffer.hpp"
 
 namespace voltdb {
-    class AuthenticationRequest {
-    public:
-        AuthenticationRequest(const std::string &username,
-                              const std::string &service,
-                              unsigned char* passwordHash,
-                              ClientAuthHashScheme hashScheme) : m_username(username),
-                                                                 m_service(service),
-                                                                 m_passwordHash(passwordHash),
-                                                                 m_hashScheme(hashScheme)  {
-        }
 
-        int32_t getSerializedSize() {
-            int sz = 8 //String length prefixes
-                    + (m_hashScheme == HASH_SHA256 ? 32 : 20) //SHA-1 hash of PW
-                    + static_cast<int32_t> (m_username.size())
-                    + static_cast<int32_t> (m_service.size())
-                    + 4 //length prefix
-                    + 1 //version number
-                    + 1; //scheme
-            return sz;
-        }
+class AuthenticationRequest {
+public:
 
-        void serializeTo(ByteBuffer *buffer) {
-            buffer->position(4);
-            buffer->putInt8(1); // Always version 1.
-            buffer->putInt8(m_hashScheme); //scheme.
-            buffer->putString(m_service);
-            buffer->putString(m_username);
-            buffer->put(reinterpret_cast<char*> (m_passwordHash), (m_hashScheme == HASH_SHA1 ? 20 : 32));
-            buffer->flip();
-            buffer->putInt32(0, buffer->limit() - 4);
-        }
-    private:
-        const std::string m_username;
-        const std::string m_service;
-        unsigned char* m_passwordHash;
-        ClientAuthHashScheme m_hashScheme;
-    };
+    AuthenticationRequest(const std::string &username,
+            const std::string &service,
+            unsigned char* passwordHash,
+            ClientAuthHashScheme hashScheme) : m_username(username),
+    m_service(service),
+    m_passwordHash(passwordHash),
+    m_hashScheme(hashScheme)
+    {
+    }
+
+    int32_t getSerializedSize()
+    {
+        int sz = 8 //String length prefixes
+                + (m_hashScheme == HASH_SHA256 ? 32 : 20) //SHA-1 hash of PW
+                + static_cast<int32_t> (m_username.size())
+                + static_cast<int32_t> (m_service.size())
+                + 4 //length prefix
+                + 1 //version number
+                + 1; //scheme
+        return sz;
+    }
+
+    void serializeTo(ByteBuffer *buffer)
+    {
+        buffer->position(4);
+        buffer->putInt8(1); // Always version 1.
+        buffer->putInt8(m_hashScheme); //scheme.
+        buffer->putString(m_service);
+        buffer->putString(m_username);
+        buffer->put(reinterpret_cast<char*> (m_passwordHash), (m_hashScheme == HASH_SHA1 ? 20 : 32));
+        buffer->flip();
+        buffer->putInt32(0, buffer->limit() - 4);
+    }
+private:
+    const std::string m_username;
+    const std::string m_service;
+    unsigned char* m_passwordHash;
+    ClientAuthHashScheme m_hashScheme;
+};
 }
 
 #endif /* VOLTDB_AUTHENTICATIONMESSAGE_HPP_ */

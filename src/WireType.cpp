@@ -24,36 +24,37 @@
 #include <cassert>
 
 namespace voltdb {
-std::string wireTypeToString(WireType type) {
-    switch (type) {
-    case WIRE_TYPE_ARRAY:
-        return std::string("ARRAY");
-    case WIRE_TYPE_NULL:
-        return std::string("NULL");
-    case WIRE_TYPE_TINYINT:
-        return std::string("TINYINT");
-    case WIRE_TYPE_SMALLINT:
-        return std::string("SMALLINT");
-    case WIRE_TYPE_INTEGER:
-        return std::string("INTEGER");
-    case WIRE_TYPE_BIGINT:
-        return std::string("BIGINT");
-    case WIRE_TYPE_FLOAT:
-        return std::string("FLOAT");
-    case WIRE_TYPE_STRING:
-        return std::string("STRING");
-    case WIRE_TYPE_TIMESTAMP:
-        return std::string("TIMESTAMP");
-    case WIRE_TYPE_DECIMAL:
-        return std::string("DECIMAL");
-    case WIRE_TYPE_VARBINARY:
-        return std::string("VARBINARY");
-    case WIRE_TYPE_GEOGRAPHY_POINT:
-        return std::string("GEOGRAPHY_POINT");
-    case WIRE_TYPE_GEOGRAPHY:
-        return std::string("GEOGRAPHY");
-    default:
-        return std::string("<<Unknown Type>>");
+
+    std::string wireTypeToString(WireType type) {
+        switch (type) {
+            case WIRE_TYPE_ARRAY:
+                return std::string("ARRAY");
+            case WIRE_TYPE_NULL:
+                return std::string("NULL");
+            case WIRE_TYPE_TINYINT:
+                return std::string("TINYINT");
+            case WIRE_TYPE_SMALLINT:
+                return std::string("SMALLINT");
+            case WIRE_TYPE_INTEGER:
+                return std::string("INTEGER");
+            case WIRE_TYPE_BIGINT:
+                return std::string("BIGINT");
+            case WIRE_TYPE_FLOAT:
+                return std::string("FLOAT");
+            case WIRE_TYPE_STRING:
+                return std::string("STRING");
+            case WIRE_TYPE_TIMESTAMP:
+                return std::string("TIMESTAMP");
+            case WIRE_TYPE_DECIMAL:
+                return std::string("DECIMAL");
+            case WIRE_TYPE_VARBINARY:
+                return std::string("VARBINARY");
+            case WIRE_TYPE_GEOGRAPHY_POINT:
+                return std::string("GEOGRAPHY_POINT");
+            case WIRE_TYPE_GEOGRAPHY:
+                return std::string("GEOGRAPHY");
+            default:
+                return std::string("<<Unknown Type>>");
+        }
     }
-}
 }

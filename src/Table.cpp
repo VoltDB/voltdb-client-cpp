@@ -27,12 +27,13 @@
 #include "Row.hpp"
 
 namespace voltdb {
+
     Table::Table(SharedByteBuffer buffer) : m_buffer(buffer) {
         buffer.position(5);
-        size_t columnCount = static_cast<size_t>(buffer.getInt16());
+        size_t columnCount = static_cast<size_t> (buffer.getInt16());
         assert(columnCount > 0);
         boost::shared_ptr<std::vector< voltdb::Column> > columns(
-                                new std::vector< voltdb::Column>(columnCount));
+                new std::vector< voltdb::Column>(columnCount));
         m_columns = columns;
 
         std::vector<int8_t> types(columnCount);
@@ -41,7 +42,7 @@ namespace voltdb {
         }
         for (size_t ii = 0; ii < columnCount; ii++) {
             bool wasNull = false;
-            m_columns->at(ii) = voltdb::Column(buffer.getString(wasNull), static_cast<WireType>(types[ii]));
+            m_columns->at(ii) = voltdb::Column(buffer.getString(wasNull), static_cast<WireType> (types[ii]));
             assert(!wasNull);
         }
         m_rowStart = m_buffer.getInt32(0) + 4;
@@ -50,27 +51,26 @@ namespace voltdb {
         m_buffer.position(m_buffer.limit());
     }
 
-    int8_t Table::getStatusCode() const{
+    int8_t Table::getStatusCode() const {
         return m_buffer.getInt8(4);
     }
 
-    TableIterator Table::iterator() const{
-        m_buffer.position(m_rowStart + 4);//skip row count
+    TableIterator Table::iterator() const {
+        m_buffer.position(m_rowStart + 4); //skip row count
         return TableIterator(m_buffer.slice(), m_columns, m_rowCount);
     }
 
-    int32_t Table::rowCount() const{
+    int32_t Table::rowCount() const {
         return m_rowCount;
     }
 
-    int32_t Table::columnCount() const{
-        return static_cast<int32_t>(m_columns->size());
+    int32_t Table::columnCount() const {
+        return static_cast<int32_t> (m_columns->size());
     }
 
     std::vector<voltdb::Column> Table::columns() const {
         return *m_columns;
     }
-
 
     std::string Table::toString() const {
         std::ostringstream ostream;
@@ -80,7 +80,7 @@ namespace voltdb {
 
     void Table::toString(std::ostringstream &ostream, std::string indent) const {
         ostream << indent << "Table size: " << m_buffer.capacity() << std::endl;
-        ostream << indent << "Status code: " << static_cast<int32_t>(getStatusCode()) << std::endl;
+        ostream << indent << "Status code: " << static_cast<int32_t> (getStatusCode()) << std::endl;
         ostream << indent << "Column names: ";
         for (size_t ii = 0; ii < m_columns->size(); ii++) {
             if (ii != 0) {
@@ -104,16 +104,17 @@ namespace voltdb {
         }
     }
 
-    void Table::operator >> (std::ostream &ostream) const {
+    void Table::operator>>(std::ostream &ostream) const {
 
         int32_t size = m_buffer.limit();
-        ostream.write((const char*)&size, sizeof(size));
+        ostream.write((const char*) &size, sizeof (size));
         if (size != 0) {
             ostream.write(m_buffer.bytes(), size);
         }
     }
 
     //Do easy checks first before heavyweight checks.
+
     bool Table::operator==(const Table& rhs) const {
         if (this == &rhs) return true;
         bool eq = (this->rowCount() == rhs.rowCount() && this->columnCount() == rhs.columnCount());
@@ -125,6 +126,7 @@ namespace voltdb {
     }
 
     //Do easy checks first before heavyweight checks.
+
     bool Table::operator!=(const Table& rhs) const {
         if (this == &rhs) return false;
         bool noteq = (this->rowCount() != rhs.rowCount() || this->columnCount() != rhs.columnCount());
@@ -137,7 +139,7 @@ namespace voltdb {
 
     static voltdb::SharedByteBuffer readByteBuffer(std::istream &istream) {
         int32_t size;
-        istream.read((char*)&size, sizeof(size));
+        istream.read((char*) &size, sizeof (size));
         if (size != 0) {
             boost::shared_array<char> buffer(new char[size]);
             istream.read(buffer.get(), size);

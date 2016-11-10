@@ -53,7 +53,7 @@ CPTEST_OBJS := test_obj/ConnectionPoolTest.o \
 			 test_obj/Tests.o
 
 
-THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a $(THIRD_PARTY_DIR)/libevent_pthreads.a
+THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a $(THIRD_PARTY_DIR)/libevent_openssl.a $(THIRD_PARTY_DIR)/libevent_pthreads.a
 
 RM := rm -rf
 
