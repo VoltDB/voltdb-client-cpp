@@ -13,7 +13,6 @@ ifeq ($(PLATFORM),Darwin)
     SSL_LIBS=-L/usr/local/opt/openssl/lib
     THIRD_PARTY_LIBS := $(VOLT_LIBS)/third_party_libs/osx/libevent_openssl.a \
                         $(VOLT_LIBS)/third_party_libs/osx/libevent.a \
-                        $(VOLT_LIBS)/third_party_libs/osx/libevent_core.a \
                         $(VOLT_LIBS)/third_party_libs/osx/libevent_pthreads.a
     SYSTEM_LIBS := $(SSL_LIBS) -lstdc++ -lssl -lcrypto -lpthread $(BOOST_LIBS) -lboost_system-mt -lboost_thread-mt
 endif
