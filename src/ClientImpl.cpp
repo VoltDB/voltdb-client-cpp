@@ -27,7 +27,6 @@
 #include <event2/buffer.h>
 #include <event2/thread.h>
 #include <event2/event.h>
-#include "sha1.h"
 #include "sha256.h"
 #include <boost/foreach.hpp>
 #include <sstream>
@@ -252,6 +251,10 @@ static void regularWriteCallback(struct bufferevent *bev, void *ctx) {
 }
 
 ClientImpl::~ClientImpl() {
+    if (m_useSSL) {
+        delete m_ssl_ctx;
+        delete m_ssl;
+    }
     for (std::vector<struct bufferevent *>::iterator i = m_bevs.begin(); i != m_bevs.end(); ++i) {
         bufferevent_free(*i);
     }
@@ -315,21 +318,46 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
     }
     m_enableAbandon = config.m_enableAbandon;
     m_hashScheme = config.m_hashScheme;
+    m_passwordHash = (unsigned char *)malloc(32*sizeof(char));
     if (m_hashScheme == HASH_SHA1) {
-        SHA1_CTX context;
+        SHA_CTX context;
         SHA1_Init(&context);
         SHA1_Update( &context, reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size());
         m_passwordHash = (unsigned char *)malloc(20*sizeof(char));
-        SHA1_Final ( &context, m_passwordHash);
+        SHA1_Final ( m_passwordHash, &context);
     } else if (config.m_hashScheme == HASH_SHA256) {
         m_passwordHash = (unsigned char *)malloc(32*sizeof(char));
         computeSHA256(config.m_password.c_str(), config.m_password.size(), m_passwordHash);
     } else {
         throw voltdb::LibEventException();
     }
-
     m_wakeupPipe[0] = -1;
     m_wakeupPipe[1] = -1;
+    
+    m_useSSL = config.m_useSSL;
+    if (m_useSSL) {
+        // Initialize OpenSSL
+        SSL_library_init();
+        ERR_load_crypto_strings();
+        SSL_load_error_strings();
+        OpenSSL_add_all_algorithms();
+
+        /* Create a new OpenSSL context */
+        m_ssl_ctx = SSL_CTX_new(SSLv23_method());
+        if (!m_ssl_ctx) {
+            throw voltdb::LibEventException();
+        }
+
+        // Create OpenSSL bufferevent and stack evhttp on top of it
+        m_ssl = SSL_new(m_ssl_ctx);
+        if (m_ssl == NULL) {
+            throw voltdb::LibEventException();
+        }
+    } else {
+        m_ssl_ctx = NULL;
+        m_ssl = NULL;
+    }
+        
 }
 
 class FreeBEVOnFailure {
@@ -356,6 +384,7 @@ private:
 void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException,
                                                                                      voltdb::LibEventException) {
     std::stringstream ss;
+
     ss << "ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port;
 
     if (pc->m_bufferEvent != NULL) {
@@ -364,7 +393,12 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
         pc->m_bufferEvent = NULL;
     }
 
-    pc->m_bufferEvent = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+
+    if (m_useSSL) {
+        pc->m_bufferEvent = bufferevent_openssl_socket_new(m_base, -1, m_ssl, BUFFEREVENT_SSL_CONNECTING, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+    } else {
+        pc->m_bufferEvent = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+    }
     if (pc->m_bufferEvent == NULL) {
         if (pc->m_keepConnecting) {
             createPendingConnection(pc->m_hostname, pc->m_port);

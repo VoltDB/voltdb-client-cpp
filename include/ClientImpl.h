@@ -23,14 +23,18 @@
 
 #ifndef VOLTDB_CLIENTIMPL_H_
 #define VOLTDB_CLIENTIMPL_H_
+
 #include <event2/event.h>
-#include <event2/bufferevent.h>
+#include <event2/bufferevent_ssl.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
+
 #include <map>
 #include <set>
 #include <list>
 #include <string>
 #include "ProcedureCallback.hpp"
-//#include "StatusListener.h"
 #include "Client.h"
 #include "Procedure.hpp"
 #include <boost/atomic.hpp>
@@ -38,6 +42,8 @@
 #include <boost/thread/mutex.hpp>
 #include "ClientConfig.h"
 #include "Distributer.h"
+
+
 namespace voltdb {
 
 class CxnContext;
@@ -215,6 +221,10 @@ private:
     ClientAuthHashScheme m_hashScheme;
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
     static const std::string SERVICE;
+
+    bool m_useSSL;
+    SSL_CTX *m_ssl_ctx;
+    SSL *m_ssl;
 };
 }
 #endif /* VOLTDB_CLIENTIMPL_H_ */

@@ -47,7 +47,6 @@ public:
             std::string password,
             StatusListener *listener,
             ClientAuthHashScheme scheme = HASH_SHA1, bool enableAbandon = false);
-    void enableSSL() { m_useSSL = true; };
     std::string m_username;
     std::string m_password;
     boost::shared_ptr<StatusListener> m_listener;

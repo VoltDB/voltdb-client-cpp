@@ -21,7 +21,7 @@ ifeq ($(PLATFORM),Linux)
     SYSTEM_LIBS := -lpthread -lrt -lboost_system -lboost_thread
 endif
 
-all: helloworld asynchelloworld voter
+all: helloworld asynchelloworld voter svoter
 
 asynchelloworld: AsyncHelloWorld.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 	$(CC) $(CFLAGS) AsyncHelloWorld.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o asynchelloworld
@@ -32,8 +32,8 @@ helloworld: HelloWorld.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 voter: Voter.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 	$(CC) $(CFLAGS) Voter.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o voter
 
-https-client: https-client.c openssl_hostname_validation.c $(VOLT_LIBS)/libvoltdbcpp.a
-	$(CC) $(CFLAGS) https-client.c openssl_hostname_validation.c $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o https-client
+svoter: SVoter.cpp $(VOLT_LIBS)/libvoltdbcpp.a
+	$(CC) $(CFLAGS) SVoter.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o svoter
 
 clean:
-	$(RM) https-client asynchelloworld helloworld voter *.dSYM *~
+	$(RM) asynchelloworld helloworld voter svoter *.dSYM *~
