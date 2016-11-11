@@ -24,8 +24,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef EVENT2_HTTP_COMPAT_H_INCLUDED_
-#define EVENT2_HTTP_COMPAT_H_INCLUDED_
+#ifndef _EVENT2_HTTP_COMPAT_H_
+#define _EVENT2_HTTP_COMPAT_H_
 
 /** @file event2/http_compat.h
 
@@ -39,10 +39,10 @@ extern "C" {
 #endif
 
 #include <event2/event-config.h>
-#ifdef EVENT__HAVE_SYS_TYPES_H
+#ifdef _EVENT_HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef EVENT__HAVE_SYS_TIME_H
+#ifdef _EVENT_HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
 
@@ -58,7 +58,7 @@ extern "C" {
  * @param port the port number on which the HTTP server should listen
  * @return an struct evhttp object
  */
-struct evhttp *evhttp_start(const char *address, ev_uint16_t port);
+struct evhttp *evhttp_start(const char *address, unsigned short port);
 
 /**
  * A connection object that can be used to for making HTTP requests.  The
@@ -68,7 +68,7 @@ struct evhttp *evhttp_start(const char *address, ev_uint16_t port);
  * @deprecated It does not allow an event base to be specified
  */
 struct evhttp_connection *evhttp_connection_new(
-	const char *address, ev_uint16_t port);
+	const char *address, unsigned short port);
 
 /**
  * Associates an event base with the connection - can only be called
@@ -87,4 +87,4 @@ void evhttp_connection_set_base(struct evhttp_connection *evcon,
 }
 #endif
 
-#endif /* EVENT2_EVENT_COMPAT_H_INCLUDED_ */
+#endif /* _EVENT2_EVENT_COMPAT_H_ */
