@@ -20,7 +20,7 @@ The source code is available in the [VoltDB Github repository]
 
 New Features in V6.8
 ==================
-- Update backpressure notification to notify when backpressure on client transition from on to off
+- Update backpressure notification to notify when backpressure on client transitions from on to off
 - Fix handling of pending connection logic where client gets disconnected and tries to reconnect, if socket timeout is longer than 10 seconds, it can potentially crash the client
 - Update setaffinity logic to not drop the set affinity request in case of backpresure with client configured with enable abandon set to true.
 
