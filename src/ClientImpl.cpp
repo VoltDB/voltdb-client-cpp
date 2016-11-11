@@ -1112,34 +1112,56 @@ bool ClientImpl::drain() throw (voltdb::Exception, voltdb::NoConnectionsExceptio
 class TopoUpdateCallback : public voltdb::ProcedureCallback
 {
 public:
-    TopoUpdateCallback(Distributer *dist):m_dist(dist){}
+    TopoUpdateCallback(Distributer *dist, ClientLogger *logger) : m_dist(dist), m_logger(logger) {}
+
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()){
-            std::cerr  << "Failure response TopoUpdateCallback::callback: " << response.statusString() << std::endl;
+            std::ostringstream os;
+            os << "Failure response TopoUpdateCallback::callback: " << response.statusString();
+            if (m_logger) {
+                m_logger->log(ClientLogger::ERROR, os.str());
+            }
+            else {
+                std::cerr << os.str() << std::endl;
+            }
             return false;
         }
         m_dist->updateAffinityTopology(response.results());
         return true;
     }
+
+    bool allowAbandon() const {return false;}
+
  private:
     Distributer *m_dist;
+    ClientLogger *m_logger;
 };
 
 class SubscribeCallback : public voltdb::ProcedureCallback
 {
 public:
-    SubscribeCallback(){}
+    SubscribeCallback(ClientLogger *logger) : m_logger(logger) {}
+
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()) {
-            std::cerr  << "Failure response SubscribeCallback::callback: " << response.statusString() << std::endl;
+            std::ostringstream os;
+            os << "Failure response SubscribeCallback::callback: " << response.statusString();
+            if (m_logger) {
+                m_logger->log(ClientLogger::ERROR, os.str());
+            }
+            else {
+                std::cerr  << os.str()<< std::endl;
+            }
             return false;
         }
         return true;
     }
 
     bool allowAbandon() const {return false;}
+private:
+    ClientLogger *m_logger;
 };
 
 /*
@@ -1148,12 +1170,19 @@ public:
 class ProcUpdateCallback : public voltdb::ProcedureCallback
 {
 public:
-    ProcUpdateCallback(Distributer *dist):m_dist(dist) {}
+    ProcUpdateCallback(Distributer *dist, ClientLogger *logger) : m_dist(dist), m_logger(logger) {}
 
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()) {
-            std::cerr  << "Failure response SubscribeCallback::callback: " << response.statusString() << std::endl;
+            std::ostringstream os;
+            os << "Failure response SubscribeCallback::callback: " << response.statusString();
+            if (m_logger) {
+                m_logger->log(ClientLogger::ERROR, os.str());
+            }
+            else {
+                std::cerr << os.str() << std::endl;
+            }
             return false;
         }
         m_dist->updateProcedurePartitioning(response.results());
@@ -1164,6 +1193,7 @@ public:
 
  private:
     Distributer *m_dist;
+    ClientLogger *m_logger;
 };
 
 
@@ -1176,7 +1206,7 @@ void ClientImpl::updateHashinator(){
     voltdb::ParameterSet* params = systemCatalogProc.params();
     params->addString("PROCEDURES");
 
-    boost::shared_ptr<ProcUpdateCallback> procCallback(new ProcUpdateCallback(&m_distributer));
+    boost::shared_ptr<ProcUpdateCallback> procCallback(new ProcUpdateCallback(&m_distributer, m_pLogger));
     invoke(systemCatalogProc, procCallback);
 
     parameterTypes.resize(2);
@@ -1187,7 +1217,7 @@ void ClientImpl::updateHashinator(){
     params = statisticsProc.params();
     params->addString("TOPO").addInt32(0);
 
-    boost::shared_ptr<TopoUpdateCallback> topoCallback(new TopoUpdateCallback(&m_distributer));
+    boost::shared_ptr<TopoUpdateCallback> topoCallback(new TopoUpdateCallback(&m_distributer, m_pLogger));
 
     invoke(statisticsProc, topoCallback);
 }
@@ -1200,7 +1230,7 @@ void ClientImpl::subscribeToTopologyNotifications(){
     voltdb::ParameterSet* params = statisticsProc.params();
     params->addString("TOPOLOGY");
 
-    boost::shared_ptr<SubscribeCallback> topoCallback(new SubscribeCallback());
+    boost::shared_ptr<SubscribeCallback> topoCallback(new SubscribeCallback(m_pLogger));
 
     invoke(statisticsProc, topoCallback);
 }
