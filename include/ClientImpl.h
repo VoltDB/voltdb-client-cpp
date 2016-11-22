@@ -51,18 +51,6 @@ class ClientImpl {
     friend class Client;
 
 public:
-
-    /*
-     * Map from client data to the appropriate callback for a specific connection
-     */
-    typedef std::map< int64_t, boost::shared_ptr<ProcedureCallback> > CallbackMap;
-
-    /*
-     * Map from buffer event (connection) to the connection's callback map
-     */
-    typedef std::map< struct bufferevent*, boost::shared_ptr<CallbackMap> > BEVToCallbackMap;
-
-
     /*
      * Create a connection to the VoltDB process running at the specified host authenticating
      * using the username and password provided when this client was constructed
@@ -71,7 +59,7 @@ public:
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(const std::string &hostname, const unsigned short port, const bool keepConnecting) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
+    void createConnection(const std::string &hostname, const unsigned short port, const bool keepConnecting) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException, voltdb::PipeCreationException, voltdb::TimerThreadException);
 
     /*
      * Synchronously invoke a stored procedure and return a the response.
@@ -99,6 +87,11 @@ public:
     void regularWriteCallback(struct bufferevent *bev);
     void eventBaseLoopBreak();
     void reconnectEventCallback();
+
+    void startTimerCheck() throw (voltdb::LibEventException);
+    void purgeTimedoutRequests();
+    void triggerScanForTimeoutRequestsEvent();
+
 
     /*
      * If one of the run family of methods is running on another thread, this
@@ -171,6 +164,16 @@ private:
      */
     void logMessage(ClientLogger::CLIENT_LOG_LEVEL severity, const std::string& msg);
 
+    void setUpTimeTracking() throw (voltdb::LibEventException);
+    void startTimerThread() throw (voltdb::TimerThreadException);
+    // function to update requests for tracking timeouts using current time
+    void queueToTimeoutList(const Procedure &proc, struct bufferevent *bev, int64_t clientData);
+
+    // Map from client data to the appropriate callback for a specific connection
+    typedef std::map< int64_t, boost::shared_ptr<ProcedureCallback> > CallbackMap;
+    // Map from buffer event (connection) to the connection's callback map
+    typedef std::map< struct bufferevent*, boost::shared_ptr<CallbackMap> > BEVToCallbackMap;
+
     Distributer  m_distributer;
     struct event_base *m_base;
     struct event * m_ev;
@@ -210,6 +213,16 @@ private:
 
     int m_wakeupPipe[2];
     boost::mutex m_wakeupPipeLock;
+
+    pthread_t m_timerThread;
+    struct event_base *m_timerBase;
+    struct event *m_timerEventPtr;
+    struct event *m_timeoutServiceEventPtr;
+    int m_timerCheckPipe[2];
+    bool m_timerEventInitialized;
+    struct timeval m_queryTimeout;
+
+    //std::deque<boost::shared_ptr<InvocationTimeTracker> > m_timeTrackerList;
 
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;

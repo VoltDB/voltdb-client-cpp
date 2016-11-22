@@ -180,6 +180,9 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
 static void authenticationEventCallback(struct bufferevent *bev, short events, void *ctx) {
     PendingConnection *pc = reinterpret_cast<PendingConnection*>(ctx);
 
+    if (events & BEV_EVENT_TIMEOUT) {
+        std::cout << "got timed out" << (int) events <<std::endl;
+    }
     if (events & BEV_EVENT_CONNECTED) {
         pc->initiateAuthentication(bev);
     } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF | BEV_EVENT_TIMEOUT)) {
@@ -225,6 +228,27 @@ void wakeupPipeCallback(evutil_socket_t fd, short what, void *ctx) {
     impl->eventBaseLoopBreak();
 }
 
+static void triggerTimeoutScanCB(evutil_socket_t fd, short event, void *ctx) {
+#if 0
+    std::ostringstream os;
+    os << "wakeUpTimerCallback: trigger scan for timedout requests: " << (long) pthread_self() << "\n";
+    std::cout << os.str() << std::endl;
+#endif
+    ClientImpl *impl = reinterpret_cast<ClientImpl*>(ctx);
+    impl->triggerScanForTimeoutRequestsEvent();
+}
+
+static void scanForTimedoutRequestsCB(evutil_socket_t fd, short event, void *ctx) {
+    ClientImpl *impl = reinterpret_cast<ClientImpl*>(ctx);
+    char buf[8];
+    ssize_t bytesRead = read(fd, buf, sizeof buf);
+#if 0
+    std::ostringstream os;
+    os << "Scan timeout, bytes read: " << bytesRead << ", thread: " << (long) pthread_self() << "\n";
+    std::cout << os.str() << std::endl;
+#endif
+    //todo: enable me impl->purgeTimedoutRequests();
+    }
 /*
  * Only has to handle the case where there is an error or EOF
  */
@@ -267,6 +291,28 @@ ClientImpl::~ClientImpl() {
     if (m_ev != NULL) {
         event_free(m_ev);
     }
+
+    if (m_timerEventInitialized) {
+        pthread_cancel(m_timerThread);
+        // cancel and free any timer events
+        if (m_timerEventPtr) {
+            if (evtimer_pending(m_timerEventPtr, NULL)) {
+                evtimer_del(m_timerEventPtr);
+            }
+            event_free(m_timerEventPtr);
+        }
+        // free up rest of timer management trackers
+        if (m_timeoutServiceEventPtr) {
+            event_free(m_timeoutServiceEventPtr);
+        }
+        if (m_timerBase) {
+            event_base_free(m_timerBase);
+        }
+        ::close(m_timerCheckPipe[0]);
+        ::close(m_timerCheckPipe[1]);
+        m_timerEventInitialized = false;
+    }
+
     event_base_free(m_base);
     if (m_wakeupPipe[1] != -1) {
        ::close(m_wakeupPipe[0]);
@@ -293,6 +339,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         m_isDraining(false), m_instanceIdIsSet(false), m_outstandingRequests(0), m_leaderAddress(-1),
         m_clusterStartTime(-1), m_username(config.m_username), m_maxOutstandingRequests(config.m_maxOutstandingRequests),
         m_ignoreBackpressure(false), m_useClientAffinity(false),m_updateHashinator(false), m_pendingConnectionSize(0),
+        m_timerThread(0), m_timerBase(NULL), m_timerEventPtr(NULL), m_timeoutServiceEventPtr(NULL), m_timerEventInitialized(false),
         m_pLogger(0)
 {
 
@@ -330,6 +377,17 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
 
     m_wakeupPipe[0] = -1;
     m_wakeupPipe[1] = -1;
+
+    m_timerBase = event_base_new();
+    assert(m_timerBase);
+    if (m_timerBase == NULL) {
+        throw voltdb::LibEventException();
+    }
+    m_timerCheckPipe[0] = -1;
+    m_timerCheckPipe[1] = -1;
+
+    m_queryTimeout.tv_sec = 10;
+    m_queryTimeout.tv_usec = 0;
 }
 
 class FreeBEVOnFailure {
@@ -539,11 +597,60 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc) throw (voltdb::Ex
     protector.success();
 }
 
+void *timerThreadRun(void *ctx) {
+    ClientImpl *client = reinterpret_cast<ClientImpl*>(ctx);
+    client->startTimerCheck();
+}
+
+void ClientImpl::startTimerCheck() throw (voltdb::LibEventException) {
+    if (event_base_dispatch(m_timerBase) == -1) {
+        throw LibEventException("failed running timer event base");
+    } else {
+        //std::cout << "dispatched timer event: " << std::endl;
+    }
+}
+
+void ClientImpl::startTimerThread() throw (voltdb::TimerThreadException){
+    pthread_attr_t threadAttr;
+    pthread_attr_init(&threadAttr);
+    pthread_attr_setdetachstate(&threadAttr, PTHREAD_CREATE_DETACHED);
+    int status = pthread_create(&m_timerThread, &threadAttr, timerThreadRun, this);
+    if (status != 0) {
+        std::ostringstream os;
+        os << "Thread creation failed, failure code: " << status;
+        logMessage(ClientLogger::ERROR, os.str());
+        throw new voltdb::TimerThreadException();
+    }
+}
+
+void ClientImpl::setUpTimeTracking() throw (voltdb::LibEventException){
+    // setup to receive timeout scan notification
+    m_timeoutServiceEventPtr = event_new(m_base, m_timerCheckPipe[0], EV_READ | EV_PERSIST, scanForTimedoutRequestsCB, this);
+    if (m_timeoutServiceEventPtr == NULL) {
+        throw LibEventException();
+    }
+    event_add(m_timeoutServiceEventPtr, NULL);
+
+    // setup to send timeout scan notification
+    m_timerEventPtr = evtimer_new(m_timerBase, triggerTimeoutScanCB, this);
+    if (m_timerEventPtr == NULL) {
+        throw LibEventException("evtimer_new failed");
+    }
+    if (evtimer_add(m_timerEventPtr, &m_queryTimeout) != 0) {
+        throw LibEventException("failed adding timeout event");
+    }
+    startTimerThread();
+
+    // todo: dispatch on m_base here?
+}
+
 void ClientImpl::createConnection(const std::string& hostname,
                                   const unsigned short port,
                                   const bool keepConnecting) throw (voltdb::Exception,
                                                                     voltdb::ConnectException,
-                                                                    voltdb::LibEventException) {
+                                                                    voltdb::LibEventException,
+                                                                    voltdb::PipeCreationException,
+                                                                    voltdb::TimerThreadException) {
 
     std::stringstream ss;
     ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
@@ -558,6 +665,17 @@ void ClientImpl::createConnection(const std::string& hostname,
     } else {
         m_wakeupPipe[1] = -1;
     }
+
+    if (m_timerEventInitialized == false) {
+        if (pipe(m_timerCheckPipe) == 0) {
+            setUpTimeTracking();
+            m_timerEventInitialized = true;
+        }
+        else {
+            throw PipeCreationException();
+        }
+    }
+
     PendingConnectionSPtr pc(new PendingConnection(hostname, port, keepConnecting, m_base, this));
     initiateConnection(pc);
 
@@ -1261,4 +1379,17 @@ void ClientImpl::logMessage(ClientLogger::CLIENT_LOG_LEVEL severity, const std::
     }
 }
 
+void ClientImpl::triggerScanForTimeoutRequestsEvent() {
+    static unsigned char c = 'w';
+    ssize_t bytes = write(m_timerCheckPipe[1], &c, 1);
+    (void) bytes;
+    int status = evtimer_add(m_timerEventPtr, &m_queryTimeout);
+    if (status != 0) {
+        std::ostringstream os;
+        os << "Failed to add timer event: " << status;
+        logMessage(ClientLogger::ERROR, os.str());
+        //todo: deleteme
+        std::cout << os.str() << std::endl;
+    }
+}
 }
