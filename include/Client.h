@@ -170,6 +170,8 @@ public:
     void setLoggerCallback(ClientLogger *pLogger);
 
     int32_t outstandingRequests() const;
+    // todo: deleteme
+    size_t getNumberOfPendingTimeoutRequests() const;
 
     ~Client();
 private:

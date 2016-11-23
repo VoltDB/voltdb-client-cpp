@@ -124,6 +124,10 @@ int32_t Client::outstandingRequests() const {
     return m_impl->outstandingRequests();
 }
 
+size_t Client::getNumberOfPendingTimeoutRequests() const {
+    return m_impl->getNumberOfPendingTimeoutRequests();
+}
+
 void Client::setLoggerCallback(ClientLogger *pLogger) {
     m_impl->setLoggerCallback(pLogger);
 }

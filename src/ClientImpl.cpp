@@ -126,12 +126,13 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
     PendingConnection *pc = reinterpret_cast<PendingConnection*>(ctx);
     struct evbuffer *evbuf = bufferevent_get_input(bev);
 
-    assert(pc->m_bufferEvent == bev);
     if (pc->m_bufferEvent != bev) {
         std::ostringstream os;
-        os << "authenticationReadCallback, PC buffer event: " << pc->m_bufferEvent
-                << ", bev: " << bev;
+        os << "authenticationReadCallback PC buffer event: " << pc->m_bufferEvent
+                << ", bev: " << bev << " " << pc->m_hostname << ":" << pc->m_port ;
+        os << ", thread id: " << (long) pthread_self();
         std::cerr << os.str() << std::endl;
+        assert(pc->m_bufferEvent == bev);
     }
     if (pc->m_authenticationResponseLength < 0) {
         char messageLengthBytes[4];
@@ -147,6 +148,8 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
             return;
         }
     }
+    //os << pc->m_hostname << ":" << pc->m_port << " bev: " << pc->m_bufferEvent << " thread-id: " << (long) pthread_self();
+    //std::cout << os.str() << std::endl;
 
     ScopedByteBuffer buffer(pc->m_authenticationResponseLength);
     int read = evbuffer_remove(evbuf, buffer.bytes(), static_cast<size_t>(pc->m_authenticationResponseLength));
@@ -180,16 +183,27 @@ static void authenticationReadCallback(struct bufferevent *bev, void *ctx) {
 static void authenticationEventCallback(struct bufferevent *bev, short events, void *ctx) {
     PendingConnection *pc = reinterpret_cast<PendingConnection*>(ctx);
 
+    //todo: delete me
     if (events & BEV_EVENT_TIMEOUT) {
         std::cout << "got timed out" << (int) events <<std::endl;
     }
+
     if (events & BEV_EVENT_CONNECTED) {
         pc->initiateAuthentication(bev);
     } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF | BEV_EVENT_TIMEOUT)) {
         pc->m_status = false;
         //pc->m_loginExchangeCompleted = true;
+
+#if 0
+        std::ostringstream os;
+        os << "AEC: free bev: " << bev << " event:" << (int) events <<
+                " pc buffEvent: " << pc->m_bufferEvent <<
+                " " << pc->m_hostname << ":" << pc->m_port <<
+                " thread-id: " << (long) pthread_self();
+        std::cout << os.str() << std::endl;
+#endif
+
         if (bev) {
-            //std::cout << "AEC: free bev: " << bev <<std::endl;;
             bufferevent_free(bev);
             pc->m_bufferEvent = NULL;
         }
@@ -338,7 +352,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         m_backPressuredForOutstandingRequests(false), m_loopBreakRequested(false),
         m_isDraining(false), m_instanceIdIsSet(false), m_outstandingRequests(0), m_leaderAddress(-1),
         m_clusterStartTime(-1), m_username(config.m_username), m_maxOutstandingRequests(config.m_maxOutstandingRequests),
-        m_ignoreBackpressure(false), m_useClientAffinity(false),m_updateHashinator(false), m_pendingConnectionSize(0),
+        m_ignoreBackpressure(false), m_useClientAffinity(true),m_updateHashinator(false), m_pendingConnectionSize(0),
         m_timerThread(0), m_timerBase(NULL), m_timerEventPtr(NULL), m_timeoutServiceEventPtr(NULL), m_timerEventInitialized(false),
         m_pLogger(0)
 {
@@ -438,6 +452,7 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
     logMessage(ClientLogger::INFO, ss.str());
     FreeBEVOnFailure protector(pc.get());
     bufferevent_setcb(pc->m_bufferEvent, authenticationReadCallback, NULL, authenticationEventCallback, pc.get());
+    //std::cout << ss.str() << " thread-id: " << (long) pthread_self() << std::endl;
 
     if (bufferevent_socket_connect_hostname(pc->m_bufferEvent, NULL, AF_INET, pc->m_hostname.c_str(), pc->m_port) != 0) {
         if (pc->m_keepConnecting) {
@@ -534,8 +549,14 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc) throw (voltdb::Ex
                boost::shared_ptr<CxnContext>(new CxnContext(pc->m_hostname, pc->m_port));
         boost::shared_ptr<CallbackMap> callbackMap(new CallbackMap());
         m_callbacks[bev] = callbackMap;
-        pc->m_bufferEvent = NULL;
+#if 0
+        std::ostringstream os;
+        os << "finalizeConnection for " << pc->m_hostname << ":" << pc->m_port << " bev: " << pc->m_bufferEvent <<
+                " thread-id: " << (long) pthread_self();
+        std::cout << os.str() << std::endl;
+#endif
 
+        pc->m_bufferEvent = NULL;
         bufferevent_setcb(bev,
                           voltdb::regularReadCallback,
                           voltdb::regularWriteCallback,
@@ -615,6 +636,7 @@ void ClientImpl::startTimerThread() throw (voltdb::TimerThreadException){
     pthread_attr_init(&threadAttr);
     pthread_attr_setdetachstate(&threadAttr, PTHREAD_CREATE_DETACHED);
     int status = pthread_create(&m_timerThread, &threadAttr, timerThreadRun, this);
+    pthread_attr_destroy(&threadAttr);
     if (status != 0) {
         std::ostringstream os;
         os << "Thread creation failed, failure code: " << status;
@@ -655,6 +677,10 @@ void ClientImpl::createConnection(const std::string& hostname,
     std::stringstream ss;
     ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
     logMessage(ClientLogger::INFO, ss.str());
+#if 0
+    ss << " thread-id: " << (long) pthread_self();
+    std::cout << ss.str() << std::endl;
+#endif
 
     if (0 == pipe(m_wakeupPipe)) {
         if (m_ev != NULL) {
@@ -693,6 +719,14 @@ void ClientImpl::createConnection(const std::string& hostname,
         }
     }
     if (keepConnecting) {
+#if 0
+        ss << " pending connection event: " << pc->m_bufferEvent;
+        std::cout << ss.str() << std::endl;
+#endif
+        if (pc->m_bufferEvent != NULL)  {
+            bufferevent_free(pc->m_bufferEvent);
+            pc->m_bufferEvent = NULL;
+        }
         createPendingConnection(hostname, port);
     } else {
         throw ConnectException();
@@ -711,6 +745,11 @@ void ClientImpl::reconnectEventCallback() {
     const int64_t now = get_sec_time();
     BOOST_FOREACH( PendingConnectionSPtr& pc, m_pendingConnectionList ) {
         if ((now - pc->m_startPending) > RECONNECT_INTERVAL) {
+#if 0
+            std::ostringstream os;
+            os << "REC "<< pc->m_hostname <<":" << pc->m_port << " bev: " << pc->m_bufferEvent << " thread-id: " << (long) pthread_self();
+            std::cout << os.str() << std::endl;
+#endif
             pc->m_startPending = now;
             initiateConnection(pc);
         }
@@ -735,7 +774,7 @@ void ClientImpl::createPendingConnection(const std::string &hostname, const unsi
     }
 
     struct timeval tv;
-    tv.tv_sec = (time > 0)? RECONNECT_INTERVAL: 0;
+    tv.tv_sec = (time > 0)? RECONNECT_INTERVAL : 0;
     tv.tv_usec = 0;
 
     event_base_once(m_base, -1, EV_TIMEOUT, reconnectCallback, this, &tv);
@@ -761,6 +800,72 @@ public:
 private:
     InvocationResponse *m_responseOut;
 };
+
+
+/* compares value first timestamp with second timestamp and returns
+ * 0 if equal,
+ * 1 if first is greater or
+ * -1 if first is less thn second
+
+ */
+int compareTimeVal(const struct timeval& first, const struct timeval& second) {
+    if (first.tv_sec < second.tv_sec) {
+        return -1;
+    }
+    if (first.tv_sec > second.tv_sec) {
+        return 1;
+    }
+    if (first.tv_usec < second.tv_usec) {
+        return -1;
+    }
+    if (first.tv_usec > second.tv_usec) {
+        return 1;
+    }
+    return 0;
+}
+
+void ClientImpl::queueToTimeoutList(const Procedure &proc, struct bufferevent *bev, int64_t clientData) {
+    ProcedureInfo *procInfo = NULL;
+    //std::ostringstream os;
+    //os << "queueToTimeoutList";
+    try {
+        procInfo = m_distributer.getProcedure(proc.getName());
+    }
+    catch (const std::exception &excp) {
+        std::ostringstream os;
+        os << "Failed fetching the procedure information: " << excp.what();
+        if (m_pLogger) {
+            m_pLogger->log(ClientLogger::ERROR, os.str());
+            return;
+        }
+        std::cerr << os.str() << std::endl;
+    }
+    if (procInfo && procInfo->m_readOnly) {
+        struct timeval expirationTime;
+        int status = gettimeofday(&expirationTime, NULL);
+        assert(status == 0);
+        expirationTime.tv_sec += m_queryTimeout.tv_sec;
+        expirationTime.tv_usec +=m_queryTimeout.tv_usec;
+        // todo: is it needed to lock and perform the queue update below
+        boost::shared_ptr<InvocationTimeTracker> timeStampRequest (new InvocationTimeTracker(bev, clientData, expirationTime));
+        if (m_timeTrackerList.empty()) {
+            m_timeTrackerList.push_front(timeStampRequest);
+        } else {
+            std::deque<boost::shared_ptr<InvocationTimeTracker> >::iterator it = m_timeTrackerList.begin();
+            while(it != m_timeTrackerList.end()) {
+                if (compareTimeVal(timeStampRequest.get()->getExpirationTime(), it->get()->getExpirationTime()) <= 0) {
+                    ++it;
+                    continue;
+                }
+                break;
+            }
+            m_timeTrackerList.insert(it, timeStampRequest);
+            //os << " procname: " << proc.getName() << ", inserted element: " << m_timeTrackerList.size();
+        }
+    }
+    //std::cout << os.str();
+
+}
 
 InvocationResponse ClientImpl::invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
 
@@ -971,6 +1076,8 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
     }
     m_outstandingRequests++;
     (*m_callbacks[bev])[clientData] = callback;
+    //std::cout << "call to queue timerequest" << std::endl;
+    queueToTimeoutList(proc, bev, clientData);
 
     if (evbuffer_get_length(evbuf) >  262144) {
         m_backpressuredBevs.insert(bev);
@@ -1147,6 +1254,12 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         if (m_outstandingRequests < m_maxOutstandingRequests) {
             m_backPressuredForOutstandingRequests = false;
         }
+
+#if 0
+        ss.str("");
+        ss << "regEventCB " << m_contexts[bev]->m_name << ":" << m_contexts[bev]->m_port ;
+        std::cout << ss.str() << std::endl;
+#endif
 
         createPendingConnection(m_contexts[bev]->m_name, m_contexts[bev]->m_port, get_sec_time());
 

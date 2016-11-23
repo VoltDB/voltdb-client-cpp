@@ -28,6 +28,7 @@
 #include <map>
 #include <set>
 #include <list>
+#include <deque>
 #include <string>
 #include "ProcedureCallback.hpp"
 //#include "StatusListener.h"
@@ -91,6 +92,7 @@ public:
     void startTimerCheck() throw (voltdb::LibEventException);
     void purgeTimedoutRequests();
     void triggerScanForTimeoutRequestsEvent();
+    size_t getNumberOfPendingTimeoutRequests() const { return m_timeTrackerList.size(); }
 
 
     /*
@@ -169,6 +171,23 @@ private:
     // function to update requests for tracking timeouts using current time
     void queueToTimeoutList(const Procedure &proc, struct bufferevent *bev, int64_t clientData);
 
+    class InvocationTimeTracker {
+        public:
+            InvocationTimeTracker(struct bufferevent *bev,
+                    int64_t clientData,
+                    const struct timeval &expirationTime) : m_bev(bev),
+                            m_clientData(clientData) {
+                ::memcpy(&m_expirationTime, &expirationTime, sizeof(struct timeval));
+            }
+            struct bufferevent* getBEV() { return m_bev; }
+            int64_t getClientData() const { return m_clientData; }
+            const struct timeval& getExpirationTime() const { return m_expirationTime; }
+        private:
+            struct bufferevent *m_bev;
+            int64_t m_clientData;
+            struct timeval m_expirationTime;
+    };
+
     // Map from client data to the appropriate callback for a specific connection
     typedef std::map< int64_t, boost::shared_ptr<ProcedureCallback> > CallbackMap;
     // Map from buffer event (connection) to the connection's callback map
@@ -214,20 +233,21 @@ private:
     int m_wakeupPipe[2];
     boost::mutex m_wakeupPipeLock;
 
-    pthread_t m_timerThread;
     struct event_base *m_timerBase;
     struct event *m_timerEventPtr;
     struct event *m_timeoutServiceEventPtr;
     int m_timerCheckPipe[2];
     bool m_timerEventInitialized;
     struct timeval m_queryTimeout;
-
-    //std::deque<boost::shared_ptr<InvocationTimeTracker> > m_timeTrackerList;
+    pthread_t m_timerThread;
+    std::deque<boost::shared_ptr<InvocationTimeTracker> > m_timeTrackerList;
 
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
     static const std::string SERVICE;
+
+    //std::ostringstream debug;
 };
 }
 #endif /* VOLTDB_CLIENTIMPL_H_ */
