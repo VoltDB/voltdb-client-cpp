@@ -39,6 +39,7 @@
 #include <boost/thread/mutex.hpp>
 #include "ClientConfig.h"
 #include "Distributer.h"
+//#include "TimeTracker.h"
 namespace voltdb {
 
 class CxnContext;
@@ -93,8 +94,7 @@ public:
     void purgeTimedoutRequests();
     void triggerScanForTimeoutRequestsEvent();
     size_t getNumberOfPendingTimeoutRequests() const { return m_timeTrackerList.size(); }
-
-
+    void clearPendingTimeoutRequests() { m_timeTrackerList.clear(); }
     /*
      * If one of the run family of methods is running on another thread, this
      * method will instruct it to exit as soon as it finishes it's current
@@ -169,30 +169,47 @@ private:
     void setUpTimeTracking() throw (voltdb::LibEventException);
     void startTimerThread() throw (voltdb::TimerThreadException);
     // function to update requests for tracking timeouts using current time
-    void queueToTimeoutList(const Procedure &proc, struct bufferevent *bev, int64_t clientData);
+    void queueToTimeoutList(const Procedure &proc, struct bufferevent *bev, int64_t clientData, timeval expirationTime);
 
-    class InvocationTimeTracker {
-        public:
-            InvocationTimeTracker(struct bufferevent *bev,
-                    int64_t clientData,
-                    const struct timeval &expirationTime) : m_bev(bev),
-                            m_clientData(clientData) {
-                ::memcpy(&m_expirationTime, &expirationTime, sizeof(struct timeval));
-            }
-            struct bufferevent* getBEV() { return m_bev; }
-            int64_t getClientData() const { return m_clientData; }
-            const struct timeval& getExpirationTime() const { return m_expirationTime; }
-        private:
-            struct bufferevent *m_bev;
-            int64_t m_clientData;
-            struct timeval m_expirationTime;
+    typedef std::pair<int64_t, bufferevent*> ClientBEVPair;
+    ClientBEVPair deleteEntrytFromTimerTrackerList(timeval expirationTime);
+
+    // helpers n constants
+    class InvocationTimer {
+    public:
+        InvocationTimer(struct bufferevent *bev, int64_t clientData,
+                timeval expirationTime) : m_bev(bev),
+                                        m_clientData(clientData) {
+            ::memcpy(&m_expirationTime, &expirationTime, sizeof(struct timeval));
+        }
+
+        struct bufferevent* getBEV() { return m_bev; }
+        int64_t getClientData() const { return m_clientData; }
+        timeval getExpirationTime() const { return m_expirationTime; }
+    private:
+        struct bufferevent *m_bev;
+        int64_t m_clientData;
+        struct timeval m_expirationTime;
+    };
+
+    class CallBackBookeeping {
+    public:
+        CallBackBookeeping(const boost::shared_ptr<ProcedureCallback> &callback,
+                timeval timeout) : m_procCallBack(callback), m_timeoutIfReadOnly(timeout) {}
+        inline boost::shared_ptr<ProcedureCallback>  getCallback() const { return m_procCallBack; }
+        inline timeval getTime() const { return m_timeoutIfReadOnly; }
+    private:
+        const boost::shared_ptr<ProcedureCallback> m_procCallBack;
+        const timeval m_timeoutIfReadOnly;
     };
 
     // Map from client data to the appropriate callback for a specific connection
-    typedef std::map< int64_t, boost::shared_ptr<ProcedureCallback> > CallbackMap;
+    //typedef std::map< int64_t, boost::shared_ptr<ProcedureCallback> > CallbackMap;
+    typedef std::map< int64_t, boost::shared_ptr<CallBackBookeeping> > CallbackMap;
     // Map from buffer event (connection) to the connection's callback map
     typedef std::map< struct bufferevent*, boost::shared_ptr<CallbackMap> > BEVToCallbackMap;
 
+    // data member variables
     Distributer  m_distributer;
     struct event_base *m_base;
     struct event * m_ev;
@@ -240,7 +257,8 @@ private:
     bool m_timerEventInitialized;
     struct timeval m_queryTimeout;
     pthread_t m_timerThread;
-    std::deque<boost::shared_ptr<InvocationTimeTracker> > m_timeTrackerList;
+    struct timeval m_timerThreadTv;
+    std::deque<boost::shared_ptr<InvocationTimer> > m_timeTrackerList;
 
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;

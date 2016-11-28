@@ -128,6 +128,9 @@ size_t Client::getNumberOfPendingTimeoutRequests() const {
     return m_impl->getNumberOfPendingTimeoutRequests();
 }
 
+void Client::clearPendingTimeoutRequests() {
+    return m_impl->clearPendingTimeoutRequests();
+}
 void Client::setLoggerCallback(ClientLogger *pLogger) {
     m_impl->setLoggerCallback(pLogger);
 }

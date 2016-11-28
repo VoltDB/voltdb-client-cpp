@@ -261,8 +261,8 @@ static void scanForTimedoutRequestsCB(evutil_socket_t fd, short event, void *ctx
     os << "Scan timeout, bytes read: " << bytesRead << ", thread: " << (long) pthread_self() << "\n";
     std::cout << os.str() << std::endl;
 #endif
-    //todo: enable me impl->purgeTimedoutRequests();
-    }
+    impl->purgeTimedoutRequests();
+}
 /*
  * Only has to handle the case where there is an error or EOF
  */
@@ -400,8 +400,11 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
     m_timerCheckPipe[0] = -1;
     m_timerCheckPipe[1] = -1;
 
-    m_queryTimeout.tv_sec = 10;
+    m_queryTimeout.tv_sec = 2;
     m_queryTimeout.tv_usec = 0;
+
+    m_timerThreadTv.tv_sec = 1;
+    m_timerThreadTv.tv_usec = 0;
 }
 
 class FreeBEVOnFailure {
@@ -824,7 +827,11 @@ int compareTimeVal(const struct timeval& first, const struct timeval& second) {
     return 0;
 }
 
-void ClientImpl::queueToTimeoutList(const Procedure &proc, struct bufferevent *bev, int64_t clientData) {
+bool isTimeValLessThn (const struct timeval& first, const struct timeval& second) {
+    return compareTimeVal(first, second) < 0;
+}
+
+void ClientImpl::queueToTimeoutList(const Procedure &proc, struct bufferevent *bev, int64_t clientData, timeval expirationTime) {
     ProcedureInfo *procInfo = NULL;
     //std::ostringstream os;
     //os << "queueToTimeoutList";
@@ -841,18 +848,15 @@ void ClientImpl::queueToTimeoutList(const Procedure &proc, struct bufferevent *b
         std::cerr << os.str() << std::endl;
     }
     if (procInfo && procInfo->m_readOnly) {
-        struct timeval expirationTime;
-        int status = gettimeofday(&expirationTime, NULL);
-        assert(status == 0);
-        expirationTime.tv_sec += m_queryTimeout.tv_sec;
-        expirationTime.tv_usec +=m_queryTimeout.tv_usec;
         // todo: is it needed to lock and perform the queue update below
-        boost::shared_ptr<InvocationTimeTracker> timeStampRequest (new InvocationTimeTracker(bev, clientData, expirationTime));
+        boost::shared_ptr<InvocationTimer> timeStampRequest (new InvocationTimer(bev, clientData, expirationTime));
         if (m_timeTrackerList.empty()) {
             m_timeTrackerList.push_front(timeStampRequest);
         } else {
-            std::deque<boost::shared_ptr<InvocationTimeTracker> >::iterator it = m_timeTrackerList.begin();
+            std::deque<boost::shared_ptr<InvocationTimer> >::iterator it = m_timeTrackerList.begin();
+            int iteration = 0;
             while(it != m_timeTrackerList.end()) {
+                iteration++;
                 if (compareTimeVal(timeStampRequest.get()->getExpirationTime(), it->get()->getExpirationTime()) <= 0) {
                     ++it;
                     continue;
@@ -865,6 +869,91 @@ void ClientImpl::queueToTimeoutList(const Procedure &proc, struct bufferevent *b
     }
     //std::cout << os.str();
 
+}
+
+ClientImpl::ClientBEVPair ClientImpl::deleteEntrytFromTimerTrackerList(timeval expirationTime) {
+    ClientBEVPair result (INT64_MAX, NULL);
+    if (m_timeTrackerList.empty()) {
+        return result;
+    }
+
+    std::deque<boost::shared_ptr<InvocationTimer> >::reverse_iterator rReqTimeIter = m_timeTrackerList.rbegin();
+    std::deque<boost::shared_ptr<InvocationTimer> >::reverse_iterator rEnd = m_timeTrackerList.rend();
+    int compareResult = -1;
+
+    while ((rReqTimeIter != rEnd) && (compareResult < 0)) {
+        compareResult = compareTimeVal(rReqTimeIter->get()->getExpirationTime(), expirationTime);
+        //iteration++;
+        //std::cout << "no match " << rReqTimeIter->get()->getExpirationTime().tv_sec << ":"
+       //                     << rReqTimeIter->get()->getExpirationTime().tv_usec << " iterations: " << iteration << std::endl;
+        if (compareResult == 0) {
+            //std::cout << "deleting entry " << rReqTimeIter->get()->getExpirationTime().tv_sec << ":"
+                    //<< rReqTimeIter->get()->getExpirationTime().tv_usec << " iterations: " << iteration << std::endl;
+            result.first = rReqTimeIter->get()->getClientData();
+            result.second = rReqTimeIter->get()->getBEV();
+            m_timeTrackerList.erase(--(rReqTimeIter.base()));
+            break;
+        }
+        ++rReqTimeIter;
+    }
+    return result;
+}
+
+void ClientImpl::purgeTimedoutRequests() {
+    struct timeval now;
+    event_base_gettimeofday_cached(m_base, &now);
+
+    if (!m_timeTrackerList.empty()) {
+        std::deque<boost::shared_ptr<InvocationTimer> >::reverse_iterator requestsFifoIter = m_timeTrackerList.rbegin();
+
+        boost::shared_ptr<CallbackMap> callbackMap;
+        BEVToCallbackMap::iterator bevToCallbackIter;
+        CallbackMap::iterator callbackmapIter;
+        std::vector<voltdb::Table> dummyTable;
+        InvocationResponse response = InvocationResponse(0, voltdb::STATUS_CODE_CONNECTION_TIMEOUT, "",
+                voltdb::STATUS_CODE_UNINITIALIZED_APP_STATUS_CODE, "No response received in allotted time",
+                dummyTable);
+
+        int requestsTimeout = 0;
+        // clean up as many requests, using time as priority, which have been serviced
+        while ((requestsFifoIter != m_timeTrackerList.rend()) &&
+                (compareTimeVal(requestsFifoIter->get()->getExpirationTime(), now) <= 0)) {
+            // cleanup callback for timed out request
+            struct bufferevent *bev = requestsFifoIter->get()->getBEV();
+            int64_t clientData = requestsFifoIter->get()->getClientData();
+            // connection lost
+            bevToCallbackIter = m_callbacks.find(bev);
+            if (bevToCallbackIter != m_callbacks.end()) {
+                callbackMap = bevToCallbackIter->second;
+                callbackmapIter = callbackMap->find(clientData);
+                if (callbackmapIter != callbackMap->end()) {
+                    response.setClientData(clientData);
+                    try {
+                        callbackmapIter->second->getCallback()->callback(response);
+                    } catch (std::exception &excp) {
+                        if (m_listener.get() != NULL) {
+                            try {
+                                m_listener->uncaughtException(excp, callbackmapIter->second->getCallback(), response);
+                            } catch (std::exception &e) {
+                                std::ostringstream msg;
+                                msg << "Uncaught exception. " << e.what();
+                                logMessage(ClientLogger::ERROR, msg.str());
+                            }
+                        }
+                    }
+
+                }
+                callbackMap->erase(callbackmapIter);
+                --m_outstandingRequests;
+            }
+            // purge entry from tracking list
+            ++requestsFifoIter;
+            requestsFifoIter =
+                    std::deque<boost::shared_ptr<InvocationTimer> >::reverse_iterator (m_timeTrackerList.erase(requestsFifoIter.base()));
+            requestsTimeout++;
+        }
+        std::cout << "pruned requests for timeout" << requestsTimeout << std::endl;
+    }
 }
 
 InvocationResponse ClientImpl::invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException) {
@@ -887,8 +976,14 @@ InvocationResponse ClientImpl::invoke(Procedure &proc) throw (voltdb::Exception,
     if (evbuffer_add(evbuf, sbb.bytes(), static_cast<size_t>(sbb.remaining()))) {
         throw voltdb::LibEventException();
     }
+    timeval tv, expirationTime;
+    int status = gettimeofday(&tv, NULL);
+    assert(status == 0);
+    expirationTime.tv_sec = tv.tv_sec + m_queryTimeout.tv_sec;
+    expirationTime.tv_usec = tv.tv_usec + m_queryTimeout.tv_usec;
+    boost::shared_ptr<CallBackBookeeping> cb (new CallBackBookeeping(callback, expirationTime));
     m_outstandingRequests++;
-    (*m_callbacks[bev])[clientData] = callback;
+    (*m_callbacks[bev])[clientData] = cb;
 
     if (event_base_dispatch(m_base) == -1) {
         throw voltdb::LibEventException();
@@ -981,6 +1076,13 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
         throw voltdb::ElasticModeMismatchException();
     }
 
+    timeval entrytime, expirationTime;
+    // optimization? - small cost benefit with using clock_gettime( monotonic)at expense of preciseness of time
+    int status = gettimeofday(&entrytime, NULL);
+    assert(status == 0);
+    expirationTime.tv_sec = entrytime.tv_sec + m_queryTimeout.tv_sec;
+    expirationTime.tv_usec = entrytime.tv_usec + m_queryTimeout.tv_usec;
+
     int32_t messageSize = proc.getSerializedSize();
     ScopedByteBuffer sbb(messageSize);
     int64_t clientData = m_nextRequestId++;
@@ -1046,7 +1148,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
                 }
                 else if (loopRunStatus == 1) {
                     if (m_pLogger) {
-                        logMessage(ClientLogger::DEBUG, "No events queued for processing");
+                        m_pLogger->log(ClientLogger::DEBUG, "No events queued for processing");
                     }
                 }
                 if (m_loopBreakRequested) {
@@ -1061,13 +1163,17 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
         }
     }
 
+    boost::shared_ptr<CallBackBookeeping> cb (new CallBackBookeeping(callback, expirationTime));
+
     //route transaction to correct event if client affinity is enabled and hashinator updating is not in progress
     //elastic scalability is disabled
     if (m_useClientAffinity && !m_distributer.isUpdating()) {
         struct bufferevent *routed_bev = routeProcedure(proc, sbb);
         // Check if the routed_bev is valid and has not been removed due to lost connection
-        if ((routed_bev) && (m_callbacks.find(routed_bev) != m_callbacks.end()))
+        if ((routed_bev) && (m_callbacks.find(routed_bev) != m_callbacks.end())) {
             bev = routed_bev;
+        }
+        queueToTimeoutList(proc, bev, clientData, expirationTime);
     }
 
     struct evbuffer *evbuf = bufferevent_get_output(bev);
@@ -1075,9 +1181,10 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
         throw voltdb::LibEventException();
     }
     m_outstandingRequests++;
-    (*m_callbacks[bev])[clientData] = callback;
-    //std::cout << "call to queue timerequest" << std::endl;
-    queueToTimeoutList(proc, bev, clientData);
+    //(*m_callbacks[bev])[clientData] = callback;
+    (*m_callbacks[bev])[clientData] = cb;
+
+
 
     if (evbuffer_get_length(evbuf) >  262144) {
         m_backpressuredBevs.insert(bev);
@@ -1113,10 +1220,13 @@ void ClientImpl::run() throw (voltdb::Exception, voltdb::NoConnectionsException,
     m_loopBreakRequested = false;
 }
 
+
+
 void ClientImpl::regularReadCallback(struct bufferevent *bev) {
     struct evbuffer *evbuf = bufferevent_get_input(bev);
     boost::shared_ptr<CxnContext> context = m_contexts[bev];
     int32_t remaining = static_cast<int32_t>(evbuffer_get_length(evbuf));
+    int64_t clientData;
     bool breakEventLoop = false;
 
     if (context->m_lengthOrMessage && remaining < 4) {
@@ -1137,26 +1247,37 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
             evbuffer_remove( evbuf, messageBytes.get(), static_cast<size_t>(context->m_nextLength));
             remaining -= context->m_nextLength;
             InvocationResponse response(messageBytes, context->m_nextLength);
-            if (response.clientData() == VOLT_NOTIFICATION_MAGIC_NUMBER) {
+            clientData = response.clientData();
+
+            if (clientData == VOLT_NOTIFICATION_MAGIC_NUMBER) {
                 if (!response.failure()){
                     m_distributer.handleTopologyNotification(response.results());
                 }
             } else {
                 boost::shared_ptr<CallbackMap> callbackMap = m_callbacks[bev];
-                CallbackMap::iterator i = callbackMap->find(response.clientData());
-                if(i != callbackMap->end()){
+                CallbackMap::iterator i = callbackMap->find(clientData);
+                if (i != callbackMap->end()) {
                     try {
                         m_ignoreBackpressure = true;
-                        breakEventLoop |= i->second->callback(response);
+                        breakEventLoop |= i->second->getCallback()->callback(response);
                         m_ignoreBackpressure = false;
                     } catch (std::exception &e) {
                         if (m_listener.get() != NULL) {
                             try {
                                 m_ignoreBackpressure = true;
-                                breakEventLoop |= m_listener->uncaughtException( e, i->second, response);
+                                breakEventLoop |= m_listener->uncaughtException( e, i->second->getCallback(), response);
                                 m_ignoreBackpressure = false;
                             } catch (const std::exception& e) {
                                 std::cerr << "Uncaught exception handler threw exception: " << e.what() << std::endl;
+                            }
+                        }
+                    }
+                    // pop the entry from timer list if it's in there
+                    if (m_useClientAffinity) {
+                        ClientBEVPair result = deleteEntrytFromTimerTrackerList(i->second->getTime());
+                        if (result.first != INT64_MAX) {
+                            if (result.first != clientData) {
+                                std::cout << "Expecting to delete entry " << clientData << ", deleted: " << result.first <<std::endl;
                             }
                         }
                     }
@@ -1232,10 +1353,18 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
                 i != callbackMap->end(); ++i) {
             try {
                 breakEventLoop |=
-                        i->second->callback(InvocationResponse());
+                        i->second->getCallback()->callback(InvocationResponse());
             } catch (std::exception &e) {
                 if (m_listener.get() != NULL) {
-                    breakEventLoop |= m_listener->uncaughtException( e, i->second, InvocationResponse());
+                    breakEventLoop |= m_listener->uncaughtException( e, i->second->getCallback(), InvocationResponse());
+                }
+            }
+            if (m_useClientAffinity) {
+                ClientBEVPair result = deleteEntrytFromTimerTrackerList(i->second->getTime());
+                if (result.second != NULL) {
+                    if (result.second != bev) {
+                        std::cout << "expected bev" << bev << ", got: " << result.second << std::endl;
+                    }
                 }
             }
             m_outstandingRequests--;
@@ -1254,12 +1383,6 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         if (m_outstandingRequests < m_maxOutstandingRequests) {
             m_backPressuredForOutstandingRequests = false;
         }
-
-#if 0
-        ss.str("");
-        ss << "regEventCB " << m_contexts[bev]->m_name << ":" << m_contexts[bev]->m_port ;
-        std::cout << ss.str() << std::endl;
-#endif
 
         createPendingConnection(m_contexts[bev]->m_name, m_contexts[bev]->m_port, get_sec_time());
 

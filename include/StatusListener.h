@@ -66,8 +66,10 @@ public:
     /*
      * Notify the client application that backpressure occured
      * @param hasBackpressure True if backpressure is beginning and false if it is ending
-     * @return true if the client library should queue the invocation and return from invoke()
-     * or false if the library should wait until there is a connection without backpressure and then queue it.
+     * @return true, in backpressure environment, if the client library to queue the invocation and
+     *              return from invoke()
+     *         false, in backpressure environment, if the library should wait until there is a
+     *               connection without backpressure and then queue it.
      */
     virtual bool backpressure(bool hasBackpressure) = 0;
 

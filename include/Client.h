@@ -172,6 +172,7 @@ public:
     int32_t outstandingRequests() const;
     // todo: deleteme
     size_t getNumberOfPendingTimeoutRequests() const;
+    void clearPendingTimeoutRequests();
 
     ~Client();
 private:
