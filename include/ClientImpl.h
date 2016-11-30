@@ -91,10 +91,12 @@ public:
     void reconnectEventCallback();
 
     void startTimerCheck() throw (voltdb::LibEventException);
-    void purgeTimedoutRequests();
+    void purgeExpiredRequests();
     void triggerScanForTimeoutRequestsEvent();
+#if defined(USE_DEQUE)
     size_t getNumberOfPendingTimeoutRequests() const { return m_timeTrackerList.size(); }
     void clearPendingTimeoutRequests() { m_timeTrackerList.clear(); }
+#endif
     /*
      * If one of the run family of methods is running on another thread, this
      * method will instruct it to exit as soon as it finishes it's current
@@ -166,8 +168,11 @@ private:
      */
     void logMessage(ClientLogger::CLIENT_LOG_LEVEL severity, const std::string& msg);
 
-    void setUpTimeTracking() throw (voltdb::LibEventException);
+    void setUpCallExpirationTracking() throw (voltdb::LibEventException);
     void startTimerThread() throw (voltdb::TimerThreadException);
+    bool isReadOnly(const Procedure &proc) ;
+
+#if defined(USE_DEQUE)
     // function to update requests for tracking timeouts using current time
     void queueToTimeoutList(const Procedure &proc, struct bufferevent *bev, int64_t clientData, timeval expirationTime);
 
@@ -191,16 +196,24 @@ private:
         int64_t m_clientData;
         struct timeval m_expirationTime;
     };
+#endif
 
     class CallBackBookeeping {
     public:
         CallBackBookeeping(const boost::shared_ptr<ProcedureCallback> &callback,
-                timeval timeout) : m_procCallBack(callback), m_timeoutIfReadOnly(timeout) {}
+                timeval timeout, bool readOnly = false) : m_procCallBack(callback),
+                                                          m_timeoutIfReadOnly(timeout),
+                                                          m_readOnly(readOnly) {}
         inline boost::shared_ptr<ProcedureCallback>  getCallback() const { return m_procCallBack; }
         inline timeval getTime() const { return m_timeoutIfReadOnly; }
+        inline bool procReadOnly() const { return m_readOnly; }
+        bool setReadOnly(bool value) {
+            m_readOnly = value;
+        }
     private:
         const boost::shared_ptr<ProcedureCallback> m_procCallBack;
         const timeval m_timeoutIfReadOnly;
+        bool m_readOnly;
     };
 
     // Map from client data to the appropriate callback for a specific connection
@@ -258,7 +271,9 @@ private:
     struct timeval m_queryTimeout;
     pthread_t m_timerThread;
     struct timeval m_timerThreadTv;
+#if defined (USE_DEQUE)
     std::deque<boost::shared_ptr<InvocationTimer> > m_timeTrackerList;
+#endif
 
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;

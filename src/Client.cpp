@@ -124,6 +124,7 @@ int32_t Client::outstandingRequests() const {
     return m_impl->outstandingRequests();
 }
 
+#if defined(USE_DEQUE)
 size_t Client::getNumberOfPendingTimeoutRequests() const {
     return m_impl->getNumberOfPendingTimeoutRequests();
 }
@@ -131,6 +132,8 @@ size_t Client::getNumberOfPendingTimeoutRequests() const {
 void Client::clearPendingTimeoutRequests() {
     return m_impl->clearPendingTimeoutRequests();
 }
+#endif
+
 void Client::setLoggerCallback(ClientLogger *pLogger) {
     m_impl->setLoggerCallback(pLogger);
 }
