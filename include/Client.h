@@ -170,11 +170,9 @@ public:
     void setLoggerCallback(ClientLogger *pLogger);
 
     int32_t outstandingRequests() const;
-#if defined(USE_DEQUE)
-    // todo: deleteme
-    size_t getNumberOfPendingTimeoutRequests() const;
-    void clearPendingTimeoutRequests();
-#endif
+
+    int64_t getTimedoutRequests() const;
+    int64_t getResponseWithHandlesNotInCallback() const;
 
     ~Client();
 private:

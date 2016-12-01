@@ -93,10 +93,7 @@ public:
     void startTimerCheck() throw (voltdb::LibEventException);
     void purgeExpiredRequests();
     void triggerScanForTimeoutRequestsEvent();
-#if defined(USE_DEQUE)
-    size_t getNumberOfPendingTimeoutRequests() const { return m_timeTrackerList.size(); }
-    void clearPendingTimeoutRequests() { m_timeTrackerList.clear(); }
-#endif
+
     /*
      * If one of the run family of methods is running on another thread, this
      * method will instruct it to exit as soon as it finishes it's current
@@ -126,6 +123,9 @@ public:
     int32_t outstandingRequests() const {return m_outstandingRequests;}
 
     void setLoggerCallback(ClientLogger *pLogger) { m_pLogger = pLogger;}
+
+    int64_t getTimedoutRequests() const { return m_timedoutRequests; }
+    int64_t getResponseWithHandlesNotInCallback() const { return m_responseHandleNotFound; }
 
 private:
     ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::LibEventException);
@@ -171,32 +171,6 @@ private:
     void setUpCallExpirationTracking() throw (voltdb::LibEventException);
     void startTimerThread() throw (voltdb::TimerThreadException);
     bool isReadOnly(const Procedure &proc) ;
-
-#if defined(USE_DEQUE)
-    // function to update requests for tracking timeouts using current time
-    void queueToTimeoutList(const Procedure &proc, struct bufferevent *bev, int64_t clientData, timeval expirationTime);
-
-    typedef std::pair<int64_t, bufferevent*> ClientBEVPair;
-    ClientBEVPair deleteEntrytFromTimerTrackerList(timeval expirationTime);
-
-    // helpers n constants
-    class InvocationTimer {
-    public:
-        InvocationTimer(struct bufferevent *bev, int64_t clientData,
-                timeval expirationTime) : m_bev(bev),
-                                        m_clientData(clientData) {
-            ::memcpy(&m_expirationTime, &expirationTime, sizeof(struct timeval));
-        }
-
-        struct bufferevent* getBEV() { return m_bev; }
-        int64_t getClientData() const { return m_clientData; }
-        timeval getExpirationTime() const { return m_expirationTime; }
-    private:
-        struct bufferevent *m_bev;
-        int64_t m_clientData;
-        struct timeval m_expirationTime;
-    };
-#endif
 
     class CallBackBookeeping {
     public:
@@ -263,17 +237,27 @@ private:
     int m_wakeupPipe[2];
     boost::mutex m_wakeupPipeLock;
 
+    // trigger for query timeout operates on another base, which gets setup during
+    // connection creation. So flipping query timeout on the fly is not supported
+    const bool m_enableQueryTimeout;
+    pthread_t m_timerThread;
+    // event base for timer thread
     struct event_base *m_timerBase;
+    // ptr to event that triggers event on event register with main base to trigger
+    // scan for outstanding requests which have expired
     struct event *m_timerEventPtr;
+    // ptr to event that scans pending requests if the response wait for them
+    // has exceeded expiration
     struct event *m_timeoutServiceEventPtr;
+    // using pipe to trigger events across two threads threads
     int m_timerCheckPipe[2];
     bool m_timerEventInitialized;
-    struct timeval m_queryTimeout;
-    pthread_t m_timerThread;
-    struct timeval m_timerThreadTv;
-#if defined (USE_DEQUE)
-    std::deque<boost::shared_ptr<InvocationTimer> > m_timeTrackerList;
-#endif
+    struct timeval m_queryExpirationTime;
+    struct timeval m_scanIntervalForTimedoutQuery;
+
+    // timer stats for debugging
+    int64_t m_timedoutRequests;
+    int64_t m_responseHandleNotFound;
 
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;
