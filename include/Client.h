@@ -170,9 +170,7 @@ public:
     void setLoggerCallback(ClientLogger *pLogger);
 
     int32_t outstandingRequests() const;
-
     int64_t getTimedoutRequests() const;
-    int64_t getResponseWithHandlesNotInCallback() const;
 
     ~Client();
 private:

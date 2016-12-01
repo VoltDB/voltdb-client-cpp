@@ -28,7 +28,6 @@
 #include <map>
 #include <set>
 #include <list>
-#include <deque>
 #include <string>
 #include "ProcedureCallback.hpp"
 //#include "StatusListener.h"
@@ -176,17 +175,18 @@ private:
     public:
         CallBackBookeeping(const boost::shared_ptr<ProcedureCallback> &callback,
                 timeval timeout, bool readOnly = false) : m_procCallBack(callback),
-                                                          m_timeoutIfReadOnly(timeout),
+                                                          m_expirationTime(timeout),
                                                           m_readOnly(readOnly) {}
         inline boost::shared_ptr<ProcedureCallback>  getCallback() const { return m_procCallBack; }
-        inline timeval getTime() const { return m_timeoutIfReadOnly; }
-        inline bool procReadOnly() const { return m_readOnly; }
-        bool setReadOnly(bool value) {
-            m_readOnly = value;
-        }
+        // fetch the query/proc timeout/expiration value
+        inline timeval getExpirationTime() const { return m_expirationTime; }
+        // returns true if the procedure is readOnly.
+        inline bool isReadOnly() const { return m_readOnly; }
+        // helper function to set if the proc is readonly or not
+        inline void setReadOnly(bool value) { m_readOnly = value; }
     private:
         const boost::shared_ptr<ProcedureCallback> m_procCallBack;
-        const timeval m_timeoutIfReadOnly;
+        const timeval m_expirationTime;
         bool m_readOnly;
     };
 
@@ -240,18 +240,18 @@ private:
     // trigger for query timeout operates on another base, which gets setup during
     // connection creation. So flipping query timeout on the fly is not supported
     const bool m_enableQueryTimeout;
-    pthread_t m_timerThread;
+    pthread_t m_queryTimeoutMonitorThread;
     // event base for timer thread
-    struct event_base *m_timerBase;
+    struct event_base *m_timerMonitorBase;
     // ptr to event that triggers event on event register with main base to trigger
     // scan for outstanding requests which have expired
-    struct event *m_timerEventPtr;
+    struct event *m_timerMonitorEventPtr;
     // ptr to event that scans pending requests if the response wait for them
     // has exceeded expiration
     struct event *m_timeoutServiceEventPtr;
     // using pipe to trigger events across two threads threads
     int m_timerCheckPipe[2];
-    bool m_timerEventInitialized;
+    bool m_timerMonitorEventInitialized;
     struct timeval m_queryExpirationTime;
     struct timeval m_scanIntervalForTimedoutQuery;
 
@@ -263,8 +263,6 @@ private:
     ClientAuthHashScheme m_hashScheme;
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
     static const std::string SERVICE;
-
-    //std::ostringstream debug;
 };
 }
 #endif /* VOLTDB_CLIENTIMPL_H_ */

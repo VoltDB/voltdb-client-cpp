@@ -293,25 +293,25 @@ ClientImpl::~ClientImpl() {
         event_free(m_ev);
     }
 
-    if (m_timerEventInitialized) {
-        pthread_cancel(m_timerThread);
+    if (m_timerMonitorEventInitialized) {
+        pthread_cancel(m_queryTimeoutMonitorThread);
         // cancel and free any timer events
-        if (m_timerEventPtr) {
-            if (evtimer_pending(m_timerEventPtr, NULL)) {
-                evtimer_del(m_timerEventPtr);
+        if (m_timerMonitorEventPtr) {
+            if (evtimer_pending(m_timerMonitorEventPtr, NULL)) {
+                evtimer_del(m_timerMonitorEventPtr);
             }
-            event_free(m_timerEventPtr);
+            event_free(m_timerMonitorEventPtr);
         }
         // free up rest of timer management trackers
         if (m_timeoutServiceEventPtr) {
             event_free(m_timeoutServiceEventPtr);
         }
-        if (m_timerBase) {
-            event_base_free(m_timerBase);
+        if (m_timerMonitorBase) {
+            event_base_free(m_timerMonitorBase);
         }
         ::close(m_timerCheckPipe[0]);
         ::close(m_timerCheckPipe[1]);
-        m_timerEventInitialized = false;
+        m_timerMonitorEventInitialized = false;
     }
 
     event_base_free(m_base);
@@ -340,8 +340,8 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         m_isDraining(false), m_instanceIdIsSet(false), m_outstandingRequests(0), m_leaderAddress(-1),
         m_clusterStartTime(-1), m_username(config.m_username), m_maxOutstandingRequests(config.m_maxOutstandingRequests),
         m_ignoreBackpressure(false), m_useClientAffinity(true),m_updateHashinator(false), m_pendingConnectionSize(0),
-        m_enableQueryTimeout(config.m_enableQueryTimeout), m_timerThread(0), m_timerBase(NULL), m_timerEventPtr(NULL),
-        m_timeoutServiceEventPtr(NULL), m_timerEventInitialized(false), m_timedoutRequests(0), m_responseHandleNotFound(0),
+        m_enableQueryTimeout(config.m_enableQueryTimeout), m_queryTimeoutMonitorThread(0), m_timerMonitorBase(NULL), m_timerMonitorEventPtr(NULL),
+        m_timeoutServiceEventPtr(NULL), m_timerMonitorEventInitialized(false), m_timedoutRequests(0), m_responseHandleNotFound(0),
         m_queryExpirationTime(config.m_queryTimeout), m_scanIntervalForTimedoutQuery(config.m_scanIntervalForTimedoutQuery),
         m_pLogger(0)
 {
@@ -381,16 +381,16 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
     m_wakeupPipe[0] = -1;
     m_wakeupPipe[1] = -1;
 
-    m_timerBase = event_base_new();
-    assert(m_timerBase);
-    if (m_timerBase == NULL) {
+    m_timerMonitorBase = event_base_new();
+    assert(m_timerMonitorBase);
+    if (m_timerMonitorBase == NULL) {
         throw voltdb::LibEventException();
     }
     m_timerCheckPipe[0] = -1;
     m_timerCheckPipe[1] = -1;
 
-    std::cout << "Scan interval: " << m_scanIntervalForTimedoutQuery.tv_sec << ":" << m_scanIntervalForTimedoutQuery.tv_usec << std::endl;
-    std::cout << "Expiration interval: " << m_queryExpirationTime.tv_sec << ":" << m_scanIntervalForTimedoutQuery.tv_usec << std::endl;
+    //std::cout << "Scan interval: " << m_scanIntervalForTimedoutQuery.tv_sec << ":" << m_scanIntervalForTimedoutQuery.tv_usec << std::endl;
+    //std::cout << "Expiration interval: " << m_queryExpirationTime.tv_sec << ":" << m_scanIntervalForTimedoutQuery.tv_usec << std::endl;
 }
 
 class FreeBEVOnFailure {
@@ -609,7 +609,7 @@ void *timerThreadRun(void *ctx) {
 }
 
 void ClientImpl::startTimerCheck() throw (voltdb::LibEventException) {
-    if (event_base_dispatch(m_timerBase) == -1) {
+    if (event_base_dispatch(m_timerMonitorBase) == -1) {
         throw LibEventException("failed running timer event base");
     } else {
         //std::cout << "dispatched timer event: " << std::endl;
@@ -620,7 +620,7 @@ void ClientImpl::startTimerThread() throw (voltdb::TimerThreadException){
     pthread_attr_t threadAttr;
     pthread_attr_init(&threadAttr);
     pthread_attr_setdetachstate(&threadAttr, PTHREAD_CREATE_DETACHED);
-    int status = pthread_create(&m_timerThread, &threadAttr, timerThreadRun, this);
+    int status = pthread_create(&m_queryTimeoutMonitorThread, &threadAttr, timerThreadRun, this);
     pthread_attr_destroy(&threadAttr);
     if (status != 0) {
         std::ostringstream os;
@@ -639,11 +639,11 @@ void ClientImpl::setUpCallExpirationTracking() throw (voltdb::LibEventException)
     event_add(m_timeoutServiceEventPtr, NULL);
 
     // setup to send timeout scan notification
-    m_timerEventPtr = evtimer_new(m_timerBase, triggerTimeoutScanCB, this);
-    if (m_timerEventPtr == NULL) {
+    m_timerMonitorEventPtr = evtimer_new(m_timerMonitorBase, triggerTimeoutScanCB, this);
+    if (m_timerMonitorEventPtr == NULL) {
         throw LibEventException("evtimer_new failed");
     }
-    if (evtimer_add(m_timerEventPtr, &m_scanIntervalForTimedoutQuery) != 0) {
+    if (evtimer_add(m_timerMonitorEventPtr, &m_scanIntervalForTimedoutQuery) != 0) {
         throw LibEventException("failed adding timeout event");
     }
     startTimerThread();
@@ -671,13 +671,13 @@ void ClientImpl::createConnection(const std::string& hostname,
         m_wakeupPipe[1] = -1;
     }
 
-    if (m_timerEventInitialized == false && m_enableQueryTimeout) {
+    if (m_timerMonitorEventInitialized == false && m_enableQueryTimeout) {
         assert(m_timerCheckPipe[0] == -1);
         assert(m_timerCheckPipe[1] == -1);
 
         if (pipe(m_timerCheckPipe) == 0) {
             setUpCallExpirationTracking();
-            m_timerEventInitialized = true;
+            m_timerMonitorEventInitialized = true;
         }
         else {
             throw PipeCreationException();
@@ -815,9 +815,9 @@ void ClientImpl::purgeExpiredRequests() {
         boost::shared_ptr<CallbackMap> callbackMap = itr->second;
         for (CallbackMap::iterator cbItr =  callbackMap->begin();
                 cbItr != callbackMap->end(); ++cbItr) {
-            timeval expirationTime = cbItr->second->getTime();
+            timeval expirationTime = cbItr->second->getExpirationTime();
 
-            if (cbItr->second->procReadOnly() && (compareTimeVal(expirationTime, now) <= 0)) {
+            if (cbItr->second->isReadOnly() && (compareTimeVal(expirationTime, now) <= 0)) {
                 response.setClientData(cbItr->first);
                 try {
                     cbItr->second->getCallback()->callback(response);
@@ -1501,7 +1501,7 @@ void ClientImpl::triggerScanForTimeoutRequestsEvent() {
     static unsigned char c = 'w';
     ssize_t bytes = write(m_timerCheckPipe[1], &c, 1);
     (void) bytes;
-    int status = evtimer_add(m_timerEventPtr, &m_queryExpirationTime);
+    int status = evtimer_add(m_timerMonitorEventPtr, &m_queryExpirationTime);
     if (status != 0) {
         std::ostringstream os;
         os << "Failed to add timer event: " << status;

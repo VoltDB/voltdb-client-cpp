@@ -128,10 +128,6 @@ int64_t Client::getTimedoutRequests() const {
     return m_impl->getTimedoutRequests();
 }
 
-int64_t Client::getResponseWithHandlesNotInCallback() const {
-    return m_impl->getResponseWithHandlesNotInCallback();
-}
-
 void Client::setLoggerCallback(ClientLogger *pLogger) {
     m_impl->setLoggerCallback(pLogger);
 }
