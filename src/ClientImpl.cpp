@@ -185,7 +185,7 @@ static void authenticationEventCallback(struct bufferevent *bev, short events, v
 
     if (events & BEV_EVENT_CONNECTED) {
         pc->initiateAuthentication(bev);
-    } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF | BEV_EVENT_TIMEOUT)) {
+    } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
         pc->m_status = false;
         //pc->m_loginExchangeCompleted = true;
 
@@ -434,7 +434,7 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
             ss << "!!!! ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port << " failed getting socket";
             logMessage(ClientLogger::ERROR, ss.str());
 
-            throw ConnectException();
+            throw ConnectException(pc->m_hostname, pc->m_port);
         }
     }
     ss << ", new bev: " <<  pc->m_bufferEvent;
@@ -457,7 +457,7 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
             ss << "!!!! ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port << " failed";
             logMessage(ClientLogger::ERROR, ss.str());
 
-            throw voltdb::LibEventException();
+            throw voltdb::LibEventException(ss.str());
         }
     }
     protector.success();
@@ -657,7 +657,7 @@ void ClientImpl::createConnection(const std::string& hostname,
                                                                     voltdb::PipeCreationException,
                                                                     voltdb::TimerThreadException) {
 
-    std::stringstream ss;
+    std::ostringstream ss;
     ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
     logMessage(ClientLogger::INFO, ss.str());
 
@@ -687,12 +687,14 @@ void ClientImpl::createConnection(const std::string& hostname,
     PendingConnectionSPtr pc(new PendingConnection(hostname, port, keepConnecting, m_base, this));
     initiateConnection(pc);
 
-    if (event_base_dispatch(m_base) == -1) {
+    int dispatchStatus = event_base_dispatch(m_base);
+    if (dispatchStatus == -1) {
         throw voltdb::LibEventException();
     }
 
     if (pc->m_status) {
-        if (event_base_dispatch(m_base) == -1) {
+        dispatchStatus = event_base_dispatch(m_base);
+        if (dispatchStatus == -1) {
             throw voltdb::LibEventException();
         }
 
@@ -707,7 +709,24 @@ void ClientImpl::createConnection(const std::string& hostname,
         }
         createPendingConnection(hostname, port);
     } else {
-        throw ConnectException();
+        // if no error has been reported for the connection, back off and listen if
+        // any events were there to process before calling it no-connection
+        int retry = 0;
+        while (pc->m_status && retry < 5) {
+            ++retry;
+            dispatchStatus = event_base_dispatch(m_base);
+            if (dispatchStatus == -1) {
+                throw voltdb::LibEventException();
+            }
+            timespec ts;
+            ts.tv_sec = 0;
+            ts.tv_nsec = 10000;
+            nanosleep(&ts, NULL);
+            if (pc->m_loginExchangeCompleted) {
+                return;
+            }
+        }
+        throw ConnectException(hostname, port);
     }
 }
 

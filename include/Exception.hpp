@@ -222,11 +222,24 @@ public:
  * e.g. Authentication fails while attempting to connect to a node
  */
 class ConnectException : public voltdb::Exception {
+    std::string m_what;
 public:
-    ConnectException() : Exception() {}
-    virtual const char* what() const throw() {
-        return "An error occured while attempting to create and authenticate a connection to VoltDB";
+    explicit ConnectException() : Exception() {
+        m_what = "An error occurred while attempting to create and authenticate a connection to VoltDB";
     }
+    explicit ConnectException(const std::string &hostname, unsigned short port) {
+        char msg[1024];
+        snprintf(msg, sizeof msg,
+                "An error occurred while attempting to create and authenticate a connection to : %s:%d",
+                hostname.c_str(), (unsigned int)port);
+        m_what = msg;
+    }
+
+    const char* what() const throw() {
+        return m_what.c_str();
+    }
+
+    virtual ~ConnectException() throw () {}
 };
 
 /*
@@ -267,7 +280,7 @@ public:
         m_what = "Lib event generated an unexpected error: " + msg;
     }
     virtual ~LibEventException() throw() {}
-    virtual const char* what() const throw() {
+    const char* what() const throw() {
         return m_what.c_str();
     }
 };
