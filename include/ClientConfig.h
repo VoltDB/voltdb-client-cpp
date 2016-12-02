@@ -37,22 +37,19 @@ public:
             std::string username = std::string(""),
             std::string password = std::string(""),
             ClientAuthHashScheme scheme = HASH_SHA1, bool enableAbandon = false,
-            bool enableQueryTimeout = false, timeval tv = (timeval) {DEFAULT_QUERY_TIMEOUT_SEC, 0},
-            timeval scanInterval = (timeval) {DEFAULT_SCAN_INTERVAL_FOR_QUERY_TIMEOUT_SEC, 0});
+            bool enableQueryTimeout = false, timeval tv = (timeval) {DEFAULT_QUERY_TIMEOUT_SEC, 0});
     ClientConfig(
             std::string username,
             std::string password,
             boost::shared_ptr<StatusListener> listener,
             ClientAuthHashScheme scheme = HASH_SHA1, bool enableAbandon = false,
-            bool enableQueryTimeout = false, timeval tv = (timeval) {DEFAULT_QUERY_TIMEOUT_SEC, 0},
-            timeval scanInterval = (timeval) {DEFAULT_SCAN_INTERVAL_FOR_QUERY_TIMEOUT_SEC, 0});
+            bool enableQueryTimeout = false, timeval tv = (timeval) {DEFAULT_QUERY_TIMEOUT_SEC, 0});
     ClientConfig(
             std::string username,
             std::string password,
             StatusListener *listener,
             ClientAuthHashScheme scheme = HASH_SHA1, bool enableAbandon = false,
-            bool enableQueryTimeout = false, timeval tv = (timeval) {DEFAULT_QUERY_TIMEOUT_SEC, 0},
-            timeval scanInterval = (timeval) {DEFAULT_SCAN_INTERVAL_FOR_QUERY_TIMEOUT_SEC, 0});
+            bool enableQueryTimeout = false, timeval tv = (timeval) {DEFAULT_QUERY_TIMEOUT_SEC, 0});
     std::string m_username;
     std::string m_password;
     boost::shared_ptr<StatusListener> m_listener;
@@ -64,7 +61,7 @@ public:
     timeval m_scanIntervalForTimedoutQuery;
 private:
     static const int8_t DEFAULT_QUERY_TIMEOUT_SEC = 10;
-    static const int8_t DEFAULT_SCAN_INTERVAL_FOR_QUERY_TIMEOUT_SEC = 2;
+    static const int8_t DEFAULT_SCAN_INTERVAL_FOR_EXPIRED_REQUESTS_SEC = 2;
 };
 }
 

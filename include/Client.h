@@ -169,8 +169,15 @@ public:
      */
     void setLoggerCallback(ClientLogger *pLogger);
 
+    /*
+     * Returns the number of outstanding/pending requests
+     */
     int32_t outstandingRequests() const;
-    int64_t getTimedoutRequests() const;
+    /*
+     * Returns number of procedure call requests that were timedout
+     * Applicable only when query timeout feature is enabled
+     */
+    int64_t getExpiredRequestsCount() const;
 
     ~Client();
 private:

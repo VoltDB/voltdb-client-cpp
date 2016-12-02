@@ -30,7 +30,6 @@
 #include <list>
 #include <string>
 #include "ProcedureCallback.hpp"
-//#include "StatusListener.h"
 #include "Client.h"
 #include "Procedure.hpp"
 #include <boost/atomic.hpp>
@@ -38,7 +37,7 @@
 #include <boost/thread/mutex.hpp>
 #include "ClientConfig.h"
 #include "Distributer.h"
-//#include "TimeTracker.h"
+
 namespace voltdb {
 
 class CxnContext;
@@ -89,7 +88,7 @@ public:
     void eventBaseLoopBreak();
     void reconnectEventCallback();
 
-    void startTimerCheck() throw (voltdb::LibEventException);
+    void runTimeoutMonitor() throw (voltdb::LibEventException);
     void purgeExpiredRequests();
     void triggerScanForTimeoutRequestsEvent();
 
@@ -123,7 +122,7 @@ public:
 
     void setLoggerCallback(ClientLogger *pLogger) { m_pLogger = pLogger;}
 
-    int64_t getTimedoutRequests() const { return m_timedoutRequests; }
+    int64_t getExpiredRequestsCount() const { return m_timedoutRequests; }
     int64_t getResponseWithHandlesNotInCallback() const { return m_responseHandleNotFound; }
 
 private:
@@ -167,10 +166,11 @@ private:
      */
     void logMessage(ClientLogger::CLIENT_LOG_LEVEL severity, const std::string& msg);
 
-    void setUpCallExpirationTracking() throw (voltdb::LibEventException);
-    void startTimerThread() throw (voltdb::TimerThreadException);
+    void setUpTimeoutCheckerMonitor() throw (voltdb::LibEventException);
+    void startMonitorThread() throw (voltdb::TimerThreadException);
     bool isReadOnly(const Procedure &proc) ;
 
+private:
     class CallBackBookeeping {
     public:
         CallBackBookeeping(const boost::shared_ptr<ProcedureCallback> &callback,
@@ -191,7 +191,6 @@ private:
     };
 
     // Map from client data to the appropriate callback for a specific connection
-    //typedef std::map< int64_t, boost::shared_ptr<ProcedureCallback> > CallbackMap;
     typedef std::map< int64_t, boost::shared_ptr<CallBackBookeeping> > CallbackMap;
     // Map from buffer event (connection) to the connection's callback map
     typedef std::map< struct bufferevent*, boost::shared_ptr<CallbackMap> > BEVToCallbackMap;
@@ -237,19 +236,24 @@ private:
     int m_wakeupPipe[2];
     boost::mutex m_wakeupPipeLock;
 
-    // trigger for query timeout operates on another base, which gets setup during
-    // connection creation. So flipping query timeout on the fly is not supported
+    // query timeout management
+
+    // Trigger for query timeout operates on separate base running on separate thread.
+    // Monitor gets setup during connection creation if query timeout feature is enabled.
+    // Enabling of query timeout is deduced from client config and can't be toggled on fly
     const bool m_enableQueryTimeout;
     pthread_t m_queryTimeoutMonitorThread;
-    // event base for timer thread
+    // base for monitor thread
     struct event_base *m_timerMonitorBase;
-    // ptr to event that triggers event on event register with main base to trigger
-    // scan for outstanding requests which have expired
+    // monitor event ptr, registered with monitor base. Monitor event triggers event
+    // to main base to scan outstanding requests if they have expired
     struct event *m_timerMonitorEventPtr;
-    // ptr to event that scans pending requests if the response wait for them
-    // has exceeded expiration
+    // event ptr, registered with main base, listens for requests to perform scans
+    // on pending requests. If any wait time of pending requests has exceed expiration
+    // time, requests is timedout by sending timeout response to client and pending request
+    // dropped from the pending callback list
     struct event *m_timeoutServiceEventPtr;
-    // using pipe to trigger events across two threads threads
+    // pipe to trigger events from monitor thread to main thread
     int m_timerCheckPipe[2];
     bool m_timerMonitorEventInitialized;
     struct timeval m_queryExpirationTime;

@@ -224,30 +224,21 @@ static void regularReadCallback(struct bufferevent *bev, void *ctx) {
 void wakeupPipeCallback(evutil_socket_t fd, short what, void *ctx) {
     ClientImpl *impl = reinterpret_cast<ClientImpl*>(ctx);
     char buf[64];
-    ssize_t bytesRd = read(fd, buf, sizeof buf);
-    (void) bytesRd;
+    ssize_t bytesRead = read(fd, buf, sizeof buf);
+    (void) bytesRead;
     impl->eventBaseLoopBreak();
 }
 
-static void triggerTimeoutScanCB(evutil_socket_t fd, short event, void *ctx) {
-#if 0
-    std::ostringstream os;
-    os << "wakeUpTimerCallback: Scheduled scan for timedout requests: " << (long) pthread_self() << "\n";
-    std::cout << os.str() << std::endl;
-#endif
+static void triggerExpiredRequestsScanCB(evutil_socket_t fd, short event, void *ctx) {
     ClientImpl *impl = reinterpret_cast<ClientImpl*>(ctx);
     impl->triggerScanForTimeoutRequestsEvent();
 }
 
-static void scanForTimedoutRequestsCB(evutil_socket_t fd, short event, void *ctx) {
+static void scanForExpiredRequestsCB(evutil_socket_t fd, short event, void *ctx) {
     ClientImpl *impl = reinterpret_cast<ClientImpl*>(ctx);
     char buf[8];
     ssize_t bytesRead = read(fd, buf, sizeof buf);
-#if 0
-    std::ostringstream os;
-    os << "Scan timeout, bytes read: " << bytesRead << ", thread: " << (long) pthread_self() << "\n";
-    std::cout << os.str() << std::endl;
-#endif
+    (void) bytesRead;
     impl->purgeExpiredRequests();
 }
 /*
@@ -605,10 +596,10 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc) throw (voltdb::Ex
 
 void *timerThreadRun(void *ctx) {
     ClientImpl *client = reinterpret_cast<ClientImpl*>(ctx);
-    client->startTimerCheck();
+    client->runTimeoutMonitor();
 }
 
-void ClientImpl::startTimerCheck() throw (voltdb::LibEventException) {
+void ClientImpl::runTimeoutMonitor() throw (voltdb::LibEventException) {
     if (event_base_dispatch(m_timerMonitorBase) == -1) {
         throw LibEventException("failed running timer event base");
     } else {
@@ -616,7 +607,7 @@ void ClientImpl::startTimerCheck() throw (voltdb::LibEventException) {
     }
 }
 
-void ClientImpl::startTimerThread() throw (voltdb::TimerThreadException){
+void ClientImpl::startMonitorThread() throw (voltdb::TimerThreadException){
     pthread_attr_t threadAttr;
     pthread_attr_init(&threadAttr);
     pthread_attr_setdetachstate(&threadAttr, PTHREAD_CREATE_DETACHED);
@@ -630,23 +621,23 @@ void ClientImpl::startTimerThread() throw (voltdb::TimerThreadException){
     }
 }
 
-void ClientImpl::setUpCallExpirationTracking() throw (voltdb::LibEventException){
+void ClientImpl::setUpTimeoutCheckerMonitor() throw (voltdb::LibEventException){
     // setup to receive timeout scan notification
-    m_timeoutServiceEventPtr = event_new(m_base, m_timerCheckPipe[0], EV_READ | EV_PERSIST, scanForTimedoutRequestsCB, this);
+    m_timeoutServiceEventPtr = event_new(m_base, m_timerCheckPipe[0], EV_READ | EV_PERSIST, scanForExpiredRequestsCB, this);
     if (m_timeoutServiceEventPtr == NULL) {
         throw LibEventException();
     }
     event_add(m_timeoutServiceEventPtr, NULL);
 
     // setup to send timeout scan notification
-    m_timerMonitorEventPtr = evtimer_new(m_timerMonitorBase, triggerTimeoutScanCB, this);
+    m_timerMonitorEventPtr = evtimer_new(m_timerMonitorBase, triggerExpiredRequestsScanCB, this);
     if (m_timerMonitorEventPtr == NULL) {
         throw LibEventException("evtimer_new failed");
     }
     if (evtimer_add(m_timerMonitorEventPtr, &m_scanIntervalForTimedoutQuery) != 0) {
         throw LibEventException("failed adding timeout event");
     }
-    startTimerThread();
+    startMonitorThread();
 }
 
 void ClientImpl::createConnection(const std::string& hostname,
@@ -676,7 +667,7 @@ void ClientImpl::createConnection(const std::string& hostname,
         assert(m_timerCheckPipe[1] == -1);
 
         if (pipe(m_timerCheckPipe) == 0) {
-            setUpCallExpirationTracking();
+            setUpTimeoutCheckerMonitor();
             m_timerMonitorEventInitialized = true;
         }
         else {
@@ -826,7 +817,7 @@ void ClientImpl::purgeExpiredRequests() {
     BEVToCallbackMap::iterator end = m_callbacks.end();
 
     std::vector<voltdb::Table> dummyTable;
-    InvocationResponse response = InvocationResponse(0, voltdb::STATUS_CODE_CONNECTION_TIMEOUT, "client timedout waiting for response",
+    InvocationResponse response(0, voltdb::STATUS_CODE_CONNECTION_TIMEOUT, "client timedout waiting for response",
             voltdb::STATUS_CODE_UNINITIALIZED_APP_STATUS_CODE, "No response received in allotted time",
             dummyTable);
 
