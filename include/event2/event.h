@@ -351,14 +351,14 @@ int event_reinit(struct event_base *base);
 /**
    Event dispatching loop
 
-  This loop will run the event base until either there are no more added
-  events, or until something calls event_base_loopbreak() or
+  This loop will run the event base until either there are no more pending or
+  active, or until something calls event_base_loopbreak() or
   event_base_loopexit().
 
   @param base the event_base structure returned by event_base_new() or
      event_base_new_with_config()
-  @return 0 if successful, -1 if an error occurred, or 1 if no events were
-    registered.
+  @return 0 if successful, -1 if an error occurred, or 1 if we exited because
+     no events were pending or active.
   @see event_base_loop()
  */
 int event_base_dispatch(struct event_base *);
@@ -563,11 +563,18 @@ void event_base_free(struct event_base *);
 /** @name Log severities
  */
 /**@{*/
-#define _EVENT_LOG_DEBUG 0
-#define _EVENT_LOG_MSG   1
-#define _EVENT_LOG_WARN  2
-#define _EVENT_LOG_ERR   3
+#define EVENT_LOG_DEBUG 0
+#define EVENT_LOG_MSG   1
+#define EVENT_LOG_WARN  2
+#define EVENT_LOG_ERR   3
 /**@}*/
+
+/* Obsolete names: these are deprecated, but older programs might use them.
+ * They violate the reserved-identifier namespace. */
+#define _EVENT_LOG_DEBUG EVENT_LOG_DEBUG
+#define _EVENT_LOG_MSG EVENT_LOG_MSG
+#define _EVENT_LOG_WARN EVENT_LOG_WARN
+#define _EVENT_LOG_ERR EVENT_LOG_ERR
 
 /**
   A callback function used to intercept Libevent's log messages.
@@ -638,15 +645,15 @@ int event_base_set(struct event_base *, struct event *);
   This is a more flexible version of event_base_dispatch().
 
   By default, this loop will run the event base until either there are no more
-  added events, or until something calls event_base_loopbreak() or
-  evenet_base_loopexit().  You can override this behavior with the 'flags'
+  pending or active events, or until something calls event_base_loopbreak() or
+  event_base_loopexit().  You can override this behavior with the 'flags'
   argument.
 
   @param eb the event_base structure returned by event_base_new() or
      event_base_new_with_config()
   @param flags any combination of EVLOOP_ONCE | EVLOOP_NONBLOCK
-  @return 0 if successful, -1 if an error occurred, or 1 if no events were
-    registered.
+  @return 0 if successful, -1 if an error occurred, or 1 if we exited because
+     no events were pending or active.
   @see event_base_loopexit(), event_base_dispatch(), EVLOOP_ONCE,
      EVLOOP_NONBLOCK
   */

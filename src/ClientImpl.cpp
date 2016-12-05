@@ -27,10 +27,12 @@
 #include <event2/buffer.h>
 #include <event2/thread.h>
 #include <event2/event.h>
-#include "sha1.h"
 #include "sha256.h"
 #include <boost/foreach.hpp>
 #include <sstream>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
 
 #define HIGH_WATERMARK 1024 * 1024 * 55
 #define RECONNECT_INTERVAL 10
@@ -268,8 +270,30 @@ static void regularWriteCallback(struct bufferevent *bev, void *ctx) {
 }
 
 ClientImpl::~ClientImpl() {
+/*
+    if (m_useSSL) {
+        std::ostringstream os;
+        //SSL_set_shutdown(m_ssl, SSL_RECEIVED_SHUTDOWN);
+        int sslStatus = SSL_shutdown(m_ssl);
+        if (sslStatus == 0) {
+            sslStatus = SSL_shutdown(m_ssl);
+            os << "Pending shutdown; successive shutdown status " << sslStatus;
+        }
+        else if (sslStatus < 0) {
+            int reason  = SSL_get_error(m_ssl, sslStatus);
+            os << "SSL shutdown failed " << reason;
+        }
+        else {
+            os << "SSL shutdown completed successfully";
+        }
+        std::cout << os.str() << std::endl;
+    }
+*/
     for (std::vector<struct bufferevent *>::iterator i = m_bevs.begin(); i != m_bevs.end(); ++i) {
         bufferevent_free(*i);
+    }
+    if (m_useSSL) {
+        SSL_CTX_free(m_ssl_ctx);
     }
     m_bevs.clear();
     m_contexts.clear();
@@ -306,6 +330,7 @@ ClientImpl::~ClientImpl() {
     }
 
     event_base_free(m_base);
+
     if (m_wakeupPipe[1] != -1) {
        ::close(m_wakeupPipe[0]);
        ::close(m_wakeupPipe[1]);
@@ -334,7 +359,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         m_enableQueryTimeout(config.m_enableQueryTimeout), m_queryTimeoutMonitorThread(0), m_timerMonitorBase(NULL), m_timerMonitorEventPtr(NULL),
         m_timeoutServiceEventPtr(NULL), m_timerMonitorEventInitialized(false), m_timedoutRequests(0), m_responseHandleNotFound(0),
         m_queryExpirationTime(config.m_queryTimeout), m_scanIntervalForTimedoutQuery(config.m_scanIntervalForTimedoutQuery),
-        m_pLogger(0)
+        m_pLogger(0), m_useSSL(config.m_useSSL), m_ssl_ctx(NULL), m_ssl(NULL)
 {
 
     pthread_once(&once_initLibevent, initLibevent);
@@ -357,16 +382,36 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
     m_enableAbandon = config.m_enableAbandon;
     m_hashScheme = config.m_hashScheme;
     if (m_hashScheme == HASH_SHA1) {
-        SHA1_CTX context;
+        SHA_CTX context;
         SHA1_Init(&context);
         SHA1_Update( &context, reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size());
         m_passwordHash = (unsigned char *)malloc(20*sizeof(char));
-        SHA1_Final ( &context, m_passwordHash);
+        SHA1_Final ( m_passwordHash, &context);
     } else if (config.m_hashScheme == HASH_SHA256) {
         m_passwordHash = (unsigned char *)malloc(32*sizeof(char));
         computeSHA256(config.m_password.c_str(), config.m_password.size(), m_passwordHash);
     } else {
         throw voltdb::LibEventException();
+    }
+
+    if (m_useSSL) {
+        // Initialize OpenSSL
+        SSL_library_init();
+        ERR_load_crypto_strings();
+        SSL_load_error_strings();
+        OpenSSL_add_all_algorithms();
+
+        // Create a new OpenSSL context
+        m_ssl_ctx = SSL_CTX_new(SSLv23_method());
+        if (m_ssl_ctx == NULL) {
+            throw voltdb::LibEventException();
+        }
+        // Create OpenSSL bufferevent and stack evhttp on top of it
+        m_ssl = SSL_new(m_ssl_ctx);
+        if (m_ssl == NULL) {
+            SSL_CTX_free(m_ssl_ctx);
+            throw voltdb::LibEventException();
+        }
     }
 
     m_wakeupPipe[0] = -1;
@@ -416,7 +461,14 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
         pc->m_bufferEvent = NULL;
     }
 
-    pc->m_bufferEvent = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+    //pc->m_bufferEvent = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+    if (m_useSSL) {
+        pc->m_bufferEvent = bufferevent_openssl_socket_new(m_base, -1, m_ssl, BUFFEREVENT_SSL_CONNECTING,
+                BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+    }
+    else {
+        pc->m_bufferEvent = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+    }
     if (pc->m_bufferEvent == NULL) {
         if (pc->m_keepConnecting) {
             createPendingConnection(pc->m_hostname, pc->m_port);

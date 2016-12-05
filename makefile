@@ -10,18 +10,25 @@ endif
 CC=g++
 BOOST_INCLUDES=/usr/local/include
 BOOST_LIBS=/usr/local/lib
-CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} 
+
 LIB_NAME=libvoltdbcpp
 KIT_NAME=voltdb-client-cpp-x86_64-6.8
 
 PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
+	OPENSSL_INCLUDES=/usr/local/opt/openssl/include
+	OPENSSL_LIBS=/usr/local/opt/openssl/lib
+	#CFLAGS=-I$(BOOST_INCLUDES) -I$(OPENSSL_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION}
+	CFLAGS=-I$(BOOST_INCLUDES) -I$(OPENSSL_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS
 	THIRD_PARTY_DIR := third_party_libs/osx
-	SYSTEM_LIBS := -L$(BOOST_LIBS) -lc -lpthread -lboost_system-mt -lboost_thread-mt
+	SYSTEM_LIBS := -L$(BOOST_LIBS) -lc -lpthread -lboost_system-mt -lboost_thread-mt -L$(OPENSSL_LIBS) -lssl -lcrypto
 endif
 ifeq ($(PLATFORM),Linux)
+    OPENSSL_LIBS=/usr/lib/x86_64-linux-gnu/
+	#CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION}
+	CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS
 	THIRD_PARTY_DIR := third_party_libs/linux
-	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system -lboost_thread -Wl,-rpath,$(BOOST_LIBS)
+	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system-mt -lboost_thread-mt -L$(OPENSSL_LIBS) -lssl -lcrypto 
 	CFLAGS += -fPIC
 endif
 
@@ -32,7 +39,6 @@ OBJS := obj/Client.o \
 		obj/ClientImpl.o \
 		obj/ConnectionPool.o \
 		obj/RowBuilder.o \
-		obj/sha1.o \
 		obj/sha256.o \
 		obj/Table.o \
 		obj/WireType.o \
@@ -54,7 +60,9 @@ CPTEST_OBJS := test_obj/ConnectionPoolTest.o \
 			 test_obj/Tests.o
 
 
-THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a $(THIRD_PARTY_DIR)/libevent_pthreads.a
+THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a \
+					$(THIRD_PARTY_DIR)/libevent_openssl.a \
+					$(THIRD_PARTY_DIR)/libevent_pthreads.a
 
 RM := rm -rf
 

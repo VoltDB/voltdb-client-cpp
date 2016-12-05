@@ -488,7 +488,11 @@ int evbuffer_add_printf(struct evbuffer *buf, const char *fmt, ...)
   @param ap a varargs va_list argument array that will be passed to vprintf(3)
   @return The number of bytes added if successful, or -1 if an error occurred.
  */
-int evbuffer_add_vprintf(struct evbuffer *buf, const char *fmt, va_list ap);
+int evbuffer_add_vprintf(struct evbuffer *buf, const char *fmt, va_list ap)
+#ifdef __GNUC__
+	__attribute__((format(printf, 2, 0)))
+#endif
+;
 
 
 /**
@@ -765,7 +769,7 @@ void evbuffer_cb_unsuspend(struct evbuffer *buffer, struct evbuffer_cb_entry *cb
 #endif
 
 /**
-  Makes the data at the begging of an evbuffer contiguous.
+  Makes the data at the beginning of an evbuffer contiguous.
 
   @param buf the evbuffer to make contiguous
   @param size the number of bytes to make contiguous, or -1 to make the

@@ -24,7 +24,12 @@
 #ifndef VOLTDB_CLIENTIMPL_H_
 #define VOLTDB_CLIENTIMPL_H_
 #include <event2/event.h>
-#include <event2/bufferevent.h>
+#include <event2/bufferevent_ssl.h>
+#include <openssl/ossl_typ.h>
+//#include <openssl/ssl.h>
+//#include <openssl/err.h>
+//#include <openssl/rand.h>
+
 #include <map>
 #include <set>
 #include <list>
@@ -265,6 +270,10 @@ private:
 
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;
+    bool m_useSSL;
+    SSL_CTX *m_ssl_ctx;
+    SSL *m_ssl;
+
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
     static const std::string SERVICE;
 };

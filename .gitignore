@@ -13,4 +13,5 @@
 /examples/asynchelloworld
 /examples/helloworld
 /examples/voter
+/examples/svoter
 *.dSYM

@@ -7,7 +7,7 @@ tar -xzf libevent-2*.tar.gz
 
 # build libevent binaries with the right configuration
 cd libevent-2*-stable
-./configure --disable-shared --disable-openssl --with-pic --prefix=`pwd`/../libeventinstall
+./configure --disable-shared --with-pic --prefix=`pwd`/../libeventinstall
 make clean
 make
 make install

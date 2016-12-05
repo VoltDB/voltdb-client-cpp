@@ -44,10 +44,10 @@
   with bufferevent_enable() and bufferevent_disable().
 
   When reading is enabled, the bufferevent will try to read from the
-  file descriptor onto its input buffer, and and call the read callback.
+  file descriptor onto its input buffer, and call the read callback.
   When writing is enabled, the bufferevent will try to write data onto its
-  file descriptor when writing is enabled, and call the write callback
-  when the output buffer is sufficiently drained.
+  file descriptor when the output buffer has enough data, and call the write
+  callback when the output buffer is sufficiently drained.
 
   Bufferevents come in several flavors, including:
 
@@ -743,7 +743,7 @@ ev_ssize_t bufferevent_get_max_to_read(struct bufferevent *bev);
 ev_ssize_t bufferevent_get_max_to_write(struct bufferevent *bev);
 
 /**
-   @name GrouprRate limit inspection
+   @name Group Rate limit inspection
 
    Return the read or write bucket size for a bufferevent rate limit
    group.  Note that it can return a negative value if bufferevents in

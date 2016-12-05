@@ -7,10 +7,12 @@
  *
  * Do not rely on macros in this file existing in later versions.
  */
+
 #ifndef _EVENT2_EVENT_CONFIG_H_
 #define _EVENT2_EVENT_CONFIG_H_
+
 /* config.h.  Generated from config.h.in by configure.  */
-/* config.h.in.  Generated from configure.in by autoheader.  */
+/* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define if libevent should build without support for a debug mode */
 /* #undef _EVENT_DISABLE_DEBUG_MODE */
@@ -22,7 +24,7 @@
 /* #undef _EVENT_DISABLE_THREAD_SUPPORT */
 
 /* Define to 1 if you have the `arc4random' function. */
-#define _EVENT_HAVE_ARC4RANDOM 1
+/* #undef _EVENT_HAVE_ARC4RANDOM */
 
 /* Define to 1 if you have the `arc4random_buf' function. */
 /* #undef _EVENT_HAVE_ARC4RANDOM_BUF */
@@ -31,7 +33,7 @@
 #define _EVENT_HAVE_ARPA_INET_H 1
 
 /* Define to 1 if you have the `clock_gettime' function. */
-/* #undef _EVENT_HAVE_CLOCK_GETTIME */
+#define _EVENT_HAVE_CLOCK_GETTIME 1
 
 /* Define to 1 if you have the declaration of `CTL_KERN', and to 0 if you
    don't. */
@@ -43,11 +45,11 @@
 
 /* Define to 1 if you have the declaration of `KERN_RANDOM', and to 0 if you
    don't. */
-#define _EVENT_HAVE_DECL_KERN_RANDOM 0
+#define _EVENT_HAVE_DECL_KERN_RANDOM 1
 
 /* Define to 1 if you have the declaration of `RANDOM_UUID', and to 0 if you
    don't. */
-#define _EVENT_HAVE_DECL_RANDOM_UUID 0
+#define _EVENT_HAVE_DECL_RANDOM_UUID 1
 
 /* Define if /dev/poll is available */
 /* #undef _EVENT_HAVE_DEVPOLL */
@@ -56,13 +58,13 @@
 #define _EVENT_HAVE_DLFCN_H 1
 
 /* Define if your system supports the epoll system calls */
-/* #undef _EVENT_HAVE_EPOLL */
+#define _EVENT_HAVE_EPOLL 1
 
 /* Define to 1 if you have the `epoll_ctl' function. */
-/* #undef _EVENT_HAVE_EPOLL_CTL */
+#define _EVENT_HAVE_EPOLL_CTL 1
 
 /* Define to 1 if you have the `eventfd' function. */
-/* #undef _EVENT_HAVE_EVENTFD */
+#define _EVENT_HAVE_EVENTFD 1
 
 /* Define if your system supports event ports */
 /* #undef _EVENT_HAVE_EVENT_PORTS */
@@ -122,10 +124,10 @@
 #define _EVENT_HAVE_INTTYPES_H 1
 
 /* Define to 1 if you have the `issetugid' function. */
-#define _EVENT_HAVE_ISSETUGID 1
+/* #undef _EVENT_HAVE_ISSETUGID */
 
 /* Define to 1 if you have the `kqueue' function. */
-#define _EVENT_HAVE_KQUEUE 1
+/* #undef _EVENT_HAVE_KQUEUE */
 
 /* Define if the system has zlib */
 #define _EVENT_HAVE_LIBZ 1
@@ -146,7 +148,7 @@
 #define _EVENT_HAVE_NETINET_IN_H 1
 
 /* Define if the system has openssl */
-/* #undef _EVENT_HAVE_OPENSSL */
+#define _EVENT_HAVE_OPENSSL 1
 
 /* Define to 1 if you have the <openssl/bio.h> header file. */
 #define _EVENT_HAVE_OPENSSL_BIO_H 1
@@ -197,7 +199,7 @@
 #define _EVENT_HAVE_SIGNAL 1
 
 /* Define to 1 if you have the `splice' function. */
-/* #undef _EVENT_HAVE_SPLICE */
+#define _EVENT_HAVE_SPLICE 1
 
 /* Define to 1 if you have the <stdarg.h> header file. */
 #define _EVENT_HAVE_STDARG_H 1
@@ -218,7 +220,7 @@
 #define _EVENT_HAVE_STRING_H 1
 
 /* Define to 1 if you have the `strlcpy' function. */
-#define _EVENT_HAVE_STRLCPY 1
+/* #undef _EVENT_HAVE_STRLCPY */
 
 /* Define to 1 if you have the `strsep' function. */
 #define _EVENT_HAVE_STRSEP 1
@@ -236,19 +238,19 @@
 #define _EVENT_HAVE_STRUCT_IN6_ADDR 1
 
 /* Define to 1 if `s6_addr16' is a member of `struct in6_addr'. */
-/* #undef _EVENT_HAVE_STRUCT_IN6_ADDR_S6_ADDR16 */
+#define _EVENT_HAVE_STRUCT_IN6_ADDR_S6_ADDR16 1
 
 /* Define to 1 if `s6_addr32' is a member of `struct in6_addr'. */
-/* #undef _EVENT_HAVE_STRUCT_IN6_ADDR_S6_ADDR32 */
+#define _EVENT_HAVE_STRUCT_IN6_ADDR_S6_ADDR32 1
 
 /* Define to 1 if the system has the type `struct sockaddr_in6'. */
 #define _EVENT_HAVE_STRUCT_SOCKADDR_IN6 1
 
 /* Define to 1 if `sin6_len' is a member of `struct sockaddr_in6'. */
-#define _EVENT_HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN 1
+/* #undef _EVENT_HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN */
 
 /* Define to 1 if `sin_len' is a member of `struct sockaddr_in'. */
-#define _EVENT_HAVE_STRUCT_SOCKADDR_IN_SIN_LEN 1
+/* #undef _EVENT_HAVE_STRUCT_SOCKADDR_IN_SIN_LEN */
 
 /* Define to 1 if the system has the type `struct sockaddr_storage'. */
 #define _EVENT_HAVE_STRUCT_SOCKADDR_STORAGE 1
@@ -266,13 +268,13 @@
 /* #undef _EVENT_HAVE_SYS_DEVPOLL_H */
 
 /* Define to 1 if you have the <sys/epoll.h> header file. */
-/* #undef _EVENT_HAVE_SYS_EPOLL_H */
+#define _EVENT_HAVE_SYS_EPOLL_H 1
 
 /* Define to 1 if you have the <sys/eventfd.h> header file. */
-/* #undef _EVENT_HAVE_SYS_EVENTFD_H */
+#define _EVENT_HAVE_SYS_EVENTFD_H 1
 
 /* Define to 1 if you have the <sys/event.h> header file. */
-#define _EVENT_HAVE_SYS_EVENT_H 1
+/* #undef _EVENT_HAVE_SYS_EVENT_H */
 
 /* Define to 1 if you have the <sys/ioctl.h> header file. */
 #define _EVENT_HAVE_SYS_IOCTL_H 1
@@ -290,7 +292,7 @@
 #define _EVENT_HAVE_SYS_SELECT_H 1
 
 /* Define to 1 if you have the <sys/sendfile.h> header file. */
-/* #undef _EVENT_HAVE_SYS_SENDFILE_H */
+#define _EVENT_HAVE_SYS_SENDFILE_H 1
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #define _EVENT_HAVE_SYS_SOCKET_H 1
@@ -343,6 +345,9 @@
 /* Define to 1 if the system has the type `uintptr_t'. */
 #define _EVENT_HAVE_UINTPTR_T 1
 
+/* Define to 1 if you have the `umask' function. */
+#define _EVENT_HAVE_UMASK 1
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #define _EVENT_HAVE_UNISTD_H 1
 
@@ -353,7 +358,7 @@
 #define _EVENT_HAVE_VASPRINTF 1
 
 /* Define if kqueue works correctly with pipes */
-#define _EVENT_HAVE_WORKING_KQUEUE 1
+/* #undef _EVENT_HAVE_WORKING_KQUEUE */
 
 /* Define to 1 if you have the <zlib.h> header file. */
 #define _EVENT_HAVE_ZLIB_H 1
@@ -366,7 +371,7 @@
 /* #undef _EVENT_NO_MINUS_C_MINUS_O */
 
 /* Numeric representation of the version */
-#define _EVENT_NUMERIC_VERSION 0x02001200
+#define _EVENT_NUMERIC_VERSION 0x02001600
 
 /* Name of package */
 #define _EVENT_PACKAGE "libevent"
@@ -402,6 +407,9 @@
 /* The size of `long long', as computed by sizeof. */
 #define _EVENT_SIZEOF_LONG_LONG 8
 
+/* The size of `off_t', as computed by sizeof. */
+#define _EVENT_SIZEOF_OFF_T 8
+
 /* The size of `pthread_t', as computed by sizeof. */
 #define _EVENT_SIZEOF_PTHREAD_T 8
 
@@ -421,7 +429,7 @@
 #define _EVENT_TIME_WITH_SYS_TIME 1
 
 /* Version number of package */
-#define _EVENT_VERSION "2.0.18-stable"
+#define _EVENT_VERSION "2.0.22-stable"
 
 /* Define to appropriate substitue if compiler doesnt have __func__ */
 /* #undef _EVENT___func__ */
@@ -446,4 +454,5 @@
 
 /* Define to `int' if <sys/types.h> does not define. */
 /* #undef _EVENT_ssize_t */
-#endif
+
+#endif /* event2/event-config.h */
