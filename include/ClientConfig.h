@@ -37,19 +37,19 @@ public:
             std::string username = std::string(""),
             std::string password = std::string(""),
             ClientAuthHashScheme scheme = HASH_SHA1, bool enableAbandon = false,
-            bool enableQueryTimeout = false, timeval tv = (timeval) {DEFAULT_QUERY_TIMEOUT_SEC, 0});
+            bool enableQueryTimeout = false, int timeoutInSec =  DEFAULT_QUERY_TIMEOUT_SEC);
     ClientConfig(
             std::string username,
             std::string password,
             boost::shared_ptr<StatusListener> listener,
             ClientAuthHashScheme scheme = HASH_SHA1, bool enableAbandon = false,
-            bool enableQueryTimeout = false, timeval tv = (timeval) {DEFAULT_QUERY_TIMEOUT_SEC, 0});
+            bool enableQueryTimeout = false, int timeoutInSec = DEFAULT_QUERY_TIMEOUT_SEC);
     ClientConfig(
             std::string username,
             std::string password,
             StatusListener *listener,
             ClientAuthHashScheme scheme = HASH_SHA1, bool enableAbandon = false,
-            bool enableQueryTimeout = false, timeval tv = (timeval) {DEFAULT_QUERY_TIMEOUT_SEC, 0});
+            bool enableQueryTimeout = false, int timeoutInSec = DEFAULT_QUERY_TIMEOUT_SEC);
     std::string m_username;
     std::string m_password;
     boost::shared_ptr<StatusListener> m_listener;

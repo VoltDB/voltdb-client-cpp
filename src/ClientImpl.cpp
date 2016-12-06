@@ -574,6 +574,20 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc) throw (voltdb::Ex
                 std::cerr << ss.str() << std::endl;
             }
         }
+
+        // set up timer thread if query timeout is enabled
+        if (m_timerMonitorEventInitialized == false && m_enableQueryTimeout) {
+            assert(m_timerCheckPipe[0] == -1);
+            assert(m_timerCheckPipe[1] == -1);
+
+            if (pipe(m_timerCheckPipe) == 0) {
+                setUpTimeoutCheckerMonitor();
+                m_timerMonitorEventInitialized = true;
+            }
+            else {
+                throw PipeCreationException();
+            }
+        }
     }
     else {
         logMessage(ClientLogger::DEBUG, "ClientImpl::finalizeAuthentication Fail");
@@ -660,19 +674,6 @@ void ClientImpl::createConnection(const std::string& hostname,
         event_add(m_ev, NULL);
     } else {
         m_wakeupPipe[1] = -1;
-    }
-
-    if (m_timerMonitorEventInitialized == false && m_enableQueryTimeout) {
-        assert(m_timerCheckPipe[0] == -1);
-        assert(m_timerCheckPipe[1] == -1);
-
-        if (pipe(m_timerCheckPipe) == 0) {
-            setUpTimeoutCheckerMonitor();
-            m_timerMonitorEventInitialized = true;
-        }
-        else {
-            throw PipeCreationException();
-        }
     }
 
     PendingConnectionSPtr pc(new PendingConnection(hostname, port, keepConnecting, m_base, this));
@@ -784,33 +785,6 @@ private:
     InvocationResponse *m_responseOut;
 };
 
-
-/* compares value first timestamp with second timestamp and returns
- * 0 if equal,
- * 1 if first is greater or
- * -1 if first is less thn second
-
- */
-int compareTimeVal(const struct timeval& first, const struct timeval& second) {
-    if (first.tv_sec < second.tv_sec) {
-        return -1;
-    }
-    if (first.tv_sec > second.tv_sec) {
-        return 1;
-    }
-    if (first.tv_usec < second.tv_usec) {
-        return -1;
-    }
-    if (first.tv_usec > second.tv_usec) {
-        return 1;
-    }
-    return 0;
-}
-
-bool isTimeValLessThn (const struct timeval& first, const struct timeval& second) {
-    return compareTimeVal(first, second) < 0;
-}
-
 void ClientImpl::purgeExpiredRequests() {
     struct timeval now;
     event_base_gettimeofday_cached(m_base, &now);
@@ -821,13 +795,13 @@ void ClientImpl::purgeExpiredRequests() {
             voltdb::STATUS_CODE_UNINITIALIZED_APP_STATUS_CODE, "No response received in allotted time",
             dummyTable);
 
-    for (BEVToCallbackMap::iterator itr = m_callbacks.begin(); itr != end; itr++) {
+    for (BEVToCallbackMap::iterator itr = m_callbacks.begin(); itr != end; ++itr) {
         boost::shared_ptr<CallbackMap> callbackMap = itr->second;
         for (CallbackMap::iterator cbItr =  callbackMap->begin();
                 cbItr != callbackMap->end(); ++cbItr) {
             timeval expirationTime = cbItr->second->getExpirationTime();
 
-            if (cbItr->second->isReadOnly() && (compareTimeVal(expirationTime, now) <= 0)) {
+            if (cbItr->second->isReadOnly() && (!timercmp(&expirationTime, &now, >))) {
                 response.setClientData(cbItr->first);
                 try {
                     cbItr->second->getCallback()->callback(response);
@@ -835,10 +809,9 @@ void ClientImpl::purgeExpiredRequests() {
                     if (m_listener.get() != NULL) {
                         try {
                             m_listener->uncaughtException(excp, cbItr->second->getCallback(), response);
-                        } catch (std::exception &e) {
-                            std::ostringstream msg;
-                            msg << "Uncaught exception. " << e.what();
-                            logMessage(ClientLogger::ERROR, msg.str());
+                        } catch (const std::exception &e) {
+                            std::string str ("Uncaught exception");
+                            logMessage(ClientLogger::ERROR, str + e.what());
                         }
                     }
                 }
@@ -910,10 +883,7 @@ void ClientImpl::invoke(Procedure &proc, ProcedureCallback *callback) throw (vol
 
 bool ClientImpl::isReadOnly(const Procedure &proc) {
     ProcedureInfo *procInfo = m_distributer.getProcedure(proc.getName());
-    if (procInfo != NULL && procInfo->m_readOnly) {
-        return true;
-    }
-    return false;
+    return (procInfo != NULL && procInfo->m_readOnly);
 }
 
 struct bufferevent *ClientImpl::routeProcedure(Procedure &proc, ScopedByteBuffer &sbb){
@@ -1086,7 +1056,6 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
         throw voltdb::LibEventException();
     }
     m_outstandingRequests++;
-    //(*m_callbacks[bev])[clientData] = callback;
     (*m_callbacks[bev])[clientData] = cb;
 
 
