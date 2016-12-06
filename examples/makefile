@@ -41,4 +41,4 @@ svoter: SVoter.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 	$(CC) $(CFLAGS) SVoter.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o svoter
 
 clean:
-	$(RM) asynchelloworld helloworld voter *.dSYM *~
+	$(RM) asynchelloworld helloworld voter svoter *.dSYM *~

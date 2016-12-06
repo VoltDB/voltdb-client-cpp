@@ -292,9 +292,6 @@ ClientImpl::~ClientImpl() {
     for (std::vector<struct bufferevent *>::iterator i = m_bevs.begin(); i != m_bevs.end(); ++i) {
         bufferevent_free(*i);
     }
-    if (m_useSSL) {
-        SSL_CTX_free(m_ssl_ctx);
-    }
     m_bevs.clear();
     m_contexts.clear();
     m_callbacks.clear();
@@ -335,6 +332,13 @@ ClientImpl::~ClientImpl() {
        ::close(m_wakeupPipe[0]);
        ::close(m_wakeupPipe[1]);
     }
+
+    if (m_useSSL) {
+        if (m_clientSslCtx != NULL) {
+            SSL_CTX_free(m_clientSslCtx);
+        }
+        ERR_free_strings();
+    }
 }
 
 // Initialization for the library that only gets called once
@@ -349,19 +353,17 @@ void initLibevent() {
 const int64_t ClientImpl::VOLT_NOTIFICATION_MAGIC_NUMBER(9223372036854775806);
 const std::string ClientImpl::SERVICE("database");
 
-ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::LibEventException) :
+ClientImpl::ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::LibEventException, SSLException) :
         m_base(NULL), m_ev(NULL), m_cfg(NULL), m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
         m_listener(config.m_listener), m_invocationBlockedOnBackpressure(false),
         m_backPressuredForOutstandingRequests(false), m_loopBreakRequested(false),
         m_isDraining(false), m_instanceIdIsSet(false), m_outstandingRequests(0), m_leaderAddress(-1),
-        m_clusterStartTime(-1), m_username(config.m_username), m_maxOutstandingRequests(config.m_maxOutstandingRequests),
+        m_clusterStartTime(-1), m_username(config.m_username), m_passwordHash(NULL), m_maxOutstandingRequests(config.m_maxOutstandingRequests),
         m_ignoreBackpressure(false), m_useClientAffinity(true),m_updateHashinator(false), m_pendingConnectionSize(0),
         m_enableQueryTimeout(config.m_enableQueryTimeout), m_queryTimeoutMonitorThread(0), m_timerMonitorBase(NULL), m_timerMonitorEventPtr(NULL),
         m_timeoutServiceEventPtr(NULL), m_timerMonitorEventInitialized(false), m_timedoutRequests(0), m_responseHandleNotFound(0),
         m_queryExpirationTime(config.m_queryTimeout), m_scanIntervalForTimedoutQuery(config.m_scanIntervalForTimedoutQuery),
-        m_pLogger(0), m_useSSL(config.m_useSSL), m_ssl_ctx(NULL), m_ssl(NULL)
-{
-
+        m_pLogger(0), m_useSSL(config.m_useSSL), m_clientSslCtx(NULL) {
     pthread_once(&once_initLibevent, initLibevent);
 #ifdef DEBUG
     if (!voltdb_clientimpl_debug_init_libevent) {
@@ -391,6 +393,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         m_passwordHash = (unsigned char *)malloc(32*sizeof(char));
         computeSHA256(config.m_password.c_str(), config.m_password.size(), m_passwordHash);
     } else {
+        //todo: change it hash exception or something
         throw voltdb::LibEventException();
     }
 
@@ -402,15 +405,9 @@ ClientImpl::ClientImpl(ClientConfig config) throw(voltdb::Exception, voltdb::Lib
         OpenSSL_add_all_algorithms();
 
         // Create a new OpenSSL context
-        m_ssl_ctx = SSL_CTX_new(SSLv23_method());
-        if (m_ssl_ctx == NULL) {
-            throw voltdb::LibEventException();
-        }
-        // Create OpenSSL bufferevent and stack evhttp on top of it
-        m_ssl = SSL_new(m_ssl_ctx);
-        if (m_ssl == NULL) {
-            SSL_CTX_free(m_ssl_ctx);
-            throw voltdb::LibEventException();
+        m_clientSslCtx = SSL_CTX_new(SSLv23_client_method());
+        if (m_clientSslCtx == NULL) {
+            throw SSLException("Failed allocating ssl context using SSLv23 client method");
         }
     }
 
@@ -451,8 +448,9 @@ private:
 };
 
 void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException,
-                                                                                     voltdb::LibEventException) {
-    std::stringstream ss;
+                                                                                     voltdb::LibEventException,
+                                                                                     SSLException) {
+    std::ostringstream ss;
     ss << "ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port;
 
     if (pc->m_bufferEvent != NULL) {
@@ -461,9 +459,15 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
         pc->m_bufferEvent = NULL;
     }
 
-    //pc->m_bufferEvent = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
     if (m_useSSL) {
-        pc->m_bufferEvent = bufferevent_openssl_socket_new(m_base, -1, m_ssl, BUFFEREVENT_SSL_CONNECTING,
+        SSL *bevSsl = SSL_new(m_clientSslCtx);
+        if (bevSsl == NULL) {
+            ss.str("");
+            ss << "failed allocating SSL structure for connection: " << pc->m_hostname << ":" << pc->m_port;
+            SSL_CTX_free(m_clientSslCtx);
+            throw SSLException(ss.str());
+        }
+        pc->m_bufferEvent = bufferevent_openssl_socket_new(m_base, -1, bevSsl, BUFFEREVENT_SSL_CONNECTING,
                 BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
     }
     else {
@@ -712,8 +716,8 @@ void ClientImpl::createConnection(const std::string& hostname,
                                                                     voltdb::ConnectException,
                                                                     voltdb::LibEventException,
                                                                     voltdb::PipeCreationException,
-                                                                    voltdb::TimerThreadException) {
-
+                                                                    voltdb::TimerThreadException,
+                                                                    SSLException) {
     std::ostringstream ss;
     ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
     logMessage(ClientLogger::INFO, ss.str());
