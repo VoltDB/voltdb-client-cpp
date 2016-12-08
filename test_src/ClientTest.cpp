@@ -95,8 +95,10 @@ CPPUNIT_TEST_SUITE_END();
 public:
     void setUp() {
         m_dlistener = new boost::shared_ptr<DelegatingListener>(new DelegatingListener());
-        m_voltdb.reset(new MockVoltDB(Client::create(ClientConfig("hello", "world", *m_dlistener))));
+        ClientConfig config = ClientConfig("hello", "world", *m_dlistener);
+        m_voltdb.reset(new MockVoltDB(Client::create(config)));
         m_client = m_voltdb->client();
+        m_client->setClientAffinity(false);
     }
 
     void tearDown() {

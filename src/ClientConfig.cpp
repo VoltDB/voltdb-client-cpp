@@ -67,23 +67,43 @@ public:
 
     ClientConfig::ClientConfig(
             std::string username,
-            std::string password, ClientAuthHashScheme scheme, bool enableAbandon) :
+            std::string password, ClientAuthHashScheme scheme, bool enableAbandon,
+            bool enableQueryTimeout, int timeoutInSeconds) :
             m_username(username), m_password(password), m_listener(reinterpret_cast<StatusListener*>(NULL)),
-            m_maxOutstandingRequests(3000), m_hashScheme(scheme), m_enableAbandon(enableAbandon) {
+            m_maxOutstandingRequests(3000), m_hashScheme(scheme), m_enableAbandon(enableAbandon),
+            m_enableQueryTimeout(enableQueryTimeout) {
+        m_queryTimeout.tv_sec = timeoutInSeconds;
+        m_queryTimeout.tv_usec = 0;
+        m_scanIntervalForTimedoutQuery.tv_sec = DEFAULT_SCAN_INTERVAL_FOR_EXPIRED_REQUESTS_SEC;
+        m_scanIntervalForTimedoutQuery.tv_usec = 0;
     }
+
     ClientConfig::ClientConfig(
             std::string username,
             std::string password,
-            StatusListener *listener, ClientAuthHashScheme scheme, bool enableAbandon) :
+            StatusListener *listener, ClientAuthHashScheme scheme, bool enableAbandon,
+            bool enableQueryTimeout, int timeoutInSeconds) :
             m_username(username), m_password(password), m_listener(new DummyStatusListener(listener)),
-            m_maxOutstandingRequests(3000), m_hashScheme(scheme), m_enableAbandon(enableAbandon) {
+            m_maxOutstandingRequests(3000), m_hashScheme(scheme), m_enableAbandon(enableAbandon),
+            m_enableQueryTimeout(enableQueryTimeout) {
+        m_queryTimeout.tv_sec = timeoutInSeconds;
+        m_queryTimeout.tv_usec = 0;
+        m_scanIntervalForTimedoutQuery.tv_sec = DEFAULT_SCAN_INTERVAL_FOR_EXPIRED_REQUESTS_SEC;
+        m_scanIntervalForTimedoutQuery.tv_usec = 0;
     }
+
     ClientConfig::ClientConfig(
             std::string username,
             std::string password,
-            boost::shared_ptr<StatusListener> listener, ClientAuthHashScheme scheme, bool enableAbandon) :
+            boost::shared_ptr<StatusListener> listener, ClientAuthHashScheme scheme, bool enableAbandon,
+            bool enableQueryTimeout, int timeoutInSeconds) :
                 m_username(username), m_password(password), m_listener(listener),
-                m_maxOutstandingRequests(3000), m_hashScheme(scheme), m_enableAbandon(enableAbandon) {
+                m_maxOutstandingRequests(3000), m_hashScheme(scheme), m_enableAbandon(enableAbandon),
+                m_enableQueryTimeout(enableQueryTimeout) {
+        m_queryTimeout.tv_sec = timeoutInSeconds;
+        m_queryTimeout.tv_usec = 0;
+        m_scanIntervalForTimedoutQuery.tv_sec = DEFAULT_SCAN_INTERVAL_FOR_EXPIRED_REQUESTS_SEC;
+        m_scanIntervalForTimedoutQuery.tv_usec = 0;
     }
 }
 

@@ -222,11 +222,24 @@ public:
  * e.g. Authentication fails while attempting to connect to a node
  */
 class ConnectException : public voltdb::Exception {
+    std::string m_what;
 public:
-    ConnectException() : Exception() {}
-    virtual const char* what() const throw() {
-        return "An error occured while attempting to create and authenticate a connection to VoltDB";
+    explicit ConnectException() : Exception() {
+        m_what = "An error occurred while attempting to create and authenticate a connection to VoltDB";
     }
+    explicit ConnectException(const std::string &hostname, unsigned short port) {
+        char msg[1024];
+        snprintf(msg, sizeof msg,
+                "An error occurred while attempting to create and authenticate a connection to : %s:%d",
+                hostname.c_str(), (unsigned int)port);
+        m_what = msg;
+    }
+
+    const char* what() const throw() {
+        return m_what.c_str();
+    }
+
+    virtual ~ConnectException() throw () {}
 };
 
 /*
@@ -258,10 +271,17 @@ public:
  * to tell what happened.
  */
 class LibEventException : public voltdb::Exception {
+    std::string m_what;
 public:
-    LibEventException() : Exception() {}
-    virtual const char* what() const throw() {
-        return "Lib event generated an unexpected error";
+    explicit LibEventException() : Exception() {
+        m_what = "Lib event generated an unexpected error";
+    }
+    explicit LibEventException(const std::string& msg) : Exception() {
+        m_what = "Lib event generated an unexpected error: " + msg;
+    }
+    virtual ~LibEventException() throw() {}
+    const char* what() const throw() {
+        return m_what.c_str();
     }
 };
 
@@ -301,6 +321,36 @@ public:
     virtual const char* what() const throw() {
         return m_what.c_str();
     }
+};
+
+class PipeCreationException : public voltdb::Exception {
+    std::string m_what;
+public:
+    explicit PipeCreationException() : Exception() {
+        m_what = "Failed to create pipe";
+    }
+    virtual ~PipeCreationException() throw() {}
+
+    virtual  const char* what() const throw() {
+        return m_what.c_str();
+    }
+};
+
+
+class TimerThreadException : public voltdb::Exception {
+private:
+    std::string m_msg;
+public:
+    explicit TimerThreadException() : Exception() {
+        m_msg = "Timer thread exception";
+    }
+    explicit TimerThreadException(std::string msg) {
+        m_msg = "Timer thread exception: " + msg;
+    }
+
+    virtual ~TimerThreadException() throw () {}
+
+    const char* what() const throw () { return m_msg.c_str();}
 };
 
 }

@@ -124,6 +124,10 @@ int32_t Client::outstandingRequests() const {
     return m_impl->outstandingRequests();
 }
 
+int64_t Client::getExpiredRequestsCount() const {
+    return m_impl->getExpiredRequestsCount();
+}
+
 void Client::setLoggerCallback(ClientLogger *pLogger) {
     m_impl->setLoggerCallback(pLogger);
 }
