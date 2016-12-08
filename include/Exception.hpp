@@ -436,7 +436,7 @@ class MDHashException : public Exception {
     std::string m_what;
 public:
     explicit MDHashException() : Exception() {
-        m_what = "OpenSSL Exception";
+        m_what = "MD Hash Exception";
     }
 
     explicit MDHashException(const std::string& msg) {

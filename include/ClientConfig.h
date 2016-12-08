@@ -64,10 +64,10 @@ public:
     bool m_enableQueryTimeout;
     timeval m_queryTimeout;
     timeval m_scanIntervalForTimedoutQuery;
+    bool m_useSSL;
 private:
     static const int8_t DEFAULT_QUERY_TIMEOUT_SEC = 10;
     static const int8_t DEFAULT_SCAN_INTERVAL_FOR_EXPIRED_REQUESTS_SEC = 2;
-    bool m_useSSL;
 };
 }
 
