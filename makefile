@@ -39,7 +39,6 @@ OBJS := obj/Client.o \
 		obj/ClientImpl.o \
 		obj/ConnectionPool.o \
 		obj/RowBuilder.o \
-		obj/sha256.o \
 		obj/Table.o \
 		obj/WireType.o \
                 obj/Distributer.o \

@@ -432,6 +432,24 @@ public:
 
 };
 
+class MDHashException : public Exception {
+    std::string m_what;
+public:
+    explicit MDHashException() : Exception() {
+        m_what = "OpenSSL Exception";
+    }
+
+    explicit MDHashException(const std::string& msg) {
+        m_what = "MD Hash Exception: " + msg;
+    }
+
+    virtual ~MDHashException() throw() {
+    }
+
+    const char* what() const throw() {
+        return m_what.c_str();
+    }
+};
 }
 
 #endif /* VOLTDB_EXCEPTION_HPP_ */

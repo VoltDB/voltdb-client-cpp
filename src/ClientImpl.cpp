@@ -27,7 +27,6 @@
 #include <event2/buffer.h>
 #include <event2/thread.h>
 #include <event2/event.h>
-#include "sha256.h"
 #include <boost/foreach.hpp>
 #include <sstream>
 #include <openssl/ssl.h>
@@ -251,6 +250,27 @@ static void regularEventCallback(struct bufferevent *bev, short events, void *ct
     impl->regularEventCallback(bev, events);
 }
 
+boost::atomic<uint32_t> ClientImpl::m_numberOfClients(0);
+boost::mutex ClientImpl::m_globalResourceLock;
+
+// Initialization of OpenSSL library that gets called only once
+pthread_once_t once_initOpenSSL = PTHREAD_ONCE_INIT;
+void initOpenSSL() {
+    SSL_library_init();
+    ERR_load_crypto_strings();
+    SSL_load_error_strings();
+    OpenSSL_add_all_algorithms();
+}
+
+void ClientImpl::initSsl() throw (SSLException) {
+    //init_ssl_locking();
+    pthread_once(&once_initOpenSSL, initOpenSSL);
+    m_clientSslCtx = SSL_CTX_new(SSLv23_client_method());
+    if (m_clientSslCtx == NULL) {
+        throw SSLException("Failed allocating ssl context using SSLv23 client method");
+    }
+}
+
 /**
    type definition for the read or write callback.
 
@@ -270,7 +290,7 @@ static void regularWriteCallback(struct bufferevent *bev, void *ctx) {
 }
 
 ClientImpl::~ClientImpl() {
-/*
+    /*
     if (m_useSSL) {
         std::ostringstream os;
         //SSL_set_shutdown(m_ssl, SSL_RECEIVED_SHUTDOWN);
@@ -286,9 +306,14 @@ ClientImpl::~ClientImpl() {
         else {
             os << "SSL shutdown completed successfully";
         }
-        std::cout << os.str() << std::endl;
+        if (m_pLogger) {
+            logMessage(ClientLogger::INFO, os.str());
+        }
     }
-*/
+    */
+
+    bool cleanupEvp = false;
+    bool cleanupErrorStrings = false;
     for (std::vector<struct bufferevent *>::iterator i = m_bevs.begin(); i != m_bevs.end(); ++i) {
         bufferevent_free(*i);
     }
@@ -297,6 +322,7 @@ ClientImpl::~ClientImpl() {
     m_callbacks.clear();
     if (m_passwordHash != NULL) {
         free(m_passwordHash);
+        cleanupEvp = true;
     }
     if (m_cfg != NULL) {
         event_config_free(m_cfg);
@@ -337,7 +363,22 @@ ClientImpl::~ClientImpl() {
         if (m_clientSslCtx != NULL) {
             SSL_CTX_free(m_clientSslCtx);
         }
-        ERR_free_strings();
+        cleanupErrorStrings = true;
+
+    }
+
+    {
+        boost::mutex::scoped_lock lock(m_globalResourceLock);
+        if (--m_numberOfClients == 0) {
+            if (cleanupEvp) {
+                // clean up/unload message digests n algos
+                EVP_cleanup();
+            }
+            if (cleanupErrorStrings) {
+                // unload ssl n crypto error strings
+                ERR_free_strings();
+            }
+        }
     }
 }
 
@@ -353,17 +394,63 @@ void initLibevent() {
 const int64_t ClientImpl::VOLT_NOTIFICATION_MAGIC_NUMBER(9223372036854775806);
 const std::string ClientImpl::SERVICE("database");
 
-ClientImpl::ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::LibEventException, SSLException) :
+class CleanupEVP_MD_Ctx{
+public:
+    explicit CleanupEVP_MD_Ctx(EVP_MD_CTX *ctx) : m_ctx(ctx) { }
+    ~CleanupEVP_MD_Ctx() {
+        if (m_ctx != NULL) {
+            EVP_MD_CTX_cleanup(m_ctx);
+        }
+    }
+private:
+    EVP_MD_CTX* m_ctx;
+};
+
+void ClientImpl::hashPassword(const std::string& password) throw (MDHashException) {
+    const EVP_MD *md = NULL;
+    size_t hashDataLength;
+    if (m_hashScheme == HASH_SHA1) {
+        hashDataLength = SHA_DIGEST_LENGTH;
+        md = EVP_sha1();
+    }
+    else if (m_hashScheme == HASH_SHA256) {
+        hashDataLength = SHA256_DIGEST_LENGTH;
+        md = EVP_sha256();
+    }
+    else {
+        throw voltdb::MDHashException("Supported hash-schemes are SHA1 and SHA256");
+    }
+    if (md == NULL) {
+        throw MDHashException("failed getting digest for " + (m_hashScheme == HASH_SHA1) ? "SHA1" : "SHA256");
+    }
+    unsigned int md_len = -1;
+    m_passwordHash = (unsigned char *) malloc(hashDataLength);
+
+    EVP_MD_CTX mdctx;
+    EVP_MD_CTX_init(&mdctx);
+    CleanupEVP_MD_Ctx cleanup(&mdctx);
+    if (EVP_DigestInit_ex(&mdctx, md, NULL) == 0) {
+        throw MDHashException("Failed to setup the digest");
+    }
+    if (EVP_DigestUpdate(&mdctx, password.c_str(), password.size()) == 0) {
+        throw MDHashException("Failed to generate digest hash");
+    }
+    if (EVP_DigestFinal_ex(&mdctx, m_passwordHash, &md_len) == 0) {
+        throw MDHashException("Failed to retrieve the digest");
+    }
+}
+
+ClientImpl::ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::LibEventException, MDHashException, SSLException) :
         m_base(NULL), m_ev(NULL), m_cfg(NULL), m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
         m_listener(config.m_listener), m_invocationBlockedOnBackpressure(false),
         m_backPressuredForOutstandingRequests(false), m_loopBreakRequested(false),
         m_isDraining(false), m_instanceIdIsSet(false), m_outstandingRequests(0), m_leaderAddress(-1),
         m_clusterStartTime(-1), m_username(config.m_username), m_passwordHash(NULL), m_maxOutstandingRequests(config.m_maxOutstandingRequests),
-        m_ignoreBackpressure(false), m_useClientAffinity(true),m_updateHashinator(false), m_pendingConnectionSize(0),
+        m_ignoreBackpressure(false), m_useClientAffinity(true),m_updateHashinator(false), m_enableAbandon(config.m_enableAbandon), m_pendingConnectionSize(0),
         m_enableQueryTimeout(config.m_enableQueryTimeout), m_queryTimeoutMonitorThread(0), m_timerMonitorBase(NULL), m_timerMonitorEventPtr(NULL),
         m_timeoutServiceEventPtr(NULL), m_timerMonitorEventInitialized(false), m_timedoutRequests(0), m_responseHandleNotFound(0),
         m_queryExpirationTime(config.m_queryTimeout), m_scanIntervalForTimedoutQuery(config.m_scanIntervalForTimedoutQuery),
-        m_pLogger(0), m_useSSL(config.m_useSSL), m_clientSslCtx(NULL) {
+        m_pLogger(0), m_hashScheme(config.m_hashScheme), m_useSSL(config.m_useSSL), m_clientSslCtx(NULL) {
     pthread_once(&once_initLibevent, initLibevent);
 #ifdef DEBUG
     if (!voltdb_clientimpl_debug_init_libevent) {
@@ -381,36 +468,10 @@ ClientImpl::ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::Li
     if (m_base == NULL) {
         throw voltdb::LibEventException();
     }
-    m_enableAbandon = config.m_enableAbandon;
-    m_hashScheme = config.m_hashScheme;
-    if (m_hashScheme == HASH_SHA1) {
-        SHA_CTX context;
-        SHA1_Init(&context);
-        SHA1_Update( &context, reinterpret_cast<const unsigned char*>(config.m_password.data()), config.m_password.size());
-        m_passwordHash = (unsigned char *)malloc(20*sizeof(char));
-        SHA1_Final ( m_passwordHash, &context);
-    } else if (config.m_hashScheme == HASH_SHA256) {
-        m_passwordHash = (unsigned char *)malloc(32*sizeof(char));
-        computeSHA256(config.m_password.c_str(), config.m_password.size(), m_passwordHash);
-    } else {
-        //todo: change it hash exception or something
-        throw voltdb::LibEventException();
-    }
-
+    hashPassword(config.m_password);
     if (m_useSSL) {
-        // Initialize OpenSSL
-        SSL_library_init();
-        ERR_load_crypto_strings();
-        SSL_load_error_strings();
-        OpenSSL_add_all_algorithms();
-
-        // Create a new OpenSSL context
-        m_clientSslCtx = SSL_CTX_new(SSLv23_client_method());
-        if (m_clientSslCtx == NULL) {
-            throw SSLException("Failed allocating ssl context using SSLv23 client method");
-        }
+        initSsl();
     }
-
     m_wakeupPipe[0] = -1;
     m_wakeupPipe[1] = -1;
 
@@ -424,6 +485,8 @@ ClientImpl::ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::Li
 
     //std::cout << "Scan interval: " << m_scanIntervalForTimedoutQuery.tv_sec << ":" << m_scanIntervalForTimedoutQuery.tv_usec << std::endl;
     //std::cout << "Expiration interval: " << m_queryExpirationTime.tv_sec << ":" << m_scanIntervalForTimedoutQuery.tv_usec << std::endl;
+
+    ++m_numberOfClients;
 }
 
 class FreeBEVOnFailure {

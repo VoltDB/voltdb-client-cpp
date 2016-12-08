@@ -43,8 +43,7 @@
 #include "TableIterator.h"
 #include "RowBuilder.h"
 #include "Row.hpp"
-#include "sha1.h"
-#include "sha256.h"
+#include "openssl/sha.h"
 #include "Geography.hpp"
 #include "GeographyPoint.hpp"
 
@@ -421,12 +420,12 @@ SharedByteBuffer fileAsByteBuffer(std::string filename) {
 void testAuthenticationRequestSha1() {
     SharedByteBuffer original = fileAsByteBuffer("authentication_request.msg");
     SharedByteBuffer generated(new char[8192], 8192);
-    unsigned char hashedPassword[20];
+    unsigned char hashedPassword[SHA_DIGEST_LENGTH];
     std::string password("world");
-    SHA1_CTX context;
+    SHA_CTX context;
     SHA1_Init(&context);
-    SHA1_Update( &context, reinterpret_cast<const unsigned char*>(password.data()), password.size());
-    SHA1_Final ( &context, hashedPassword);
+    SHA1_Update( &context, password.c_str(), password.size());
+    SHA1_Final (hashedPassword, &context);
     AuthenticationRequest request( "hello", "database", hashedPassword, HASH_SHA1 );
     request.serializeTo(&generated);
     CPPUNIT_ASSERT(original.remaining() == generated.remaining());
@@ -436,9 +435,12 @@ void testAuthenticationRequestSha1() {
 void testAuthenticationRequestSha256() {
     SharedByteBuffer original = fileAsByteBuffer("authentication_request_sha256.msg");
     SharedByteBuffer generated(new char[8192], 8192);
-    unsigned char hashedPassword[32];
+    unsigned char hashedPassword[SHA256_DIGEST_LENGTH];
     std::string password("world");
-    computeSHA256(password.c_str(), password.size(), hashedPassword);
+    SHA256_CTX context;
+    SHA256_Init(&context);
+    SHA256_Update( &context, password.c_str(), password.size());
+    SHA256_Final (hashedPassword, &context);
     AuthenticationRequest request( "hello", "database", hashedPassword, HASH_SHA256);
     request.serializeTo(&generated);
     CPPUNIT_ASSERT(original.remaining() == generated.remaining());

@@ -131,7 +131,7 @@ public:
     int64_t getResponseWithHandlesNotInCallback() const { return m_responseHandleNotFound; }
 
 private:
-    ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::LibEventException, SSLException);
+    ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::LibEventException, MDHashException, SSLException);
 
     void initiateAuthentication(struct bufferevent *bev) throw (voltdb::LibEventException);
     void finalizeAuthentication(PendingConnection* pc) throw (voltdb::Exception, voltdb::ConnectException);
@@ -164,6 +164,18 @@ private:
      */
     void createPendingConnection(const std::string &hostname, const unsigned short port, const int64_t time=0);
     void erasePendingConnection(PendingConnection *);
+
+    /*
+     * Generates digest for the for the password. Hash functions supported for
+     * generating digest are SHA1 and 256
+     * @param: password for which hash disgest will generated
+     */
+    void hashPassword(const std::string& password) throw (MDHashException);
+
+    /*
+     * Initializes SSL library, contexts and algorithms to use
+     */
+    void initSsl() throw (SSLException);
 
     /*
      * Method for sinking messages.
@@ -272,6 +284,10 @@ private:
     ClientAuthHashScheme m_hashScheme;
     bool m_useSSL;
     SSL_CTX *m_clientSslCtx;
+    // to reference count number of clients currently operating so that
+    // global resource like ssl error strings and digests can be deallocated/unloaded
+    static boost::atomic<uint32_t> m_numberOfClients;
+    static boost::mutex m_globalResourceLock;
 
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
     static const std::string SERVICE;
