@@ -10,11 +10,12 @@ PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
     BOOST_INCLUDES=-I/usr/local/include
     BOOST_LIBS=-L/usr/local/lib
+    SSL_LIBS=-L/usr/local/opt/openssl/lib
+    SYSTEM_LIBS := $(SSL_LIBS) -lssl -lcrypto -lpthread $(BOOST_LIBS) -lboost_system-mt -lboost_thread-mt
     THIRD_PARTY_DIR := $(VOLT_LIBS)/third_party_libs/osx
     THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a \
                         $(THIRD_PARTY_DIR)/libevent_openssl.a \
                         $(THIRD_PARTY_DIR)/libevent_pthreads.a
-    SYSTEM_LIBS := -lpthread $(BOOST_LIBS) -lboost_system-mt -lboost_thread-mt
 endif
 ifeq ($(PLATFORM),Linux)
     OPENSSL_LIBS=/usr/lib/x86_64-linux-gnu/

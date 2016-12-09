@@ -18,8 +18,7 @@ PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
 	OPENSSL_INCLUDES=/usr/local/opt/openssl/include
 	OPENSSL_LIBS=/usr/local/opt/openssl/lib
-	#CFLAGS=-I$(BOOST_INCLUDES) -I$(OPENSSL_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION}
-	CFLAGS=-I$(BOOST_INCLUDES) -I$(OPENSSL_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS
+	CFLAGS=-I$(BOOST_INCLUDES) -I$(OPENSSL_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION}
 	THIRD_PARTY_DIR := third_party_libs/osx
 	SYSTEM_LIBS := -L$(BOOST_LIBS) -lc -lpthread -lboost_system-mt -lboost_thread-mt -L$(OPENSSL_LIBS) -lssl -lcrypto
 endif

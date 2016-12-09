@@ -7,7 +7,17 @@ tar -xzf libevent-2*.tar.gz
 
 # build libevent binaries with the right configuration
 cd libevent-2*-stable
+
+if [ "$(uname)" == "Darwin" ]; then
+
+./configure CPPFLAGS="-I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/opt/openssl/lib" --disable-shared --with-pic --prefix=`pwd`/../libeventinstall
+
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+
 ./configure --disable-shared --with-pic --prefix=`pwd`/../libeventinstall
+
+fi
+
 make clean
 make
 make install
