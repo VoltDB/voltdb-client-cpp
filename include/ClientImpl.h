@@ -26,9 +26,6 @@
 #include <event2/event.h>
 #include <event2/bufferevent_ssl.h>
 #include <openssl/ossl_typ.h>
-//#include <openssl/ssl.h>
-//#include <openssl/err.h>
-//#include <openssl/rand.h>
 
 #include <map>
 #include <set>
@@ -194,6 +191,10 @@ private:
                 timeval timeout, bool readOnly = false) : m_procCallBack(callback),
                                                           m_expirationTime(timeout),
                                                           m_readOnly(readOnly) {}
+
+        CallBackBookeeping(const CallBackBookeeping& other) : m_procCallBack (other.m_procCallBack),
+                m_expirationTime (other.m_expirationTime),  m_readOnly (other.m_readOnly) {}
+
         inline boost::shared_ptr<ProcedureCallback>  getCallback() const { return m_procCallBack; }
         // fetch the query/proc timeout/expiration value
         inline timeval getExpirationTime() const { return m_expirationTime; }
@@ -284,11 +285,16 @@ private:
     ClientAuthHashScheme m_hashScheme;
     bool m_useSSL;
     SSL_CTX *m_clientSslCtx;
-    // to reference count number of clients currently operating so that
-    // global resource like ssl error strings and digests can be deallocated/unloaded
+    // Reference count number of clients running so that global resource like ssl
+    // error strings and digests, which are shared between clients running on separate
+    // threads can cleaned up
     static boost::atomic<uint32_t> m_numberOfClients;
     static boost::mutex m_globalResourceLock;
 
+    //void initSSLLocks();
+    //void freeSSLLocks();
+
+    //static pthread_mutex_t *sslLocks;
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
     static const std::string SERVICE;
 };

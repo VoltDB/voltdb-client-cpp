@@ -422,6 +422,7 @@ void testAuthenticationRequestSha1() {
     SharedByteBuffer generated(new char[8192], 8192);
     unsigned char hashedPassword[SHA_DIGEST_LENGTH];
     std::string password("world");
+    // ok to use low level ssl calls
     SHA_CTX context;
     SHA1_Init(&context);
     SHA1_Update( &context, password.c_str(), password.size());
@@ -437,6 +438,7 @@ void testAuthenticationRequestSha256() {
     SharedByteBuffer generated(new char[8192], 8192);
     unsigned char hashedPassword[SHA256_DIGEST_LENGTH];
     std::string password("world");
+    // ok to use low level ssl calls
     SHA256_CTX context;
     SHA256_Init(&context);
     SHA256_Update( &context, password.c_str(), password.size());
