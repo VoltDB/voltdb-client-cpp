@@ -130,7 +130,7 @@ public:
 private:
     ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::LibEventException, MDHashException, SSLException);
 
-    void initiateAuthentication(struct bufferevent *bev) throw (voltdb::LibEventException);
+    void initiateAuthentication(struct bufferevent *bev, const std::string& hostname, unsigned short port) throw (voltdb::LibEventException);
     void finalizeAuthentication(PendingConnection* pc) throw (voltdb::Exception, voltdb::ConnectException);
 
     /*
@@ -284,7 +284,7 @@ private:
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;
     bool m_useSSL;
-    SSL_CTX *m_clientSslCtx;
+    static SSL_CTX *m_clientSslCtx;
     // Reference count number of clients running so that global resource like ssl
     // error strings and digests, which are shared between clients running on separate
     // threads can cleaned up
