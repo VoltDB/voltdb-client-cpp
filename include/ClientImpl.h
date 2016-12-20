@@ -26,6 +26,7 @@
 #include <event2/event.h>
 #include <event2/bufferevent_ssl.h>
 #include <openssl/ossl_typ.h>
+#include <openssl/ssl.h>
 
 #include <map>
 #include <set>
@@ -173,6 +174,30 @@ private:
      * Initializes SSL library, contexts and algorithms to use
      */
     void initSsl() throw (SSLException);
+    inline void notifySslClose(bufferevent *bev) {
+
+        SSL *ssl = bufferevent_openssl_get_ssl(bev);
+        if (ssl == NULL) {
+            return;
+        }
+        if (SSL_get_shutdown(ssl) & SSL_RECEIVED_SHUTDOWN) {
+            int closeStatus = SSL_shutdown(ssl);
+            if (closeStatus == 0) {
+                SSL_shutdown(ssl);
+            }
+        } else {
+            //SSL_set_shutdown(ssl, SSL_RECEIVED_SHUTDOWN);
+        }
+
+#if 0
+        if (doShutdown) {
+            int closeStatus = SSL_shutdown(ssl);
+            (void) closeStatus;
+        }
+#endif
+
+
+    }
 
     /*
      * Method for sinking messages.
@@ -284,7 +309,7 @@ private:
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;
     bool m_useSSL;
-    static SSL_CTX *m_clientSslCtx;
+    /*static*/ SSL_CTX *m_clientSslCtx;
     // Reference count number of clients running so that global resource like ssl
     // error strings and digests, which are shared between clients running on separate
     // threads can cleaned up
