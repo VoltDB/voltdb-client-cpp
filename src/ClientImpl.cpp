@@ -29,7 +29,6 @@
 #include <event2/event.h>
 #include <boost/foreach.hpp>
 #include <sstream>
-//#include <openssl/ssl.h>
 #include <openssl/err.h>
 
 #define HIGH_WATERMARK 1024 * 1024 * 55
@@ -47,51 +46,6 @@ int64_t get_sec_time() {
     assert(res == 0);
     return tp.tv_sec;
 }
-
-
-static pthread_mutex_t *sslLocks;
-
-static void sslSynchronizationCallback(int mode, int type, char *file, int line)
-{
-  (void)file;
-  (void)line;
-  if (mode & CRYPTO_LOCK) {
-    pthread_mutex_lock(&(sslLocks[type]));
-  }
-  else {
-    pthread_mutex_unlock(&(sslLocks[type]));
-  }
-}
-
-static unsigned long getCurrentThreadId(void)
-{
-  unsigned long id = (unsigned long)pthread_self();
-  return id;
-}
-
-static void initSSLLocks(void)
-{
-  sslLocks = (pthread_mutex_t *)OPENSSL_malloc(CRYPTO_num_locks() * sizeof(pthread_mutex_t));
-  int status = 0;
-  for (int i = 0; i < CRYPTO_num_locks(); i++) {
-       status = pthread_mutex_init(&(sslLocks[i]), NULL);
-       if (status != 0) {
-           throw voltdb::SSLException("Failed initiatizing locks for OpenSSL");
-       }
-  }
-
-  CRYPTO_set_id_callback((unsigned long (*)())getCurrentThreadId);
-  CRYPTO_set_locking_callback((void (*)(int, int, const char*, int))sslSynchronizationCallback);
-}
-
-static void freeSSLLocks(void) {
-  CRYPTO_set_locking_callback(NULL);
-  for (int i = 0; i < CRYPTO_num_locks(); i++) {
-    pthread_mutex_destroy(&(sslLocks[i]));
-  }
-  OPENSSL_free(sslLocks);
-}
-
 
 class PendingConnection {
 public:
@@ -118,9 +72,6 @@ public:
 
     void cleanupBev() {
         if (m_bufferEvent) {
-            if (m_clientImpl->m_useSSL) {
-                //m_clientImpl->notifySslClose(m_bufferEvent);
-            }
             bufferevent_free(m_bufferEvent);
             m_bufferEvent = NULL;
         }
@@ -239,8 +190,6 @@ static void authenticationEventCallback(struct bufferevent *bev, short events, v
         pc->initiateAuthentication(bev);
     } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
         pc->m_status = false;
-        //pc->m_loginExchangeCompleted = true;
-
         if (bev) {
             pc->cleanupBev();
         }
@@ -310,7 +259,6 @@ void initOpenSSL() {
     ERR_load_crypto_strings();
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
-    //initSSLLocks();
 }
 
 void ClientImpl::initSsl() throw (SSLException) {
@@ -346,33 +294,10 @@ static void regularWriteCallback(struct bufferevent *bev, void *ctx) {
 }
 
 ClientImpl::~ClientImpl() {
-#if 0
-    if (m_useSSL) {
-        std::ostringstream os;
-        //SSL_set_shutdown(m_ssl, SSL_RECEIVED_SHUTDOWN);
-        int sslStatus = SSL_shutdown(m_ssl);
-        if (sslStatus == 0) {
-            sslStatus = SSL_shutdown(m_ssl);
-            os << "Pending shutdown; successive shutdown status " << sslStatus;
-        }
-        else if (sslStatus < 0) {
-            int reason  = SSL_get_error(m_ssl, sslStatus);
-            os << "SSL shutdown failed " << reason;
-        }
-        else {
-            os << "SSL shutdown completed successfully";
-        }
-        if (m_pLogger) {
-            logMessage(ClientLogger::INFO, os.str());
-        }
-    }
-#endif
-
     bool cleanupEvp = false;
     bool cleanupErrorStrings = false;
     for (std::vector<struct bufferevent *>::iterator i = m_bevs.begin(); i != m_bevs.end(); ++i) {
-        if (m_useSSL) {
-            //notifySslClose(*i, true);
+        if (m_enableSSL) {
             notifySslClose(*i);
         }
         bufferevent_free(*i);
@@ -421,7 +346,7 @@ ClientImpl::~ClientImpl() {
 
 #if 1
     // ssl ctx per client
-    if (m_useSSL) {
+    if (m_enableSSL) {
         if (m_clientSslCtx != NULL) {
             SSL_CTX_free(m_clientSslCtx);
             m_clientSslCtx = NULL;
@@ -437,7 +362,7 @@ ClientImpl::~ClientImpl() {
                 // clean up/unload message digests n algos
                 EVP_cleanup();
             }
-            if (m_useSSL) {
+            if (m_enableSSL) {
 #if 0
                 // if using global context between clients
                 if (m_clientSslCtx != NULL) {
@@ -447,7 +372,6 @@ ClientImpl::~ClientImpl() {
 #endif
                 // unload ssl n crypto error strings
                 ERR_free_strings();
-                //freeSSLLocks();
             }
         }
     }
@@ -513,7 +437,6 @@ void ClientImpl::hashPassword(const std::string& password) throw (MDHashExceptio
         throw MDHashException("Failed to retrieve the digest");
     }
 }
-//SSL_CTX* ClientImpl::m_clientSslCtx = NULL;
 
 ClientImpl::ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::LibEventException, MDHashException, SSLException) :
         m_base(NULL), m_ev(NULL), m_cfg(NULL), m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
@@ -525,7 +448,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::Li
         m_enableQueryTimeout(config.m_enableQueryTimeout), m_queryTimeoutMonitorThread(0), m_timerMonitorBase(NULL), m_timerMonitorEventPtr(NULL),
         m_timeoutServiceEventPtr(NULL), m_timerMonitorEventInitialized(false), m_timedoutRequests(0), m_responseHandleNotFound(0),
         m_queryExpirationTime(config.m_queryTimeout), m_scanIntervalForTimedoutQuery(config.m_scanIntervalForTimedoutQuery),
-        m_pLogger(0), m_hashScheme(config.m_hashScheme), m_useSSL(config.m_useSSL) {
+        m_pLogger(0), m_hashScheme(config.m_hashScheme), m_enableSSL(config.m_useSSL), m_clientSslCtx(NULL) {
     pthread_once(&once_initLibevent, initLibevent);
 #ifdef DEBUG
     if (!voltdb_clientimpl_debug_init_libevent) {
@@ -544,7 +467,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::Li
         throw voltdb::LibEventException("Failed creating main base");
     }
     hashPassword(config.m_password);
-    if (m_useSSL) {
+    if (m_enableSSL) {
         initSsl();
     }
     m_wakeupPipe[0] = -1;
@@ -558,9 +481,6 @@ ClientImpl::ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::Li
     }
     m_timerCheckPipe[0] = -1;
     m_timerCheckPipe[1] = -1;
-
-    //std::cout << "Scan interval: " << m_scanIntervalForTimedoutQuery.tv_sec << ":" << m_scanIntervalForTimedoutQuery.tv_usec << std::endl;
-    //std::cout << "Expiration interval: " << m_queryExpirationTime.tv_sec << ":" << m_scanIntervalForTimedoutQuery.tv_usec << std::endl;
 
     ++m_numberOfClients;
 }
@@ -599,7 +519,7 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
         pc->cleanupBev();
     }
 
-    if (m_useSSL) {
+    if (m_enableSSL) {
         SSL *bevSsl = SSL_new(m_clientSslCtx);
         if (bevSsl == NULL) {
             ss.str("");
@@ -608,6 +528,7 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
         }
         pc->m_bufferEvent = bufferevent_openssl_socket_new(m_base, -1, bevSsl, BUFFEREVENT_SSL_CONNECTING,
                 BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+        bufferevent_openssl_get_allow_dirty_shutdown(pc->m_bufferEvent);
     }
     else {
         pc->m_bufferEvent = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
@@ -657,8 +578,7 @@ void ClientImpl::close() {
     }
     if (m_bevs.empty()) return;
     for (std::vector<struct bufferevent *>::iterator bevEntryItr = m_bevs.begin(); bevEntryItr != m_bevs.end(); ++bevEntryItr) {
-        if (m_useSSL) {
-            //notifySslClose(*bevEntryItr, true);
+        if (m_enableSSL) {
             notifySslClose(*bevEntryItr);
         }
         bufferevent_free(*bevEntryItr);
@@ -1426,7 +1346,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         assert(false);
     } else if (events & (BEV_EVENT_ERROR | BEV_EVENT_EOF)) {
 
-        if (m_useSSL) {
+        if (m_enableSSL) {
             // check if there are wrapper in evutil for ssl errors
             unsigned long sslErr = ERR_get_error();
             const char* const errMsg = ERR_reason_error_string(sslErr);
@@ -1443,22 +1363,8 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
 
         bool breakEventLoop = false;
 
-        std::ostringstream os;
-#if 0
-        int err = EVUTIL_SOCKET_ERROR();
-        char* errMsg = NULL;
-        errMsg = evutil_socket_error_to_string(err);
-        if (errMsg) {
-            std::string msg(errMsg);
-            if (m_pLogger) {
-                m_pLogger->log(ClientLogger::ERROR, msg);
-            } else {
-                // for debugging
-                std::cerr << msg << std::endl;
-            }
-        }
-#endif
         if (m_pLogger) {
+            std::ostringstream os;
             const char* s_error = (events & BEV_EVENT_ERROR) ? "BEV_EVENT_ERROR" :"BEV_EVENT_EOF";
             os << "connectionLost: " << s_error;
             logMessage(ClientLogger::ERROR, os.str());
@@ -1496,12 +1402,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
             //Remove the callback map from the callbacks map
             m_callbacks.erase(callbackMapIter);
         }
-#if 0
-        else {
-            os << "bev not found in callback list" << bev;
-            std::cout << os.str() << std::endl;
-        }
-#endif
+
         if (m_isDraining && (m_outstandingRequests == 0)) {
             m_isDraining = false;
             breakEventLoop = true;
@@ -1520,25 +1421,11 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         //Remove the connection context
         m_contexts.erase(bev);
 
-
-        //os << "\nbefore deletion: " << m_bevs.size() << " bev entry: " << bev;
-#if 0
-        for (std::vector<struct bufferevent *>::iterator i = m_bevs.begin(); i != m_bevs.end(); ++i) {
-            if (*i == bev) {
-                m_bevs.erase(i);
-                break;
-            }
-        }
-#endif
         std::vector<bufferevent *>::iterator entry = std::find(m_bevs.begin(), m_bevs.end(), bev);
         if (entry != m_bevs.end()) {
             m_bevs.erase(entry);
         }
 
-        if (m_useSSL) {
-            //notifySslClose(bev, false);
-            notifySslClose(bev);
-        }
         bufferevent_free(bev);
         //Reset cluster Id as no more connections left
         if (m_bevs.empty()) {
@@ -1615,13 +1502,12 @@ public:
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()){
-            std::ostringstream os;
-            os << "Failure response TopoUpdateCallback::callback: " << response.statusString();
             if (m_logger) {
-                m_logger->log(ClientLogger::ERROR, os.str());
+                std::string msg = "Failure response TopoUpdateCallback::callback: " + response.statusString();
+                m_logger->log(ClientLogger::ERROR, msg);
             }
             else {
-                std::cerr << os.str() << std::endl;
+                //std::cerr << os.str() << std::endl;
             }
             return false;
         }
@@ -1645,13 +1531,12 @@ public:
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()) {
-            std::ostringstream os;
-            os << "Failure response SubscribeCallback::callback: " << response.statusString();
             if (m_logger) {
-                m_logger->log(ClientLogger::ERROR, os.str());
+                std::string msg = "Failure response SubscribeCallback::callback: " + response.statusString();
+                m_logger->log(ClientLogger::ERROR, msg);
             }
             else {
-                std::cerr  << os.str()<< std::endl;
+                //std::cerr  << os.str()<< std::endl;
             }
             return false;
         }
@@ -1674,13 +1559,13 @@ public:
     bool callback(InvocationResponse response) throw (voltdb::Exception)
     {
         if (response.failure()) {
-            std::ostringstream os;
-            os << "Failure response SubscribeCallback::callback: " << response.statusString();
+
             if (m_logger) {
-                m_logger->log(ClientLogger::ERROR, os.str());
+                std::string msg = "Failure response SubscribeCallback::callback: " + response.statusString();
+                m_logger->log(ClientLogger::ERROR, msg);
             }
             else {
-                std::cerr << os.str() << std::endl;
+                //std::cerr << os.str() << std::endl;
             }
             return false;
         }

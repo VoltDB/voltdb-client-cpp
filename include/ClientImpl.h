@@ -175,7 +175,6 @@ private:
      */
     void initSsl() throw (SSLException);
     inline void notifySslClose(bufferevent *bev) {
-
         SSL *ssl = bufferevent_openssl_get_ssl(bev);
         if (ssl == NULL) {
             return;
@@ -185,18 +184,7 @@ private:
             if (closeStatus == 0) {
                 SSL_shutdown(ssl);
             }
-        } else {
-            //SSL_set_shutdown(ssl, SSL_RECEIVED_SHUTDOWN);
         }
-
-#if 0
-        if (doShutdown) {
-            int closeStatus = SSL_shutdown(ssl);
-            (void) closeStatus;
-        }
-#endif
-
-
     }
 
     /*
@@ -308,18 +296,14 @@ private:
 
     ClientLogger* m_pLogger;
     ClientAuthHashScheme m_hashScheme;
-    bool m_useSSL;
-    /*static*/ SSL_CTX *m_clientSslCtx;
+    const bool m_enableSSL;
+    SSL_CTX *m_clientSslCtx;
     // Reference count number of clients running so that global resource like ssl
     // error strings and digests, which are shared between clients running on separate
     // threads can cleaned up
     static boost::atomic<uint32_t> m_numberOfClients;
     static boost::mutex m_globalResourceLock;
 
-    //void initSSLLocks();
-    //void freeSSLLocks();
-
-    //static pthread_mutex_t *sslLocks;
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
     static const std::string SERVICE;
 };

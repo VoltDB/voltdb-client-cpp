@@ -183,6 +183,10 @@ int main(int argc, char* argv[]) {
     voltdb::ParameterSet* params = initProc.params();
     params->addInt32(maxContestant).addString(cNames);
     voltdb::InvocationResponse vtInitialize = client.invoke(initProc);
+    if (!vtInitialize.success()) {
+        std::cerr << "Error response received on \"Initialize\" stored proc invocation\n " << vtInitialize.toString() << std::endl;
+        exit(-1);
+    }
     maxContestant = (int32_t)vtInitialize.results()[0].iterator().next().getInt64(0);
     cout << "Running for " << maxContestant << " contestant(s)" << endl;
 
