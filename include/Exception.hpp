@@ -25,6 +25,7 @@
 #define VOLTDB_EXCEPTION_HPP_
 #include <cstdio>
 #include <exception>
+#include "WireType.h"
 
 namespace voltdb {
 
@@ -60,10 +61,10 @@ public:
         m_what = "Attempted to retrieve a column with an invalid index or name, or an invalid type for the specified column";
     }
 
-    explicit InvalidColumnException(const size_t index) :
+    explicit InvalidColumnException(const size_t index, const size_t numColumns) :
         Exception() {
         char msg[256];
-        snprintf(msg, sizeof msg, "Attempted to retrieve a column with an invalid index: %ld", index);
+        snprintf(msg, sizeof msg, "Attempted to retrieve a column with an invalid index: %ld; valid high index: %ld", index, numColumns-1);
         m_what = msg;
     }
 
@@ -86,6 +87,44 @@ public:
     }
 };
 
+class ColumnPopulateException : public voltdb::Exception {
+    std::string m_what;
+    explicit ColumnPopulateException():Exception() {
+        //m_what = "Column populate exception: Encountered exception populating column for the row";
+    }
+public:
+    ColumnPopulateException(WireType expected, WireType actual) : Exception() {
+        m_what = "Column populate exception: Provided column type does not match expected column type. "
+                "Expected: " + wireTypeToString(expected) + ", provided: " + wireTypeToString(actual);
+    }
+
+    ColumnPopulateException(const std::string &msg) {
+        m_what = "Column populate exception: " + msg;
+    }
+    const char* what() const throw() {
+        return m_what.c_str();
+    }
+    ~ColumnPopulateException() throw() {}
+};
+
+class VoltTableException : public Exception {
+private:
+    std::string m_what;
+public:
+    explicit VoltTableException() {
+        m_what = "Encountered exception when operating with VoltTable";
+    }
+
+    explicit VoltTableException(const std::string& msg) {
+        m_what = "Encountered exception when operating with VoltTable: " + msg;
+    }
+
+    const char* what() const throw() {
+        return m_what.c_str();
+    }
+
+    ~VoltTableException() throw() {}
+};
 /*
  * Thrown by ByteBuffer when an attempt is made to get or put data beyond the limit or capacity of the ByteBuffer
  * Users should never see this error since they don't access ByteBuffers directly. They access them
@@ -351,6 +390,32 @@ public:
     virtual ~TimerThreadException() throw () {}
 
     const char* what() const throw () { return m_msg.c_str();}
+};
+
+class UninitializedColumnException : public Exception {
+private:
+    std::string m_what;
+public:
+    explicit UninitializedColumnException() : Exception() {
+        m_what = "Uninitialized column exception";
+    }
+    explicit UninitializedColumnException(size_t currentColumnIndex, size_t numberOfColumns) : Exception() {
+        char msg[1024];
+        snprintf(msg, sizeof (msg), "Not at all columns of the row were initialized. Number of columns: %ld; number of columns initialized: %ld", currentColumnIndex, numberOfColumns);
+        m_what = std::string(msg);
+    }
+
+    const char* what() const throw () { return m_what.c_str(); }
+
+    ~UninitializedColumnException() throw() {}
+};
+
+class InCompatibleSchemaException : public Exception {
+public:
+    explicit InCompatibleSchemaException() : Exception() {}
+    const char* what() const throw() { return "Incompatible schema"; }
+    ~InCompatibleSchemaException() throw() {}
+
 };
 
 }

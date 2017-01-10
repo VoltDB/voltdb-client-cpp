@@ -29,62 +29,85 @@
 #include "boost/shared_ptr.hpp"
 #include <stdint.h>
 #include "Exception.hpp"
+#include "Decimal.hpp"
+#include "Geography.hpp"
+#include "GeographyPoint.hpp"
+
+/* Helper class to build row given the table schema.
+ * Column count and it's type is inferred using the table schema
+ * provided at construction time.
+ * Note: the bytebuffer does not contain the Row length field at the start
+ * ByteBuffer stores the column data sequentially starting with first column
+ */
 
 namespace voltdb {
-class ColumnMismatchException : public voltdb::Exception {
-    const char * what() const throw() {
-        return "Attempted to set a column using the wrong type";
-    }
-};
-class Table;
+
+class TableTest;
 class RowBuilder {
-    friend class Table;
+friend class TableTest;
 private:
-    void validateType(WireType type) {
-        if (m_columns[m_currentColumn].m_type != type ||
-                m_currentColumn > m_columns.size()) {
-            throw ColumnMismatchException();
+    void validateType(WireType type) throw (InvalidColumnException, ColumnPopulateException){
+        if (m_currentColumnIndex >= m_columns.size()) {
+            throw InvalidColumnException(m_currentColumnIndex, m_columns.size());
+        }
+
+        if (m_columns[m_currentColumnIndex].type() != type) {
+            throw ColumnPopulateException(m_columns[m_currentColumnIndex].type(), type);
         }
     }
-public:
-    RowBuilder(Table *table);
 
-    void addInt64(int64_t val) {
+public:
+    // Initializes the Rowbuilder with schema of the table for which the row will be constructed
+    RowBuilder(const std::vector<Column> &schema) throw (ColumnPopulateException);
+
+    RowBuilder& addInt64(int64_t val) {
         validateType(WIRE_TYPE_BIGINT);
         m_buffer.ensureRemaining(8);
         m_buffer.putInt64(val);
-        m_currentColumn++;
+        m_currentColumnIndex++;
+        return *this;
     }
-    void addInt32(int32_t val) {
+
+    RowBuilder& addInt32(int32_t val) {
         validateType(WIRE_TYPE_INTEGER);
         m_buffer.ensureRemaining(4);
         m_buffer.putInt32(val);
-        m_currentColumn++;
+        m_currentColumnIndex++;
+        return *this;
     }
-    void addInt16(int16_t val) {
+
+    RowBuilder& addInt16(int16_t val) {
         validateType(WIRE_TYPE_SMALLINT);
         m_buffer.ensureRemaining(2);
         m_buffer.putInt16(val);
-        m_currentColumn++;
+        m_currentColumnIndex++;
+        return *this;
     }
-    void addInt8(int8_t val) {
+
+    RowBuilder& addInt8(int8_t val) {
         validateType(WIRE_TYPE_TINYINT);
         m_buffer.ensureRemaining(1);
         m_buffer.putInt8(val);
-        m_currentColumn++;
+        m_currentColumnIndex++;
+        return *this;
     }
-    void addDouble(double val) {
+
+    RowBuilder& addDouble(double val) {
         validateType(WIRE_TYPE_FLOAT);
         m_buffer.ensureRemaining(8);
         m_buffer.putDouble(val);
-        m_currentColumn++;
+        m_currentColumnIndex++;
+        return *this;
     }
-    void addNull() {
-        if (m_currentColumn > m_columns.size()) {
-            throw ColumnMismatchException();
+
+    RowBuilder& addNull() {
+        if (m_currentColumnIndex >= m_columns.size()) {
+            throw InvalidColumnException(m_currentColumnIndex, m_columns.size());
         }
-        switch (m_columns[m_currentColumn].m_type) {
+
+        switch (m_columns[m_currentColumnIndex].type()) {
         case WIRE_TYPE_BIGINT:
+        case WIRE_TYPE_TIMESTAMP:
             addInt64(INT64_MIN);
             break;
         case WIRE_TYPE_INTEGER:
@@ -102,39 +125,110 @@ public:
         case WIRE_TYPE_STRING:
             m_buffer.ensureRemaining(4);
             m_buffer.putInt32(-1);
-            m_currentColumn++;
+            m_currentColumnIndex++;
             break;
         case WIRE_TYPE_VARBINARY:
             m_buffer.ensureRemaining(4);
             m_buffer.putInt32(-1);
-            m_currentColumn++;
+            m_currentColumnIndex++;
             break;
+         //todo: populate null for decimal, geography point and geography types
+        case WIRE_TYPE_DECIMAL:     // null is ttint min for decimal
+        case WIRE_TYPE_GEOGRAPHY:   // polygon with zero rings
+        case WIRE_TYPE_GEOGRAPHY_POINT: //long 360 n lat 360
         default:
             assert(false);
         }
+        return *this;
     }
-    void addString(const std::string& val) {
+
+    RowBuilder& addString(const std::string& val) {
         validateType(WIRE_TYPE_STRING);
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(val.size()));
         m_buffer.putString(val);
-        m_currentColumn++;
+        m_currentColumnIndex++;
+        return *this;
     }
 
-    void addVarbinary(const int32_t bufsize, const uint8_t *in_value) {
+    RowBuilder& addVarbinary(const int32_t bufsize, const uint8_t *in_value) {
         validateType(WIRE_TYPE_VARBINARY);
         m_buffer.ensureRemaining(4 + bufsize);
         m_buffer.putBytes(bufsize, in_value);
-        m_currentColumn++;
+        m_currentColumnIndex++;
+        return *this;
+    }
+
+    RowBuilder& addTimeStamp(int64_t value) {
+        validateType(WIRE_TYPE_TIMESTAMP);
+        m_buffer.ensureRemaining(8);
+        m_buffer.putInt64(value);
+        m_currentColumnIndex++;
+        return *this;
+    }
+
+    RowBuilder& addDecimal(const Decimal& value) {
+        validateType(WIRE_TYPE_DECIMAL);
+        m_buffer.ensureRemaining(2 * sizeof (int64_t));
+        value.serializeTo(&m_buffer);
+        m_currentColumnIndex++;
+        return *this;
+    }
+
+    RowBuilder& addGeographyPoint(const GeographyPoint &val) {
+        validateType(WIRE_TYPE_GEOGRAPHY_POINT);
+        // One byte for the type and 2*sizeof(double) bytes
+        // for the payload.
+        m_buffer.ensureRemaining(2*sizeof(double));
+        m_buffer.putDouble(val.getLongitude());
+        m_buffer.putDouble(val.getLatitude());
+        m_currentColumnIndex++;
+        return *this;
+    }
+
+    RowBuilder& addGeography(const Geography &val) {
+        validateType(WIRE_TYPE_GEOGRAPHY);
+        int32_t valSize = val.getSerializedSize();
+        m_buffer.ensureRemaining(1 + valSize);
+        int realSize = val.serializeTo(m_buffer);
+        m_currentColumnIndex++;
+        return *this;
     }
 
     void reset() {
         m_buffer.clear();
-        m_currentColumn = 0;
+        m_currentColumnIndex = 0;
     }
+
+    /** Copies over row row data into provided byte buffer
+     *  Precondition to calling this function: All the columns of the
+     *  row schema have been populated
+     */
+    void serializeTo(ExpandableByteBuffer& buffer) {
+        if (m_currentColumnIndex != m_columns.size()) {
+            throw UninitializedColumnException(m_currentColumnIndex, m_columns.size());
+        }
+
+        m_buffer.flip();
+        buffer.ensureRemaining(m_buffer.limit());
+        buffer.put(&m_buffer);
+        reset();
+    }
+
+    /** Returns number of first 'n'n populated columns for the given row.
+     * For example 0 meaning none of the row columns are populated
+     * 1 telling first column of the row has been populated.
+     * Row does not support holes, so if return count is 3 it represents
+     * all 3 columns from beginning have been populated
+     */
+    int32_t numberOfPopulatedColumns() const {
+        return m_currentColumnIndex;
+    }
+
+    const std::vector<voltdb::Column>& getSchema() const { return m_columns; }
 private:
     std::vector<voltdb::Column> m_columns;
     voltdb::ScopedByteBuffer m_buffer;
-    uint32_t m_currentColumn;
+    uint32_t m_currentColumnIndex;
 };
 }
 

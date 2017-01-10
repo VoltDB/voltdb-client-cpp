@@ -27,6 +27,8 @@
 #include "Row.hpp"
 
 namespace voltdb {
+    const int32_t Table::MAX_TUPLE_LENGTH = 2097152;
+
     Table::Table(SharedByteBuffer buffer) : m_buffer(buffer) {
         buffer.position(5);
         size_t columnCount = static_cast<size_t>(buffer.getInt16());
@@ -50,6 +52,44 @@ namespace voltdb {
         m_buffer.position(m_buffer.limit());
     }
 
+    Table::Table(const std::vector<Column> &columns) {
+        if (columns.empty()) {
+            throw VoltTableException("volt table construction requires at least one column");
+        }
+        const int initialBuffSize = 8192;
+        char *data = new char[initialBuffSize];
+        m_buffer = SharedByteBuffer(data, initialBuffSize);
+
+        m_columns.reset(new std::vector<voltdb::Column>(columns));
+
+        // prepare byte buffer
+        m_buffer.putInt32(0); // start with dummy value for header size
+        m_buffer.putInt8(0);
+        const size_t columnCount = columns.size();
+        m_buffer.putInt16((int16_t) columnCount);
+
+        for (int index = 0; index < columnCount; ++index) {
+            assert(columns[index].type() != WIRE_TYPE_INVALID);
+            m_buffer.putInt8((int8_t)columns[index].type());
+        }
+
+        for (int index = 0; index < columnCount; ++index) {
+            assert((columns[index].name() != std::string()) &&
+                    (columns[index].name() != std::string("")));
+            m_buffer.putString(columns[index].name());
+        }
+
+        // header size (length-prefixed non-inclusive)
+        m_rowStart = m_buffer.position();
+        m_buffer.putInt32(0, m_rowStart - 4);
+        // row count to zero
+        m_rowCount = 0;
+        m_buffer.putInt32(m_rowCount);
+
+
+        m_buffer.limit(m_buffer.position());
+    }
+
     int8_t Table::getStatusCode() const{
         return m_buffer.getInt8(4);
     }
@@ -67,7 +107,7 @@ namespace voltdb {
         return static_cast<int32_t>(m_columns->size());
     }
 
-    std::vector<voltdb::Column> Table::columns() const {
+    const std::vector<voltdb::Column>& Table::columns() const {
         return *m_columns;
     }
 
@@ -86,14 +126,14 @@ namespace voltdb {
             if (ii != 0) {
                 ostream << ", ";
             }
-            ostream << m_columns->at(ii).m_name;
+            ostream << m_columns->at(ii).name();
         }
         ostream << std::endl << indent << "Column types: ";
         for (size_t ii = 0; ii < m_columns->size(); ii++) {
             if (ii != 0) {
                 ostream << ", ";
             }
-            ostream << wireTypeToString(m_columns->at(ii).m_type);
+            ostream << wireTypeToString(m_columns->at(ii).type());
         }
         ostream << std::endl;
         TableIterator iter = iterator();
@@ -102,6 +142,32 @@ namespace voltdb {
             row.toString(ostream, indent + "    ");
             ostream << std::endl;
         }
+    }
+
+    void Table::validateRowScehma(const std::vector<Column>& schema) const throw (InCompatibleSchemaException) {
+        if (schema.empty() || schema != *m_columns) {
+            throw (InCompatibleSchemaException());
+        }
+    }
+
+    void Table::addRow(RowBuilder& row) {
+        const std::vector<Column>& schema = row.getSchema();
+        validateRowScehma(schema);
+
+        m_buffer.limit(m_buffer.capacity());
+        m_buffer.ensureRemaining(m_buffer.position() + 8192);
+
+        int32_t startPosition = m_buffer.position();
+        m_buffer.position(startPosition + 4);                // update startPosition to store row data
+        row.serializeTo(m_buffer);
+        int32_t rowSize = m_buffer.position() - (startPosition + 4);
+        assert(rowSize > MAX_TUPLE_LENGTH);
+        if (rowSize > MAX_TUPLE_LENGTH) {
+            throw VoltTableException("Row size exceeded max tuple size");
+        }
+        m_buffer.putInt32(startPosition, rowSize);           // mark row size
+        m_buffer.putInt32(m_rowStart, ++m_rowCount);    // update row count
+        m_buffer.limit(m_buffer.position());
     }
 
     void Table::operator >> (std::ostream &ostream) const {

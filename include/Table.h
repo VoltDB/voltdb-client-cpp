@@ -30,22 +30,24 @@
 #include "Column.hpp"
 #include <sstream>
 #include <iostream>
+#include "RowBuilder.h"
 
 namespace voltdb {
 class TableIterator;
-class RowBuilder;
 
 /*
  * Reprentation of result tables returns by VoltDB.
  */
 class Table {
-    friend class RowBuilder;
+    //friend class RowBuilder;
+    friend class TableTest;
 public:
     /*
      * Construct a table from a shared buffer. The table retains a reference
      * to the shared buffer indefinitely so watch out for unwanted memory retension.
      */
     Table(SharedByteBuffer buffer);
+    Table(const std::vector<Column> &columns);
     Table() {}
 
     ~Table() {
@@ -66,11 +68,12 @@ public:
      * Retrieve the number of rows contained in this table
      */
     int32_t rowCount() const;
+    void addRow(RowBuilder& row) ;
 
     /*
      * Retrieve a copy of the column metadata.
      */
-    std::vector<voltdb::Column> columns() const;
+    const std::vector<voltdb::Column>& columns() const;
 
     /*
      * Retrieve the number of columns in this table's schema.
@@ -81,6 +84,11 @@ public:
      * Returns a string representation of this table and all of its rows.
      */
     std::string toString() const;
+
+    /**
+     * Serialize Volt table to byte buffer
+     */
+    void serializeTo(ByteBuffer *buffer);
 
     /*
      * Returns a string representation of this table and all of its rows with
@@ -95,7 +103,9 @@ public:
 
     Table(std::istream &istream);
 
+    const static int32_t MAX_TUPLE_LENGTH;
 private:
+    void validateRowScehma(const std::vector<Column>& schema) const throw (InCompatibleSchemaException);
     boost::shared_ptr<std::vector<voltdb::Column> > m_columns;
     int32_t m_rowStart;
     int32_t m_rowCount;

@@ -261,9 +261,9 @@ public:
      */
     bool isNull(int32_t column) throw(voltdb::InvalidColumnException, voltdb::UnsupportedTypeException) {
         if (column < 0 || column >= static_cast<ssize_t>(m_columns->size())) {
-            throw InvalidColumnException(column);
+            throw InvalidColumnException(column, m_columns->size());
         }
-        WireType columnType = m_columns->at(static_cast<size_t>(column)).m_type;
+        WireType columnType = m_columns->at(static_cast<size_t>(column)).type();
         switch (columnType) {
         case WIRE_TYPE_DECIMAL:
             getDecimal(column); break;
@@ -453,7 +453,7 @@ public:
                 ostream << "NULL";
                 continue;
             }
-            switch(m_columns->at(ii).m_type) {
+            switch(m_columns->at(ii).type()) {
             case WIRE_TYPE_TINYINT:
                 ostream << static_cast<int32_t>(getInt8(ii)); break;
             case WIRE_TYPE_SMALLINT:
@@ -495,9 +495,9 @@ private:
     WireType validateType(WireType type, int32_t index)  throw (InvalidColumnException) {
         if (index < 0 ||
                 index >= static_cast<ssize_t>(m_columns->size())) {
-            throw InvalidColumnException(index);
+            throw InvalidColumnException(index, m_columns->size());
         }
-        WireType columnType = m_columns->at(static_cast<size_t>(index)).m_type;
+        WireType columnType = m_columns->at(static_cast<size_t>(index)).type();
         switch (columnType) {
         case WIRE_TYPE_INTEGER:
             if (type != WIRE_TYPE_BIGINT && type != WIRE_TYPE_INTEGER) {
@@ -544,7 +544,7 @@ private:
 
     int32_t getColumnIndexByName(const std::string& name) {
         for (int32_t ii = 0; ii < static_cast<ssize_t>(m_columns->size()); ii++) {
-            if (m_columns->at(static_cast<size_t>(ii)).m_name == name) {
+            if (m_columns->at(static_cast<size_t>(ii)).name() == name) {
                 return ii;
             }
         }
@@ -552,7 +552,7 @@ private:
     }
 
     const std::string& getColumnNameByIndex(int32_t index){
-        return m_columns->at(index).m_name;
+        return m_columns->at(index).name();
     }
 
     void ensureCalculatedOffsets() {
@@ -565,7 +565,7 @@ private:
             // data at offset i-1 and add it to the offset at index i-1,
             // to get the index at i.
             //
-            WireType type = m_columns->at(static_cast<size_t>(i - 1)).m_type;
+            WireType type = m_columns->at(static_cast<size_t>(i - 1)).type();
             if (isVariableSized(type)) {
                 int32_t length = m_data.getInt32(m_offsets[static_cast<size_t>(i - 1)]);
                 if (length == -1) {

@@ -23,7 +23,12 @@
 
 #include "RowBuilder.h"
 #include "Table.h"
+
 namespace voltdb {
-    RowBuilder::RowBuilder(Table *table) :
-    m_columns(*table->m_columns.get()), m_buffer(8192), m_currentColumn(0) {}
+    RowBuilder::RowBuilder(const std::vector<Column> &schema) throw (ColumnPopulateException) :
+    m_columns(schema), m_buffer(8192), m_currentColumnIndex(0) {
+        if (m_columns.size() < 1) {
+            throw ColumnPopulateException("table schema for row should contain at least one column");
+        }
+    }
 }

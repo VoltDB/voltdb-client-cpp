@@ -29,11 +29,9 @@
 namespace voltdb {
 class Column {
 public:
-    Column() {}
+    Column() : m_name(""), m_type(WIRE_TYPE_INVALID) {}
     Column(std::string name, WireType type) : m_name(name), m_type(type) {}
     Column(WireType type) : m_name(""), m_type(type) {}
-    std::string m_name;
-    WireType m_type;
 
     const std::string& name() const {
         return m_name;
@@ -52,6 +50,10 @@ public:
         if (this == &rhs) return false;
         return (m_type != rhs.m_type || m_name != rhs.m_name);
     }
+
+private:
+    std::string m_name;
+    WireType m_type;
 
 };
 }

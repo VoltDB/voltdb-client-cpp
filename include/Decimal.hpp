@@ -53,6 +53,10 @@ public:
 
     Decimal() {}
 
+    Decimal(const TTInt& ttInt) {
+        getDecimal() = ttInt;
+    }
+
     /*
      * Construct a decimal value from a string.
      */
