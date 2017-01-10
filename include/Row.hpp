@@ -484,11 +484,11 @@ public:
         }
     }
 
-    int32_t columnCount() {
+    int32_t columnCount() const {
         return static_cast<int32_t>(m_columns->size());
     }
 
-    std::vector<voltdb::Column> columns() {
+    std::vector<voltdb::Column> columns() const {
         return *m_columns;
     }
 private:

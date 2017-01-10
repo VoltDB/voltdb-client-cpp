@@ -43,6 +43,7 @@
 namespace voltdb {
 
 class TableTest;
+
 class RowBuilder {
 friend class TableTest;
 private:
@@ -106,18 +107,20 @@ public:
         }
 
         switch (m_columns[m_currentColumnIndex].type()) {
-        case WIRE_TYPE_BIGINT:
-        case WIRE_TYPE_TIMESTAMP:
-            addInt64(INT64_MIN);
-            break;
-        case WIRE_TYPE_INTEGER:
-            addInt32(INT32_MIN);
+        case WIRE_TYPE_TINYINT:
+            addInt8(INT8_MIN);
             break;
         case WIRE_TYPE_SMALLINT:
             addInt16(INT16_MIN);
             break;
-        case WIRE_TYPE_TINYINT:
-            addInt8(INT8_MIN);
+        case WIRE_TYPE_INTEGER:
+            addInt32(INT32_MIN);
+            break;
+        case WIRE_TYPE_BIGINT:
+            addInt64(INT64_MIN);
+            break;
+        case WIRE_TYPE_TIMESTAMP:
+            addTimeStamp(INT64_MIN);
             break;
         case WIRE_TYPE_FLOAT:
             addDouble(-1.7976931348623157E+308);
@@ -132,13 +135,30 @@ public:
             m_buffer.putInt32(-1);
             m_currentColumnIndex++;
             break;
-         //todo: populate null for decimal, geography point and geography types
-        case WIRE_TYPE_DECIMAL:     // null is ttint min for decimal
-        case WIRE_TYPE_GEOGRAPHY:   // polygon with zero rings
-        case WIRE_TYPE_GEOGRAPHY_POINT: //long 360 n lat 360
+        case WIRE_TYPE_DECIMAL: {
+            TTInt ttInt;
+            ttInt.SetMin();
+            Decimal dec(ttInt);
+            dec.serializeTo(&m_buffer);
+            m_currentColumnIndex++;
+            break;
+        }
+        case WIRE_TYPE_GEOGRAPHY: {
+            Geography polyNull;     // zero rings poly is null
+            polyNull.serializeTo(m_buffer);
+            m_currentColumnIndex++;
+            break;
+        }
+        case WIRE_TYPE_GEOGRAPHY_POINT:
+            m_buffer.ensureRemaining(2*sizeof(double));
+            m_buffer.putDouble(GeographyPoint::NULL_COORDINATE);
+            m_buffer.putDouble(GeographyPoint::NULL_COORDINATE);
+            m_currentColumnIndex++;
+            break;
         default:
             assert(false);
         }
+
         return *this;
     }
 
@@ -176,8 +196,7 @@ public:
 
     RowBuilder& addGeographyPoint(const GeographyPoint &val) {
         validateType(WIRE_TYPE_GEOGRAPHY_POINT);
-        // One byte for the type and 2*sizeof(double) bytes
-        // for the payload.
+        // 2*sizeof(double) bytes for the payload.
         m_buffer.ensureRemaining(2*sizeof(double));
         m_buffer.putDouble(val.getLongitude());
         m_buffer.putDouble(val.getLatitude());
@@ -214,7 +233,7 @@ public:
         reset();
     }
 
-    /** Returns number of first 'n'n populated columns for the given row.
+    /** Returns number of first 'n' populated columns for the given row.
      * For example 0 meaning none of the row columns are populated
      * 1 telling first column of the row has been populated.
      * Row does not support holes, so if return count is 3 it represents
@@ -224,7 +243,7 @@ public:
         return m_currentColumnIndex;
     }
 
-    const std::vector<voltdb::Column>& getSchema() const { return m_columns; }
+    const std::vector<voltdb::Column>& rowSchema() const { return m_columns; }
 private:
     std::vector<voltdb::Column> m_columns;
     voltdb::ScopedByteBuffer m_buffer;

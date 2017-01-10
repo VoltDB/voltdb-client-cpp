@@ -151,7 +151,7 @@ namespace voltdb {
     }
 
     void Table::addRow(RowBuilder& row) {
-        const std::vector<Column>& schema = row.getSchema();
+        const std::vector<Column>& schema = row.rowSchema();
         validateRowScehma(schema);
 
         m_buffer.limit(m_buffer.capacity());
@@ -161,7 +161,7 @@ namespace voltdb {
         m_buffer.position(startPosition + 4);                // update startPosition to store row data
         row.serializeTo(m_buffer);
         int32_t rowSize = m_buffer.position() - (startPosition + 4);
-        assert(rowSize > MAX_TUPLE_LENGTH);
+        assert(rowSize <= MAX_TUPLE_LENGTH);
         if (rowSize > MAX_TUPLE_LENGTH) {
             throw VoltTableException("Row size exceeded max tuple size");
         }

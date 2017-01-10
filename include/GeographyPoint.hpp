@@ -160,10 +160,11 @@ public:
     int32_t deserializeFrom(ByteBuffer &message,
                             int32_t     offset,
                             bool       &wasNull);
+    static const double NULL_COORDINATE = 360.0;
 private:
     double m_longitude;
     double m_latitude;
-    static const double NULL_COORDINATE = 360.0;
+
 };
 
 } /* namespace voltdb */

@@ -202,6 +202,15 @@ public:
         min.SetMin();
         return getDecimal() == min;
     }
+
+    bool operator==(const Decimal &other) {
+        return ::memcmp((void *) m_data, other.m_data, sizeof(m_data)) == 0;
+    }
+
+    bool operator!=(const Decimal &other) {
+        return !operator==(other);
+    }
+
 private:
 
     // Constants for Decimal type
