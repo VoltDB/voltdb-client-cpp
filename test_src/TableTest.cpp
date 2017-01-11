@@ -52,7 +52,7 @@ private:
     CPPUNIT_TEST(testTableConstruct);
     CPPUNIT_TEST_EXCEPTION(testTableConstructWitnNoColumns, voltdb::VoltTableException);
     CPPUNIT_TEST(testRowBuilderRudimentary);
-    CPPUNIT_TEST(testRowAdd);
+    CPPUNIT_TEST(testTablePopulate);
     CPPUNIT_TEST_SUITE_END();
 
     void fillRandomValues() {
@@ -398,7 +398,7 @@ private:
             }
         }
 
-        void testRowAdd() {
+        void testTablePopulate() {
             std::vector<voltdb::Column> columns;
             allTypeColumns(columns);
 
@@ -437,17 +437,32 @@ private:
             schemaRead = rowFetched.columns();
             CPPUNIT_ASSERT(schemaRead == columns);
 
-            rowFetched = tableItr.next(); // 2nd row
+            assert(tableItr.hasNext());     // 2nd row
+            rowFetched = tableItr.next();
             CPPUNIT_ASSERT(rowFetched.columnCount() == columns.size());
             schemaRead = rowFetched.columns();
             CPPUNIT_ASSERT(schemaRead == columns);
             verifyRowData(rowFetched);
 
-            rowFetched = tableItr.next(); // 3rd row
+            assert (tableItr.hasNext());    // 3rd row
+            rowFetched = tableItr.next();
             CPPUNIT_ASSERT(rowFetched.columnCount() == columns.size());
             schemaRead = rowFetched.columns();
             CPPUNIT_ASSERT(schemaRead == columns);
             verifyNullValues(rowFetched);
+
+            assert (!tableItr.hasNext());   // no more rows left
+
+            // serialization
+            int32_t tableSerializeSize = table.getSerializedSize();
+            char *data = new char[tableSerializeSize];
+            boost::scoped_ptr<char> scopedData(data);
+            ByteBuffer tableBB(scopedData.get(), tableSerializeSize);
+            int32_t serializedSize = table.serializeTo(tableBB);
+            if (tableSerializeSize != serializedSize) {
+                std::cout << "expected serialized size: " << tableSerializeSize <<" got: " << serializedSize <<std::endl;
+            }
+            CPPUNIT_ASSERT(serializedSize == tableSerializeSize);
         }
 
         void testRowBuilderRudimentary() {

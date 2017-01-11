@@ -85,10 +85,15 @@ public:
      */
     std::string toString() const;
 
-    /**
+    /*
      * Serialize Volt table to byte buffer
      */
-    void serializeTo(ByteBuffer *buffer);
+    int32_t serializeTo(ByteBuffer& buffer);
+
+    /*
+     * Size for serialized voltable
+     */
+    int32_t getSerializedSize() const;
 
     /*
      * Returns a string representation of this table and all of its rows with

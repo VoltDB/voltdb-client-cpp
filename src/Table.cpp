@@ -179,6 +179,30 @@ namespace voltdb {
         }
     }
 
+    /*
+     * Serialize Volt table to byte buffer
+     */
+    int32_t Table::serializeTo(ByteBuffer& buffer) {
+        // ensure there is sufficient size in the buffer
+        // to serialize the data
+        buffer.limit(buffer.capacity());
+        if (buffer.remaining() < getSerializedSize()) {
+            // todo: generate appropriate exception
+            throw VoltTableException("Insufficient space in destination buffer");
+        }
+        int32_t startPosition = buffer.position();
+        buffer.position(startPosition + 4);
+        m_buffer.flip();
+        buffer.put(&m_buffer);
+        int32_t tableSize = m_buffer.position() - (startPosition + 4);
+        buffer.putInt32(startPosition, tableSize);
+        buffer.limit(buffer.position());
+        return buffer.position() - startPosition;
+    }
+    int32_t Table::getSerializedSize() const {
+        return 4 + m_buffer.limit();
+    }
+
     //Do easy checks first before heavyweight checks.
     bool Table::operator==(const Table& rhs) const {
         if (this == &rhs) return true;
