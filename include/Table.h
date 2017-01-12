@@ -90,8 +90,9 @@ public:
      */
     int32_t serializeTo(ByteBuffer& buffer);
 
-    /*
-     * Size for serialized voltable
+    /**
+     * Returns the size in bytes needed to serialize the current table data
+     * including size
      */
     int32_t getSerializedSize() const;
 
@@ -112,7 +113,7 @@ public:
 private:
     void validateRowScehma(const std::vector<Column>& schema) const throw (InCompatibleSchemaException);
     boost::shared_ptr<std::vector<voltdb::Column> > m_columns;
-    int32_t m_rowStart;
+    int32_t m_rowCountPosition;
     int32_t m_rowCount;
     mutable voltdb::SharedByteBuffer m_buffer;
 };

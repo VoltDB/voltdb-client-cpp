@@ -24,14 +24,13 @@
 #ifndef VOLTDB_PARAMETERSET_HPP_
 #define VOLTDB_PARAMETERSET_HPP_
 #include "Parameter.hpp"
-#include "RowBuilder.h"
 #include <vector>
-#include "ByteBuffer.hpp"
+#include "Table.h"
 #include "boost/shared_ptr.hpp"
-#include "Exception.hpp"
 #include "Decimal.hpp"
 #include "GeographyPoint.hpp"
 #include "Geography.hpp"
+
 
 namespace voltdb {
 class Procedure;
@@ -486,6 +485,46 @@ public:
             realSize += idx->serializeTo(m_buffer);
         }
         assert(valSize == realSize);
+        m_currentParam++;
+        return *this;
+    }
+
+    /**
+     * Add single table
+     */
+    ParameterSet& addTable(Table &table) {
+        validateType(WIRE_TYPE_VOLTTABLE, false);
+        int32_t tableSerializeSize = table.getSerializedSize();
+        m_buffer.ensureRemaining(1 + tableSerializeSize);
+        m_buffer.putInt8(WIRE_TYPE_VOLTTABLE);
+        int32_t serializedSize = table.serializeTo(m_buffer);
+        assert(serializedSize == tableSerializeSize);
+        m_currentParam++;
+        return *this;
+    }
+
+    /**
+     * Add vector of tables
+     */
+    ParameterSet& addTable(std::vector<Table> &table) {
+        validateType(WIRE_TYPE_VOLTTABLE, true);
+        int32_t cummulativeSerializeTableSize = 0;
+        const size_t tableCount = table.size();
+        for (std::vector<Table>::iterator itr = table.begin(); itr != table.end(); ++itr) {
+            cummulativeSerializeTableSize += itr->getSerializedSize();
+        }
+
+        // Array element (1) + table type (1) + table count (2) + size of serialized data
+        m_buffer.ensureRemaining(1 + 1 + 2 + cummulativeSerializeTableSize);
+        m_buffer.putInt8(WIRE_TYPE_ARRAY);
+        m_buffer.putInt8(WIRE_TYPE_VOLTTABLE);
+        m_buffer.putInt16(tableCount);
+
+        int32_t serializedTablesSize = 0;
+        for (std::vector<Table>::iterator itr = table.begin(); itr != table.end(); ++itr) {
+            serializedTablesSize += itr->serializeTo(m_buffer);
+        }
+        assert(serializedTablesSize == cummulativeSerializeTableSize);
         m_currentParam++;
         return *this;
     }

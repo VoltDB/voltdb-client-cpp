@@ -384,7 +384,7 @@ private:
                 CPPUNIT_ASSERT(table.m_buffer.getInt8(7 + index) == columns[index].type());
             }
 
-            int32_t rowCountPosition = table.m_rowStart;
+            int32_t rowCountPosition = table.m_rowCountPosition;
             CPPUNIT_ASSERT(table.m_buffer.getInt32(0) == (rowCountPosition - 4));
             CPPUNIT_ASSERT(table.m_buffer.getInt32(rowCountPosition) == 0);
         }
@@ -463,6 +463,11 @@ private:
                 std::cout << "expected serialized size: " << tableSerializeSize <<" got: " << serializedSize <<std::endl;
             }
             CPPUNIT_ASSERT(serializedSize == tableSerializeSize);
+
+            // verify the table size from serialized bb
+            int32_t tableSize = tableBB.getInt32(0);
+            CPPUNIT_ASSERT((serializedSize - 4) == tableSize);
+
         }
 
         void testRowBuilderRudimentary() {
@@ -471,19 +476,37 @@ private:
 
             fillRandomValues();
             RowBuilder row(columns);
-            int32_t rowSize = populateRow(row, false);
+            int32_t rowDataSize = populateRow(row, false);
 
-            char* data = (char *) malloc(rowSize);
-            SharedByteBuffer byteBuffer(data, rowSize);
-            row.serializeTo(byteBuffer);
-            CPPUNIT_ASSERT(rowSize== byteBuffer.position());
+            int32_t serializedSize = row.getSerializedSize();
+            if ((rowDataSize + 4) != serializedSize) {
+                std::cout << __LINE__ << (rowDataSize+4) << " : " << serializedSize << std::endl;
+            }
+            CPPUNIT_ASSERT((rowDataSize + 4) == serializedSize);
+
+            char* data = (char *) malloc(serializedSize);
+            SharedByteBuffer byteBuffer(data, serializedSize);
+
+            byteBuffer.ensureRemaining(serializedSize);
+            rowDataSize = row.serializeTo(byteBuffer);
+            CPPUNIT_ASSERT(rowDataSize == serializedSize);
 
             // populate with nulls
-            rowSize = populateRow(row, true);
+            rowDataSize = populateRow(row, true);
+            serializedSize = row.getSerializedSize();
+            if ((rowDataSize + 4) != serializedSize) {
+                std::cout << __LINE__ << (rowDataSize+4) << " : " << serializedSize << std::endl;
+            }
+            CPPUNIT_ASSERT((rowDataSize + 4) == serializedSize);
+
             byteBuffer.clear();
-            byteBuffer.ensureRemaining(rowSize);
-            row.serializeTo(byteBuffer);
-            CPPUNIT_ASSERT(rowSize== byteBuffer.position());
+            byteBuffer.ensureRemaining(serializedSize);
+            rowDataSize = row.serializeTo(byteBuffer);
+            CPPUNIT_ASSERT(rowDataSize == serializedSize);
+
+            // verify the row size from serialized bb
+            int32_t rowSize = byteBuffer.getInt32(0);
+            CPPUNIT_ASSERT((serializedSize - 4) == rowSize);
         }
 
         void testTableConstructWitnNoColumns() {

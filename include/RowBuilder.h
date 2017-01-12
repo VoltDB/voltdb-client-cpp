@@ -36,8 +36,6 @@
 /* Helper class to build row given the table schema.
  * Column count and it's type is inferred using the table schema
  * provided at construction time.
- * Note: the bytebuffer does not contain the Row length field at the start
- * ByteBuffer stores the column data sequentially starting with first column
  */
 
 namespace voltdb {
@@ -218,19 +216,34 @@ public:
         m_currentColumnIndex = 0;
     }
 
-    /** Copies over row row data into provided byte buffer
-     *  Precondition to calling this function: All the columns of the
-     *  row schema have been populated
+    /**
+     * Serializes row data to supplied byte buffer (including size)
+     * Precondition:  All the columns of the row schema should be
+     * populated/initialized
      */
-    void serializeTo(ExpandableByteBuffer& buffer) {
+    int32_t serializeTo(ByteBuffer &buffer) {
         if (m_currentColumnIndex != m_columns.size()) {
             throw UninitializedColumnException(m_currentColumnIndex, m_columns.size());
         }
 
+        int32_t startPosition = buffer.position();
+        buffer.position(startPosition + 4);
         m_buffer.flip();
-        buffer.ensureRemaining(m_buffer.limit());
         buffer.put(&m_buffer);
+        int32_t serializedBytes = buffer.position() - (startPosition + 4);
+        buffer.putInt32(startPosition, serializedBytes);
+        buffer.limit(buffer.position());
         reset();
+        return buffer.limit() - startPosition;
+    }
+
+    /**
+     * Returns the size in bytes needed to serialize the current row data
+     * including size
+     */
+
+    int32_t getSerializedSize() const {
+        return m_buffer.position() + 4;
     }
 
     /** Returns number of first 'n' populated columns for the given row.

@@ -46,8 +46,8 @@ namespace voltdb {
             m_columns->at(ii) = voltdb::Column(buffer.getString(wasNull), static_cast<WireType>(types[ii]));
             assert(!wasNull);
         }
-        m_rowStart = m_buffer.getInt32(0) + 4;
-        m_rowCount = m_buffer.getInt32(m_rowStart);
+        m_rowCountPosition = m_buffer.getInt32(0) + 4;
+        m_rowCount = m_buffer.getInt32(m_rowCountPosition);
 
         m_buffer.position(m_buffer.limit());
     }
@@ -63,30 +63,28 @@ namespace voltdb {
         m_columns.reset(new std::vector<voltdb::Column>(columns));
 
         // prepare byte buffer
-        m_buffer.putInt32(0); // start with dummy value for header size
-        m_buffer.putInt8(0);
+        m_buffer.putInt32(0);       // table header size - start with dummy value
+        m_buffer.putInt8(0);        // status code
         const size_t columnCount = columns.size();
-        m_buffer.putInt16((int16_t) columnCount);
+        m_buffer.putInt16((int16_t) columnCount);       // column count
 
         for (int index = 0; index < columnCount; ++index) {
             assert(columns[index].type() != WIRE_TYPE_INVALID);
-            m_buffer.putInt8((int8_t)columns[index].type());
+            m_buffer.putInt8((int8_t)columns[index].type());    //column type
         }
 
         for (int index = 0; index < columnCount; ++index) {
             assert((columns[index].name() != std::string()) &&
                     (columns[index].name() != std::string("")));
-            m_buffer.putString(columns[index].name());
+            m_buffer.putString(columns[index].name());          // column name
         }
 
         // header size (length-prefixed non-inclusive)
-        m_rowStart = m_buffer.position();
-        m_buffer.putInt32(0, m_rowStart - 4);
-        // row count to zero
+        m_rowCountPosition = m_buffer.position();
+        m_buffer.putInt32(0, m_rowCountPosition - 4);   // header size
+
         m_rowCount = 0;
-        m_buffer.putInt32(m_rowCount);
-
-
+        m_buffer.putInt32(m_rowCount);                  // O rows to start with
         m_buffer.limit(m_buffer.position());
     }
 
@@ -95,7 +93,7 @@ namespace voltdb {
     }
 
     TableIterator Table::iterator() const{
-        m_buffer.position(m_rowStart + 4);//skip row count
+        m_buffer.position(m_rowCountPosition + 4);//skip row count
         return TableIterator(m_buffer.slice(), m_columns, m_rowCount);
     }
 
@@ -150,6 +148,7 @@ namespace voltdb {
         }
     }
 
+    /*
     void Table::addRow(RowBuilder& row) {
         const std::vector<Column>& schema = row.rowSchema();
         validateRowScehma(schema);
@@ -167,6 +166,27 @@ namespace voltdb {
         }
         m_buffer.putInt32(startPosition, rowSize);           // mark row size
         m_buffer.putInt32(m_rowStart, ++m_rowCount);    // update row count
+        m_buffer.limit(m_buffer.position());
+    }
+    */
+
+    void Table::addRow(RowBuilder& row) {
+        const std::vector<Column>& schema = row.rowSchema();
+        validateRowScehma(schema);
+        m_buffer.limit(m_buffer.capacity());
+
+        int32_t serializeRowSize = row.getSerializedSize();
+        assert(serializeRowSize <= MAX_TUPLE_LENGTH);
+        if (serializeRowSize > MAX_TUPLE_LENGTH) {
+            throw VoltTableException("Row size exceeded max tuple size");
+        }
+
+        m_buffer.ensureRemaining(serializeRowSize);
+        int32_t serializedSize = row.serializeTo(m_buffer);
+        assert(serializedSize == serializeRowSize);
+
+        // update row count
+        m_buffer.putInt32(m_rowCountPosition, ++m_rowCount);
         m_buffer.limit(m_buffer.position());
     }
 
@@ -187,20 +207,24 @@ namespace voltdb {
         // to serialize the data
         buffer.limit(buffer.capacity());
         if (buffer.remaining() < getSerializedSize()) {
-            // todo: generate appropriate exception
-            throw VoltTableException("Insufficient space in destination buffer");
+            std::ostringstream os;
+            os << "Insufficient space in destination buffer. Remaining size in passed-in buffer: "
+                    << buffer.remaining() << ", needed: " << getSerializedSize();
+            throw VoltTableException(os.str());
         }
+
         int32_t startPosition = buffer.position();
         buffer.position(startPosition + 4);
         m_buffer.flip();
         buffer.put(&m_buffer);
-        int32_t tableSize = m_buffer.position() - (startPosition + 4);
+        int32_t tableSize = buffer.position() - (startPosition + 4);
         buffer.putInt32(startPosition, tableSize);
         buffer.limit(buffer.position());
-        return buffer.position() - startPosition;
+        return buffer.limit() - startPosition;
     }
+
     int32_t Table::getSerializedSize() const {
-        return 4 + m_buffer.limit();
+        return 4 + m_buffer.position();
     }
 
     //Do easy checks first before heavyweight checks.
