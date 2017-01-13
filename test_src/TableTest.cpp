@@ -378,7 +378,7 @@ private:
             CPPUNIT_ASSERT(table.columnCount() == (int32_t) columns.size());
 
             // validate the constituted buffer
-            CPPUNIT_ASSERT(table.m_buffer.getInt8(4) == 0);
+            CPPUNIT_ASSERT(table.m_buffer.getInt8(4) == Table::DEFAULT_STATUS_CODE);
             CPPUNIT_ASSERT(table.m_buffer.getInt16(5) == (int16_t) columns.size());
             int index = 0;
             for (index = 0; index < columns.size(); ++index) {

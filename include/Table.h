@@ -109,6 +109,7 @@ public:
     Table(std::istream &istream);
 
     const static int32_t MAX_TUPLE_LENGTH;
+    const static int8_t DEFAULT_STATUS_CODE;
 private:
     void validateRowScehma(const std::vector<Column>& schema) const throw (InCompatibleSchemaException);
     boost::shared_ptr<std::vector<voltdb::Column> > m_columns;

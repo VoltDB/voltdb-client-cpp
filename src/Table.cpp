@@ -29,6 +29,7 @@
 
 namespace voltdb {
     const int32_t Table::MAX_TUPLE_LENGTH = 2097152;
+    const int8_t Table::DEFAULT_STATUS_CODE = INT8_MIN;
 
     Table::Table(SharedByteBuffer buffer) : m_buffer(buffer) {
         buffer.position(5);
@@ -65,7 +66,7 @@ namespace voltdb {
 
         // prepare byte buffer
         m_buffer.putInt32(0);       // table header size - start with dummy value
-        m_buffer.putInt8(0);        // status code
+        m_buffer.putInt8(DEFAULT_STATUS_CODE); // status code
         const size_t columnCount = columns.size();
         m_buffer.putInt16((int16_t) columnCount);       // column count
 
