@@ -1279,21 +1279,7 @@ void testTableSerialization() {
     CPPUNIT_ASSERT(constructedTable.rowCount() == tableFromSBB.rowCount());
 
     compareTables(constructedTable, tableFromSBB);
-
-    //CPPUNIT_ASSERT(::memcmp(generated.bytes(), original.bytes(), serializedSize) == 0);
 }
-
-struct TestSchema {
-    int8_t col1Val;
-    std::string col2Val;
-    int16_t col3Val;
-    int32_t col4Val;
-    int64_t col5Val;
-    int64_t col6Val;
-    Decimal col7Val;
-    Geography col8Val;
-    GeographyPoint col9Val;
-};
 
 void compareTables(Table &t1, Table &t2) {
     int32_t scanRow = 0;
