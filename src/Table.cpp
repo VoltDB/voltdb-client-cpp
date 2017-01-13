@@ -25,6 +25,7 @@
 #include "Table.h"
 #include "TableIterator.h"
 #include "Row.hpp"
+#include "RowBuilder.h"
 
 namespace voltdb {
     const int32_t Table::MAX_TUPLE_LENGTH = 2097152;
@@ -105,7 +106,7 @@ namespace voltdb {
         return static_cast<int32_t>(m_columns->size());
     }
 
-    const std::vector<voltdb::Column>& Table::columns() const {
+    std::vector<voltdb::Column> Table::columns() const {
         return *m_columns;
     }
 
@@ -148,30 +149,8 @@ namespace voltdb {
         }
     }
 
-    /*
     void Table::addRow(RowBuilder& row) {
-        const std::vector<Column>& schema = row.rowSchema();
-        validateRowScehma(schema);
-
-        m_buffer.limit(m_buffer.capacity());
-        m_buffer.ensureRemaining(m_buffer.position() + 8192);
-
-        int32_t startPosition = m_buffer.position();
-        m_buffer.position(startPosition + 4);                // update startPosition to store row data
-        row.serializeTo(m_buffer);
-        int32_t rowSize = m_buffer.position() - (startPosition + 4);
-        assert(rowSize <= MAX_TUPLE_LENGTH);
-        if (rowSize > MAX_TUPLE_LENGTH) {
-            throw VoltTableException("Row size exceeded max tuple size");
-        }
-        m_buffer.putInt32(startPosition, rowSize);           // mark row size
-        m_buffer.putInt32(m_rowStart, ++m_rowCount);    // update row count
-        m_buffer.limit(m_buffer.position());
-    }
-    */
-
-    void Table::addRow(RowBuilder& row) {
-        const std::vector<Column>& schema = row.rowSchema();
+        const std::vector<Column> schema = row.columns();
         validateRowScehma(schema);
         m_buffer.limit(m_buffer.capacity());
 

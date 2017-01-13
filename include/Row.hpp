@@ -284,6 +284,10 @@ public:
         case WIRE_TYPE_VARBINARY:
             int out_len;
             getVarbinary(column, 0, NULL, &out_len); break;
+        case WIRE_TYPE_GEOGRAPHY:
+            getGeography(column); break;
+        case WIRE_TYPE_GEOGRAPHY_POINT:
+            getGeographyPoint(column); break;
         default:
             throw UnsupportedTypeException(wireTypeToString(columnType));
         }

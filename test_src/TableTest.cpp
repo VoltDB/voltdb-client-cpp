@@ -53,6 +53,7 @@ private:
     CPPUNIT_TEST_EXCEPTION(testTableConstructWitnNoColumns, voltdb::VoltTableException);
     CPPUNIT_TEST(testRowBuilderRudimentary);
     CPPUNIT_TEST(testTablePopulate);
+    CPPUNIT_TEST(testPopulateRowWithIllegalColumnType);
     CPPUNIT_TEST_SUITE_END();
 
     void fillRandomValues() {
@@ -512,6 +513,28 @@ private:
         void testTableConstructWitnNoColumns() {
             std::vector<voltdb::Column> columns;
             Table table (columns);
+        }
+
+        void testPopulateRowWithIllegalColumnType () {
+            std::vector<voltdb::Column> columns(3);
+            columns[0] = voltdb::Column("C1", voltdb::WIRE_TYPE_BIGINT);
+            columns[1] = voltdb::Column("C2", voltdb::WIRE_TYPE_BIGINT);
+            columns[2] = voltdb::Column("C3", voltdb::WIRE_TYPE_BIGINT);
+
+            RowBuilder row(columns);
+            row.addInt64(10);
+            row.addInt64(4);
+            try {
+                row.addString("foo");
+                CPPUNIT_ASSERT_MESSAGE("Expected to throw InvalidColumnException", false);
+            }
+            catch (voltdb::InvalidColumnException& excp) {
+                std::string msg(excp.what());
+                CPPUNIT_ASSERT_MESSAGE("Exception message missing expected type name",
+                        msg.find(voltdb::wireTypeToString(voltdb::WIRE_TYPE_BIGINT)) != std::string::npos);
+                CPPUNIT_ASSERT_MESSAGE("Exception message missing supplied type name",
+                        msg.find(voltdb::wireTypeToString(voltdb::WIRE_TYPE_STRING)) != std::string::npos);
+            }
         }
     };
 

@@ -30,16 +30,15 @@
 #include "Column.hpp"
 #include <sstream>
 #include <iostream>
-#include "RowBuilder.h"
 
 namespace voltdb {
 class TableIterator;
+class RowBuilder;
 
 /*
  * Reprentation of result tables returns by VoltDB.
  */
 class Table {
-    //friend class RowBuilder;
     friend class TableTest;
 public:
     /*
@@ -73,7 +72,7 @@ public:
     /*
      * Retrieve a copy of the column metadata.
      */
-    const std::vector<voltdb::Column>& columns() const;
+    std::vector<voltdb::Column> columns() const;
 
     /*
      * Retrieve the number of columns in this table's schema.

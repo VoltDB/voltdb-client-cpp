@@ -25,6 +25,7 @@
 #define VOLTDB_ROWBUILDER_H_
 #include "ByteBuffer.hpp"
 #include "WireType.h"
+#include "Table.h"
 #include "Column.hpp"
 #include "boost/shared_ptr.hpp"
 #include <stdint.h>
@@ -51,13 +52,21 @@ private:
         }
 
         if (m_columns[m_currentColumnIndex].type() != type) {
-            throw ColumnPopulateException(m_columns[m_currentColumnIndex].type(), type);
+            std::string expectedTypeName = wireTypeToString(m_columns[m_currentColumnIndex].type());
+            std::string typeName = wireTypeToString(type);
+            throw InvalidColumnException(m_columns[m_currentColumnIndex].name(),
+                    type, typeName, expectedTypeName);
+        }
+        if (m_columns[m_currentColumnIndex].type() == WIRE_TYPE_ARRAY) {
+            // array types for row in row builder is not implemented at present
+            throw ColumnPopulateException("Support for array type when constructing row is not available at present");
         }
     }
 
 public:
     // Initializes the Rowbuilder with schema of the table for which the row will be constructed
     RowBuilder(const std::vector<Column> &schema) throw (ColumnPopulateException);
+
 
     RowBuilder& addInt64(int64_t val) {
         validateType(WIRE_TYPE_BIGINT);
@@ -256,7 +265,7 @@ public:
         return m_currentColumnIndex;
     }
 
-    const std::vector<voltdb::Column>& rowSchema() const { return m_columns; }
+    std::vector<voltdb::Column> columns() const { return m_columns; }
 private:
     std::vector<voltdb::Column> m_columns;
     voltdb::ScopedByteBuffer m_buffer;

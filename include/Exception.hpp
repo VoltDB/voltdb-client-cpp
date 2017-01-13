@@ -88,22 +88,19 @@ public:
 };
 
 class ColumnPopulateException : public voltdb::Exception {
+private:
     std::string m_what;
-    explicit ColumnPopulateException():Exception() {
-        //m_what = "Column populate exception: Encountered exception populating column for the row";
-    }
+    explicit ColumnPopulateException():Exception() {}
 public:
-    ColumnPopulateException(WireType expected, WireType actual) : Exception() {
-        m_what = "Column populate exception: Provided column type does not match expected column type. "
-                "Expected: " + wireTypeToString(expected) + ", provided: " + wireTypeToString(actual);
-    }
 
     ColumnPopulateException(const std::string &msg) {
         m_what = "Column populate exception: " + msg;
     }
+
     const char* what() const throw() {
         return m_what.c_str();
     }
+
     ~ColumnPopulateException() throw() {}
 };
 
