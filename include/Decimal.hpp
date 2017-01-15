@@ -204,7 +204,7 @@ public:
     }
 
     bool operator==(const Decimal &other) {
-        return ::memcmp((void *) m_data, other.m_data, sizeof(m_data)) == 0;
+        return getDecimal() == other.getDecimal();
     }
 
     bool operator!=(const Decimal &other) {

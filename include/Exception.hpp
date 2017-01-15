@@ -398,7 +398,7 @@ public:
     }
     explicit UninitializedColumnException(size_t currentColumnIndex, size_t numberOfColumns) : Exception() {
         char msg[1024];
-        snprintf(msg, sizeof (msg), "Not at all columns of the row were initialized. Number of columns: %ld; number of columns initialized: %ld", currentColumnIndex, numberOfColumns);
+        snprintf(msg, sizeof (msg), "Not at all columns of the row were initialized. Number of columns in schema: %ld, columns initialized: %ld", numberOfColumns, currentColumnIndex);
         m_what = std::string(msg);
     }
 

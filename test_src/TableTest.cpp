@@ -50,10 +50,12 @@ class TableTest : public CppUnit::TestFixture {
 private:
     CPPUNIT_TEST_SUITE( TableTest );
     CPPUNIT_TEST(testTableConstruct);
-    CPPUNIT_TEST_EXCEPTION(testTableConstructWitnNoColumns, voltdb::VoltTableException);
+    CPPUNIT_TEST(testRowTableConstructWithEmptySchemaNegative);
     CPPUNIT_TEST(testRowBuilderRudimentary);
     CPPUNIT_TEST(testTablePopulate);
     CPPUNIT_TEST(testPopulateRowWithIllegalColumnType);
+    CPPUNIT_TEST(testDecimalSignedZeroEquality);
+    CPPUNIT_TEST(testTableSerializeNegative);
     CPPUNIT_TEST_SUITE_END();
 
     void fillRandomValues() {
@@ -468,7 +470,31 @@ private:
             // verify the table size from serialized bb
             int32_t tableSize = tableBB.getInt32(0);
             CPPUNIT_ASSERT((serializedSize - 4) == tableSize);
+        }
 
+        void testTableSerializeNegative() {
+            // serialize the table with partially populated table
+            std::vector<voltdb::Column> columns;
+            columns.push_back(voltdb::Column("foo", voltdb::WIRE_TYPE_BIGINT));
+            columns.push_back(voltdb::Column("foo1", voltdb::WIRE_TYPE_TINYINT));
+            Table table (columns);
+
+            RowBuilder row(columns);
+            row.addInt64(INT64_MAX -1);
+            int32_t dataSize = row.getSerializedSize();
+            char *data = (char *) malloc(dataSize);
+            SharedByteBuffer buffer(data, dataSize);
+            try {
+                row.serializeTo(buffer);
+                CPPUNIT_ASSERT_MESSAGE("serialization of partially populated expected to fail", false);
+            }
+            catch (const voltdb::UninitializedColumnException &excp) {
+                std::string msg(excp.what());
+                std::string expected = "Not at all columns of the row were initialized. "
+                        "Number of columns in schema: 2, columns initialized: 1";
+                CPPUNIT_ASSERT_MESSAGE("Exception message missing supplied type name",
+                                        msg.find(expected) != std::string::npos);
+            }
         }
 
         void testRowBuilderRudimentary() {
@@ -510,9 +536,33 @@ private:
             CPPUNIT_ASSERT((serializedSize - 4) == rowSize);
         }
 
-        void testTableConstructWitnNoColumns() {
+        void testRowTableConstructWithEmptySchemaNegative() {
+            // constructing row or column with no column/empty
+            // schema not permissible
             std::vector<voltdb::Column> columns;
-            Table table (columns);
+            std::string expected;
+
+            try {
+                Table table (columns);
+                CPPUNIT_ASSERT_MESSAGE("table construction with empty schema expected to fail", false);
+            }
+            catch (const voltdb::VoltTableException &excp) {
+                std::string msg(excp.what());
+                expected = "table construction requires at least one column";
+                CPPUNIT_ASSERT_MESSAGE("Exception message empty schema message not found",
+                                        msg.find(expected) != std::string::npos);
+            }
+
+            try {
+                RowBuilder row(columns);
+                CPPUNIT_ASSERT_MESSAGE("row construction with empty schema expected to fail", false);
+            }
+            catch (const voltdb::ColumnPopulateException &excp) {
+                std::string msg(excp.what());
+                expected = "schema for row should contain at least one column";
+                CPPUNIT_ASSERT_MESSAGE("Exception message empty schema message not found",
+                                       msg.find(expected) != std::string::npos);
+            }
         }
 
         void testPopulateRowWithIllegalColumnType () {
@@ -535,6 +585,30 @@ private:
                 CPPUNIT_ASSERT_MESSAGE("Exception message missing supplied type name",
                         msg.find(voltdb::wireTypeToString(voltdb::WIRE_TYPE_STRING)) != std::string::npos);
             }
+        }
+
+        // type specific test for testing signed zero equality
+        void testDecimalSignedZeroEquality() {
+            TTInt positiveZero;
+            positiveZero.SetZero();
+            TTInt negativeZero;
+            negativeZero.SetZero();
+            negativeZero.SetSign();
+            CPPUNIT_ASSERT(positiveZero == negativeZero);
+
+            Decimal d1 (positiveZero);
+            Decimal d2 (negativeZero);
+            CPPUNIT_ASSERT(d1 == d2);
+
+            std::string value = "0.0";
+            d1 = Decimal(value);
+            value = "-0.0";
+            d2 = Decimal(value);
+            CPPUNIT_ASSERT(d1 == d2);
+
+            value = "0.00000"; d1 = Decimal(value);
+            value = "-0.000"; d2 = Decimal(value);
+            CPPUNIT_ASSERT(d1 == d2);
         }
     };
 
