@@ -54,7 +54,7 @@ public:
     Decimal() {}
 
     Decimal(const TTInt& ttInt) {
-        getDecimal() = ttInt;
+        *reinterpret_cast<TTInt*>(m_data) = ttInt;
     }
 
     /*
