@@ -71,7 +71,7 @@ void dumpBytes(char *bytes, size_t length) {
 void compareBuffers(char *first, char*second, size_t length) {
     for (int i = 0; i < length; ++i) {
         if (first[i] != second[i]) {
-            printf("%d (%d %d) ", i, (first[i] & 0xff), (second[i] & 0xff));
+            printf("%d (%02x %02x) ", i, (first[i] & 0xff), (second[i] & 0xff));
         }
     }
     printf("\n");
