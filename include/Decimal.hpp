@@ -53,6 +53,10 @@ public:
 
     Decimal() {}
 
+    Decimal(const TTInt& ttInt) {
+        *reinterpret_cast<TTInt*>(m_data) = ttInt;
+    }
+
     /*
      * Construct a decimal value from a string.
      */
@@ -198,6 +202,15 @@ public:
         min.SetMin();
         return getDecimal() == min;
     }
+
+    bool operator==(const Decimal &other) {
+        return getDecimal() == other.getDecimal();
+    }
+
+    bool operator!=(const Decimal &other) {
+        return !operator==(other);
+    }
+
 private:
 
     // Constants for Decimal type

@@ -29,7 +29,7 @@
 namespace voltdb {
 class Column {
 public:
-    Column() {}
+    Column() : m_name(""), m_type(WIRE_TYPE_INVALID) {}
     Column(std::string name, WireType type) : m_name(name), m_type(type) {}
     Column(WireType type) : m_name(""), m_type(type) {}
     std::string m_name;

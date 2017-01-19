@@ -41,6 +41,7 @@
 #include "InvocationResponse.hpp"
 #include "Table.h"
 #include "TableIterator.h"
+#include "RowBuilder.h"
 #include "Row.hpp"
 #include "sha1.h"
 #include "sha256.h"
@@ -55,6 +56,26 @@
 namespace voltdb {
 
 static const double EPSILON = 1.0e-14;
+
+void dumpBytes(char *bytes, size_t length) {
+    for (int i = 0; i < length; ++i) {
+        printf("%02x ", bytes[i] && 0xff);
+        if (i % 16 == 0) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+}
+
+
+void compareBuffers(char *first, char*second, size_t length) {
+    for (int i = 0; i < length; ++i) {
+        if (first[i] != second[i]) {
+            printf("%d (%02x %02x) ", i, (first[i] & 0xff), (second[i] & 0xff));
+        }
+    }
+    printf("\n");
+}
 
 static void compareByteBuffers(ByteBuffer &original, std::string originalName,
                                ByteBuffer generated, std::string generatedName) {
@@ -271,6 +292,30 @@ static bool compareParameterSets(ByteBuffer &original, std::string originalName,
     return true;
 }
 
+static WireType schemaColTypes[] = {
+        WIRE_TYPE_TINYINT,
+        WIRE_TYPE_STRING,
+        WIRE_TYPE_SMALLINT,
+        WIRE_TYPE_INTEGER,
+        WIRE_TYPE_BIGINT,
+        WIRE_TYPE_TIMESTAMP,
+        WIRE_TYPE_DECIMAL,
+        WIRE_TYPE_GEOGRAPHY,
+        WIRE_TYPE_GEOGRAPHY_POINT
+};
+
+void generateTestSchema(std::vector<Column> &columns) {
+    if (!columns.empty()) {
+        columns.clear();
+    }
+
+    char columnNames[32];
+    for(int i = 0; i < sizeof(schemaColTypes)/sizeof(schemaColTypes[0]); ++i) {
+        snprintf(columnNames, sizeof(columnNames), "column%d", i + 1);
+        columns.push_back(voltdb::Column(columnNames, schemaColTypes[i]));
+    }
+}
+
 /**
  * Reset the position of a byte buffer to its initial position.
  */
@@ -333,6 +378,8 @@ CPPUNIT_TEST(testInvocationGeoSelectPolyNull);
 CPPUNIT_TEST(testInvocationGeoSelectPointNull);
 
 CPPUNIT_TEST(testSerializedTable);
+CPPUNIT_TEST(testTableSerialization);
+
 CPPUNIT_TEST_SUITE_END();
 public:
 
@@ -594,10 +641,10 @@ void testInvocationResponseSelect() {
     CPPUNIT_ASSERT(results.columnCount() == 2);
     std::vector<voltdb::Column> columns = results.columns();
     CPPUNIT_ASSERT(columns.size() == 2);
-    CPPUNIT_ASSERT(columns[0].m_name == "HELLO");
-    CPPUNIT_ASSERT(columns[0].m_type == WIRE_TYPE_STRING);
-    CPPUNIT_ASSERT(columns[1].m_name == "WORLD");
-    CPPUNIT_ASSERT(columns[1].m_type == WIRE_TYPE_STRING);
+    CPPUNIT_ASSERT(columns[0].name() == "HELLO");
+    CPPUNIT_ASSERT(columns[0].type() == WIRE_TYPE_STRING);
+    CPPUNIT_ASSERT(columns[1].name() == "WORLD");
+    CPPUNIT_ASSERT(columns[1].type() == WIRE_TYPE_STRING);
     TableIterator iterator = results.iterator();
     int resultCount = 0;
     while (iterator.hasNext()) {
@@ -630,12 +677,12 @@ void testInvocationGeoSelectBoth() {
     CPPUNIT_ASSERT(results.columnCount() == 3);
     std::vector<voltdb::Column> columns = results.columns();
     CPPUNIT_ASSERT(columns.size() == 3);
-    CPPUNIT_ASSERT(columns[0].m_name == "ID");
-    CPPUNIT_ASSERT(columns[0].m_type == WIRE_TYPE_BIGINT);
-    CPPUNIT_ASSERT(columns[1].m_name == "GEO");
-    CPPUNIT_ASSERT(columns[1].m_type == WIRE_TYPE_GEOGRAPHY);
-    CPPUNIT_ASSERT(columns[2].m_name == "GEO_PT");
-    CPPUNIT_ASSERT(columns[2].m_type == WIRE_TYPE_GEOGRAPHY_POINT);
+    CPPUNIT_ASSERT(columns[0].name() == "ID");
+    CPPUNIT_ASSERT(columns[0].type() == WIRE_TYPE_BIGINT);
+    CPPUNIT_ASSERT(columns[1].name() == "GEO");
+    CPPUNIT_ASSERT(columns[1].type() == WIRE_TYPE_GEOGRAPHY);
+    CPPUNIT_ASSERT(columns[2].name()== "GEO_PT");
+    CPPUNIT_ASSERT(columns[2].type() == WIRE_TYPE_GEOGRAPHY_POINT);
     TableIterator iterator = results.iterator();
     int resultCount = 0;
     GeographyPoint originPoint(0, 0);
@@ -690,12 +737,12 @@ void testInvocationGeoSelectBothMid() {
     CPPUNIT_ASSERT(results.columnCount() == 3);
     std::vector<voltdb::Column> columns = results.columns();
     CPPUNIT_ASSERT(columns.size() == 3);
-    CPPUNIT_ASSERT(columns[0].m_name == "ID");
-    CPPUNIT_ASSERT(columns[0].m_type == WIRE_TYPE_BIGINT);
-    CPPUNIT_ASSERT(columns[1].m_name == "GEO");
-    CPPUNIT_ASSERT(columns[1].m_type == WIRE_TYPE_GEOGRAPHY);
-    CPPUNIT_ASSERT(columns[2].m_name == "GEO_PT");
-    CPPUNIT_ASSERT(columns[2].m_type == WIRE_TYPE_GEOGRAPHY_POINT);
+    CPPUNIT_ASSERT(columns[0].name() == "ID");
+    CPPUNIT_ASSERT(columns[0].type() == WIRE_TYPE_BIGINT);
+    CPPUNIT_ASSERT(columns[1].name() == "GEO");
+    CPPUNIT_ASSERT(columns[1].type() == WIRE_TYPE_GEOGRAPHY);
+    CPPUNIT_ASSERT(columns[2].name() == "GEO_PT");
+    CPPUNIT_ASSERT(columns[2].type() == WIRE_TYPE_GEOGRAPHY_POINT);
     TableIterator iterator = results.iterator();
     int resultCount = 0;
     GeographyPoint twentyPoint(20, 20);
@@ -749,12 +796,12 @@ void testInvocationGeoSelectPolyNull() {
     CPPUNIT_ASSERT(results.columnCount() == 3);
     std::vector<voltdb::Column> columns = results.columns();
     CPPUNIT_ASSERT(columns.size() == 3);
-    CPPUNIT_ASSERT(columns[0].m_name == "ID");
-    CPPUNIT_ASSERT(columns[0].m_type == WIRE_TYPE_BIGINT);
-    CPPUNIT_ASSERT(columns[1].m_name == "GEO");
-    CPPUNIT_ASSERT(columns[1].m_type == WIRE_TYPE_GEOGRAPHY);
-    CPPUNIT_ASSERT(columns[2].m_name == "GEO_PT");
-    CPPUNIT_ASSERT(columns[2].m_type == WIRE_TYPE_GEOGRAPHY_POINT);
+    CPPUNIT_ASSERT(columns[0].name() == "ID");
+    CPPUNIT_ASSERT(columns[0].type() == WIRE_TYPE_BIGINT);
+    CPPUNIT_ASSERT(columns[1].name() == "GEO");
+    CPPUNIT_ASSERT(columns[1].type() == WIRE_TYPE_GEOGRAPHY);
+    CPPUNIT_ASSERT(columns[2].name() == "GEO_PT");
+    CPPUNIT_ASSERT(columns[2].type() == WIRE_TYPE_GEOGRAPHY_POINT);
     TableIterator iterator = results.iterator();
     int resultCount = 0;
     GeographyPoint originPoint(0, 0);
@@ -805,12 +852,12 @@ void testInvocationGeoSelectPointNull() {
     CPPUNIT_ASSERT(results.columnCount() == 3);
     std::vector<voltdb::Column> columns = results.columns();
     CPPUNIT_ASSERT(columns.size() == 3);
-    CPPUNIT_ASSERT(columns[0].m_name == "ID");
-    CPPUNIT_ASSERT(columns[0].m_type == WIRE_TYPE_BIGINT);
-    CPPUNIT_ASSERT(columns[1].m_name == "GEO");
-    CPPUNIT_ASSERT(columns[1].m_type == WIRE_TYPE_GEOGRAPHY);
-    CPPUNIT_ASSERT(columns[2].m_name == "GEO_PT");
-    CPPUNIT_ASSERT(columns[2].m_type == WIRE_TYPE_GEOGRAPHY_POINT);
+    CPPUNIT_ASSERT(columns[0].name() == "ID");
+    CPPUNIT_ASSERT(columns[0].type() == WIRE_TYPE_BIGINT);
+    CPPUNIT_ASSERT(columns[1].name() == "GEO");
+    CPPUNIT_ASSERT(columns[1].type() == WIRE_TYPE_GEOGRAPHY);
+    CPPUNIT_ASSERT(columns[2].name() == "GEO_PT");
+    CPPUNIT_ASSERT(columns[2].type() == WIRE_TYPE_GEOGRAPHY_POINT);
     TableIterator iterator = results.iterator();
     int resultCount = 0;
     Geography midPoly;
@@ -864,12 +911,12 @@ void testInvocationGeoSelectBothNull() {
     CPPUNIT_ASSERT(results.columnCount() == 3);
     std::vector<voltdb::Column> columns = results.columns();
     CPPUNIT_ASSERT(columns.size() == 3);
-    CPPUNIT_ASSERT(columns[0].m_name == "ID");
-    CPPUNIT_ASSERT(columns[0].m_type == WIRE_TYPE_BIGINT);
-    CPPUNIT_ASSERT(columns[1].m_name == "GEO");
-    CPPUNIT_ASSERT(columns[1].m_type == WIRE_TYPE_GEOGRAPHY);
-    CPPUNIT_ASSERT(columns[2].m_name == "GEO_PT");
-    CPPUNIT_ASSERT(columns[2].m_type == WIRE_TYPE_GEOGRAPHY_POINT);
+    CPPUNIT_ASSERT(columns[0].name() == "ID");
+    CPPUNIT_ASSERT(columns[0].type() == WIRE_TYPE_BIGINT);
+    CPPUNIT_ASSERT(columns[1].name() == "GEO");
+    CPPUNIT_ASSERT(columns[1].type() == WIRE_TYPE_GEOGRAPHY);
+    CPPUNIT_ASSERT(columns[2].name() == "GEO_PT");
+    CPPUNIT_ASSERT(columns[2].type() == WIRE_TYPE_GEOGRAPHY_POINT);
     TableIterator iterator = results.iterator();
     int resultCount = 0;
     while (iterator.hasNext()) {
@@ -900,24 +947,24 @@ void testSerializedTable() {
     CPPUNIT_ASSERT(t.rowCount() == 4);
     std::vector<Column> columns = t.columns();
     CPPUNIT_ASSERT(columns.size() == 9);
-    CPPUNIT_ASSERT(columns[0].m_name == "column1");
-    CPPUNIT_ASSERT(columns[1].m_name == "column2");
-    CPPUNIT_ASSERT(columns[2].m_name == "column3");
-    CPPUNIT_ASSERT(columns[3].m_name == "column4");
-    CPPUNIT_ASSERT(columns[4].m_name == "column5");
-    CPPUNIT_ASSERT(columns[5].m_name == "column6");
-    CPPUNIT_ASSERT(columns[6].m_name == "column7");
-    CPPUNIT_ASSERT(columns[7].m_name == "column8");
-    CPPUNIT_ASSERT(columns[8].m_name == "column9");
-    CPPUNIT_ASSERT(columns[0].m_type == WIRE_TYPE_TINYINT);
-    CPPUNIT_ASSERT(columns[1].m_type == WIRE_TYPE_STRING);
-    CPPUNIT_ASSERT(columns[2].m_type == WIRE_TYPE_SMALLINT);
-    CPPUNIT_ASSERT(columns[3].m_type == WIRE_TYPE_INTEGER);
-    CPPUNIT_ASSERT(columns[4].m_type == WIRE_TYPE_BIGINT);
-    CPPUNIT_ASSERT(columns[5].m_type == WIRE_TYPE_TIMESTAMP);
-    CPPUNIT_ASSERT(columns[6].m_type == WIRE_TYPE_DECIMAL);
-    CPPUNIT_ASSERT(columns[7].m_type == WIRE_TYPE_GEOGRAPHY);
-    CPPUNIT_ASSERT(columns[8].m_type == WIRE_TYPE_GEOGRAPHY_POINT);
+    CPPUNIT_ASSERT(columns[0].name() == "column1");
+    CPPUNIT_ASSERT(columns[1].name() == "column2");
+    CPPUNIT_ASSERT(columns[2].name() == "column3");
+    CPPUNIT_ASSERT(columns[3].name() == "column4");
+    CPPUNIT_ASSERT(columns[4].name() == "column5");
+    CPPUNIT_ASSERT(columns[5].name() == "column6");
+    CPPUNIT_ASSERT(columns[6].name() == "column7");
+    CPPUNIT_ASSERT(columns[7].name() == "column8");
+    CPPUNIT_ASSERT(columns[8].name() == "column9");
+    CPPUNIT_ASSERT(columns[0].type() == WIRE_TYPE_TINYINT);
+    CPPUNIT_ASSERT(columns[1].type() == WIRE_TYPE_STRING);
+    CPPUNIT_ASSERT(columns[2].type() == WIRE_TYPE_SMALLINT);
+    CPPUNIT_ASSERT(columns[3].type() == WIRE_TYPE_INTEGER);
+    CPPUNIT_ASSERT(columns[4].type() == WIRE_TYPE_BIGINT);
+    CPPUNIT_ASSERT(columns[5].type() == WIRE_TYPE_TIMESTAMP);
+    CPPUNIT_ASSERT(columns[6].type() == WIRE_TYPE_DECIMAL);
+    CPPUNIT_ASSERT(columns[7].type() == WIRE_TYPE_GEOGRAPHY);
+    CPPUNIT_ASSERT(columns[8].type() == WIRE_TYPE_GEOGRAPHY_POINT);
 
     TableIterator ti = t.iterator();
     CPPUNIT_ASSERT(ti.hasNext());
@@ -1132,6 +1179,190 @@ void testSerializedTable() {
     CPPUNIT_ASSERT(r.getDecimal("column7").toString() == "3.145900000000");
     CPPUNIT_ASSERT(!r.wasNull());
 }
+
+void testTableSerialization() {
+    std::vector<Column> columns;
+    generateTestSchema(columns);
+    CPPUNIT_ASSERT(columns.size() == sizeof(schemaColTypes)/sizeof(schemaColTypes[0]));
+
+    Table constructedTable (columns);
+    RowBuilder row(columns);
+    Geography smallPoly;
+    Decimal dec;
+    const std::string pi = "3.1459";
+
+    smallPoly.addEmptyRing()
+        << GeographyPoint(0, 0)
+        << GeographyPoint(1, 0)
+        << GeographyPoint(1, 1)
+        << GeographyPoint(0, 1)
+        << GeographyPoint(0, 0);
+    smallPoly.addEmptyRing()
+        << GeographyPoint(0.1, 0.1)
+        << GeographyPoint(0.1, 0.9)
+        << GeographyPoint(0.9, 0.9)
+        << GeographyPoint(0.9, 0.1)
+        << GeographyPoint(0.1, 0.1);
+    GeographyPoint smallPoint(0.5, 0.5);
+
+    //1st row - vt.addRow( null, null, null, null, null, null, null, poly, pt);
+    for (int i = 0; i < sizeof(schemaColTypes)/sizeof(schemaColTypes[0]); ++i) {
+        // all nulls except geo types
+        if (schemaColTypes[i] == WIRE_TYPE_GEOGRAPHY) {
+            row.addGeography(smallPoly);
+        }
+        else if (schemaColTypes[i] == WIRE_TYPE_GEOGRAPHY_POINT) {
+            row.addGeographyPoint(smallPoint);
+        } else {
+            row.addNull();
+        }
+    }
+    constructedTable.addRow(row);
+    CPPUNIT_ASSERT(constructedTable.rowCount() == 1);
+
+    // 2nd row - vt.addRow( 0, "", 2, 4, 5, new TimestampType(44), new BigDecimal("3.1459"), poly, pt);
+    row.addInt8(0);
+    row.addString("");
+    row.addInt16(2);
+    row.addInt32(4);
+    row.addInt64(5);
+    row.addTimeStamp(44);
+    dec = Decimal(pi);
+    row.addDecimal(dec);
+    row.addGeography(smallPoly);
+    row.addGeographyPoint(smallPoint);
+    constructedTable.addRow(row);
+    CPPUNIT_ASSERT(constructedTable.rowCount() == 2);
+
+    // 3rd row - vt.addRow( 0, null, 2, 4, 5, null, null, poly, pt);
+    row.addInt8(0);
+    row.addNull();
+    row.addInt16(2);
+    row.addInt32(4);
+    row.addInt64(5);
+    row.addNull();
+    row.addNull();
+    row.addGeography(smallPoly);
+    row.addGeographyPoint(smallPoint);
+    constructedTable.addRow(row);
+    CPPUNIT_ASSERT(constructedTable.rowCount() == 3);
+
+    // 4th row - vt.addRow( null, "woobie", null, null, null, new TimestampType(44), new BigDecimal("3.1459"), poly, pt);
+    row.addNull();
+    row.addString("woobie");
+    row.addNull();
+    row.addNull();
+    row.addNull();
+    row.addTimeStamp(44);
+    dec = Decimal(pi);
+    row.addDecimal(dec);
+    row.addGeography(smallPoly);
+    row.addGeographyPoint(smallPoint);
+    constructedTable.addRow(row);
+    CPPUNIT_ASSERT(constructedTable.rowCount() == 4);
+
+    int32_t serializedTableSize = constructedTable.getSerializedSize();
+    char *constructedData = (char *) malloc(serializedTableSize);
+    SharedByteBuffer generated(constructedData, serializedTableSize);
+    int32_t serializedSize = constructedTable.serializeTo(generated);
+    CPPUNIT_ASSERT(serializedSize == serializedTableSize);
+    int32_t tableDataSizeFromBB = generated.getInt32(0);
+    CPPUNIT_ASSERT((serializedSize - 4) == tableDataSizeFromBB);
+    SharedByteBuffer original = fileAsByteBuffer("serialized_table.bin");
+
+    CPPUNIT_ASSERT(tableDataSizeFromBB == generated.getInt32(0));
+
+    original.position(4);
+    Table tableFromSBB(original.slice());
+    CPPUNIT_ASSERT(constructedTable.columnCount() == tableFromSBB.columnCount());
+    CPPUNIT_ASSERT(constructedTable.columns() == tableFromSBB.columns());
+    CPPUNIT_ASSERT(constructedTable.rowCount() == tableFromSBB.rowCount());
+
+    compareTables(constructedTable, tableFromSBB);
+}
+
+void compareTables(Table &t1, Table &t2) {
+    int32_t scanRow = 0;
+    const int32_t rowCount = t1.rowCount();
+
+    TableIterator t1Itr = t1.iterator();
+    TableIterator t2Itr = t2.iterator();
+
+    int8_t t1col1Val, t2col1Val;
+    std::string t1col2Val, t2col2Val;
+    int16_t t1col3Val, t2col3Val;
+    int32_t t1col4Val, t2col4Val;
+    int64_t t1col5Val, t2col5Val;
+    int64_t t1col6Val, t2col6Val;
+    Decimal t1col7Val, t2col7Val;
+    Geography t1col8Val, t2col8Val;
+    GeographyPoint t1col9Val, t2col9Val;
+
+    while (scanRow < rowCount) {
+        CPPUNIT_ASSERT(t1Itr.hasNext() == t2Itr.hasNext());
+        Row row1 = t1Itr.next();
+        Row row2 = t2Itr.next();
+        CPPUNIT_ASSERT(row1.columnCount() == row2.columnCount());
+        CPPUNIT_ASSERT(row1.columns() == row2.columns());
+
+        CPPUNIT_ASSERT(row1.isNull(0) == row2.isNull(0));
+        if (!row1.isNull(0)) {
+            //std::cout << (int32_t) row1.getInt8(0) << " " << (int32_t) row2.getInt8(0) << ", ";
+            CPPUNIT_ASSERT(row1.getInt8(0) == row2.getInt8(0));
+        }
+
+        CPPUNIT_ASSERT(row1.isNull(1) == row2.isNull(1));
+        if (!row1.isNull(1)) {
+            //std::cout << row1.getString(1) << " " << row2.getString(1) << ", ";
+            CPPUNIT_ASSERT(row1.getString(1) == row2.getString(1));
+        }
+
+        CPPUNIT_ASSERT(row1.isNull(2) == row2.isNull(2));
+        if (!row1.isNull(2)) {
+            //std::cout << (int32_t) row1.getInt16(2) << " " << (int32_t) row2.getInt16(2) << ", ";
+            CPPUNIT_ASSERT(row1.getInt16(2) == row2.getInt16(2));
+        }
+
+        CPPUNIT_ASSERT(row1.isNull(3) == row2.isNull(3));
+        if (!row1.isNull(3)) {
+            //std::cout << row1.getInt32(3) << " " << row2.getInt32(3) << ", ";
+            CPPUNIT_ASSERT(row1.getInt32(3) == row2.getInt32(3));
+        }
+
+        CPPUNIT_ASSERT(row1.isNull(4) == row2.isNull(4));
+        if (!row1.isNull(4)) {
+            //std::cout << row1.getInt64(4) << " " << row2.getInt64(4) << ", ";
+            CPPUNIT_ASSERT(row1.getInt64(4) == row2.getInt64(4));
+        }
+
+        CPPUNIT_ASSERT(row1.isNull(5) == row2.isNull(5));
+        if (!row1.isNull(5)) {
+            //std::cout << row1.getTimestamp(5) << " " << row2.getTimestamp(5) << ", ";
+            CPPUNIT_ASSERT(row1.getTimestamp(5) == row2.getTimestamp(5));
+        }
+
+        CPPUNIT_ASSERT(row1.isNull(6) == row2.isNull(6));
+        if (!row1.isNull(6)) {
+            //std::cout << row1.getDecimal(6).toString() << " " << row2.getDecimal(6).toString() << ", ";
+            CPPUNIT_ASSERT(row1.getDecimal(6) == row2.getDecimal(6));
+        }
+
+        CPPUNIT_ASSERT(row1.isNull(7) == row2.isNull(7));
+        if (!row1.isNull(7)) {
+            //std::cout << row1.getGeography(7).toString() << " " << row2.getGeography(7).toString() <<", ";
+            CPPUNIT_ASSERT(row1.getGeography(7) == row2.getGeography(7));
+        }
+
+        CPPUNIT_ASSERT(row1.isNull(8) == row2.isNull(8));
+        if (!row1.isNull(8)) {
+            //std::cout << row1.getGeographyPoint(8).toString() << " " << row2.getGeographyPoint(8).toString();
+            CPPUNIT_ASSERT(row1.getGeographyPoint(8)== row2.getGeographyPoint(8));
+        }
+
+        ++scanRow;
+    }
+}
+
 };
 
 const std::string SerializationTest::FAKE_BUILD_STRING("volt_6.1_test_build_string");

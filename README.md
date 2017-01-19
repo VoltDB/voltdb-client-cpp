@@ -18,6 +18,36 @@ The OSX binary was compiled with Xcode 7.2 on OSX 10.11.
 The source code is available in the [VoltDB Github repository]
 (https://github.com/VoltDB/voltdb-client-cpp). 
 
+New Features in 7.0
+==================
+- Support for Table (synomous to VoltTable on server side) in parameter set.
+How to construct table: initialize table with column schema. Generate row to be inserted - initialize the row with same
+column schema as that of table, populate the row and add the row to the table. After inserting the populated row to the
+table, the row instance can be reused to populate it row with new values and push it table.
+```C++
+std::vector<voltdb::Column> columns;
+columns.push_back(voltdb::Column("col1", voltdb::WIRE_TYPE_BIGINT));
+columns.push_back(voltdb::Column("col2", voltdb::WIRE_TYPE_STRING));
+
+voltdb::Table table (columns);
+voltdb::RowBuilder row(columns);
+row.addInt64(1234).addString("hello");
+table.addRow(row);
+row.addNull().addString("unknown");
+table.addRow(row);
+```
+
+New Features in V6.9
+==================
+- Support for timing out outstanding/pending invocation requests. By default the monitoring of the pending requests for timeout is disabled. To exercise feature, timeout has to be enabled using client config. Default timeout is 10 seconds and can be tweaked through client config.
+```C++
+bool enableQueryTimeout = true;
+int queryTimeout = 10;
+voltdb::ClientConfig config("myusername", "mypassword", voltdb::HASH_SHA256, true, enableQueryTimeout, queryTimeout);
+voltdb::Client client = voltdb::Client::create(config);
+```
+
+
 New Features in V6.8
 ==================
 - Update backpressure notification to notify when backpressure on client transitions from on to off

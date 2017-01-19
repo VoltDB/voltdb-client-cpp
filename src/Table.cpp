@@ -25,8 +25,12 @@
 #include "Table.h"
 #include "TableIterator.h"
 #include "Row.hpp"
+#include "RowBuilder.h"
 
 namespace voltdb {
+    const int32_t Table::MAX_TUPLE_LENGTH = 2097152;
+    const int8_t Table::DEFAULT_STATUS_CODE = INT8_MIN;
+
     Table::Table(SharedByteBuffer buffer) : m_buffer(buffer) {
         buffer.position(5);
         size_t columnCount = static_cast<size_t>(buffer.getInt16());
@@ -44,10 +48,47 @@ namespace voltdb {
             m_columns->at(ii) = voltdb::Column(buffer.getString(wasNull), static_cast<WireType>(types[ii]));
             assert(!wasNull);
         }
-        m_rowStart = m_buffer.getInt32(0) + 4;
-        m_rowCount = m_buffer.getInt32(m_rowStart);
+        m_rowCountPosition = m_buffer.getInt32(0) + 4;
+        m_rowCount = m_buffer.getInt32(m_rowCountPosition);
 
         m_buffer.position(m_buffer.limit());
+    }
+
+    Table::Table(const std::vector<Column> &columns) throw (TableException) {
+        if (columns.empty()) {
+            throw TableException("Failed to create table. Provided schema can't be empty, "
+                    "it must contain at least one column");
+        }
+        const int initialBuffSize = 8192;
+        char *data = new char[initialBuffSize];
+        m_buffer = SharedByteBuffer(data, initialBuffSize);
+
+        m_columns.reset(new std::vector<voltdb::Column>(columns));
+
+        // prepare byte buffer
+        m_buffer.putInt32(0);       // table header size - start with dummy value
+        m_buffer.putInt8(DEFAULT_STATUS_CODE); // status code
+        const size_t columnCount = columns.size();
+        m_buffer.putInt16((int16_t) columnCount);       // column count
+
+        for (int index = 0; index < columnCount; ++index) {
+            assert(columns[index].type() != WIRE_TYPE_INVALID);
+            m_buffer.putInt8((int8_t)columns[index].type());    //column type
+        }
+
+        for (int index = 0; index < columnCount; ++index) {
+            assert((columns[index].name() != std::string()) &&
+                    (columns[index].name() != std::string("")));
+            m_buffer.putString(columns[index].name());          // column name
+        }
+
+        // header size (length-prefixed non-inclusive)
+        m_rowCountPosition = m_buffer.position();
+        m_buffer.putInt32(0, m_rowCountPosition - 4);   // header size
+
+        m_rowCount = 0;
+        m_buffer.putInt32(m_rowCount);                  // O rows to start with
+        m_buffer.limit(m_buffer.position());
     }
 
     int8_t Table::getStatusCode() const{
@@ -55,7 +96,7 @@ namespace voltdb {
     }
 
     TableIterator Table::iterator() const{
-        m_buffer.position(m_rowStart + 4);//skip row count
+        m_buffer.position(m_rowCountPosition + 4);//skip row count
         return TableIterator(m_buffer.slice(), m_columns, m_rowCount);
     }
 
@@ -86,14 +127,14 @@ namespace voltdb {
             if (ii != 0) {
                 ostream << ", ";
             }
-            ostream << m_columns->at(ii).m_name;
+            ostream << m_columns->at(ii).name();
         }
         ostream << std::endl << indent << "Column types: ";
         for (size_t ii = 0; ii < m_columns->size(); ii++) {
             if (ii != 0) {
                 ostream << ", ";
             }
-            ostream << wireTypeToString(m_columns->at(ii).m_type);
+            ostream << wireTypeToString(m_columns->at(ii).type());
         }
         ostream << std::endl;
         TableIterator iter = iterator();
@@ -104,6 +145,32 @@ namespace voltdb {
         }
     }
 
+    void Table::validateRowScehma(const std::vector<Column>& schema) const throw (InCompatibleSchemaException) {
+        if (schema.empty() || schema != *m_columns) {
+            throw (InCompatibleSchemaException());
+        }
+    }
+
+    void Table::addRow(RowBuilder& row) throw (TableException, UninitializedColumnException, InCompatibleSchemaException) {
+        const std::vector<Column> schema = row.columns();
+        validateRowScehma(schema);
+        m_buffer.limit(m_buffer.capacity());
+
+        int32_t serializeRowSize = row.getSerializedSize();
+        assert(serializeRowSize <= MAX_TUPLE_LENGTH);
+        if (serializeRowSize > MAX_TUPLE_LENGTH) {
+            throw TableException("Cannot add row to the table. Row size too large (over 2MB)");
+        }
+
+        m_buffer.ensureRemaining(serializeRowSize);
+        int32_t serializedSize = row.serializeTo(m_buffer);
+        assert(serializedSize == serializeRowSize);
+
+        // update row count
+        m_buffer.putInt32(m_rowCountPosition, ++m_rowCount);
+        m_buffer.limit(m_buffer.position());
+    }
+
     void Table::operator >> (std::ostream &ostream) const {
 
         int32_t size = m_buffer.limit();
@@ -111,6 +178,32 @@ namespace voltdb {
         if (size != 0) {
             ostream.write(m_buffer.bytes(), size);
         }
+    }
+
+    /*
+     * Serialize table to byte buffer. Ensure there is sufficient space
+     * in the passed in byte buffer to serialize the data. Needed space
+     * to serialize can be obtained by Table::getSerializedSize()
+     */
+    int32_t Table::serializeTo(ByteBuffer& buffer) throw (TableException){
+        buffer.limit(buffer.capacity());
+        if (buffer.remaining() < getSerializedSize()) {
+            throw TableException("Cannot serialize table as the specified buffer is not large enough. "
+                    "Use the getSerializedSize method to determine the necessary size");
+        }
+
+        int32_t startPosition = buffer.position();
+        buffer.position(startPosition + 4);
+        m_buffer.flip();
+        buffer.put(&m_buffer);
+        int32_t tableSize = buffer.position() - (startPosition + 4);
+        buffer.putInt32(startPosition, tableSize);
+        buffer.limit(buffer.position());
+        return buffer.limit() - startPosition;
+    }
+
+    int32_t Table::getSerializedSize() const {
+        return 4 + m_buffer.position();
     }
 
     //Do easy checks first before heavyweight checks.
