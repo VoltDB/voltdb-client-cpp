@@ -87,40 +87,37 @@ public:
     }
 };
 
-class ColumnPopulateException : public voltdb::Exception {
+class RowCreationException : public voltdb::Exception {
 private:
     std::string m_what;
-    explicit ColumnPopulateException():Exception() {}
+    explicit RowCreationException():Exception() {}
 public:
 
-    ColumnPopulateException(const std::string &msg) {
-        m_what = "Column populate exception: " + msg;
+    RowCreationException(const std::string &msg) {
+        m_what = "Failed to create row. " + msg;
     }
 
     const char* what() const throw() {
         return m_what.c_str();
     }
 
-    ~ColumnPopulateException() throw() {}
+    ~RowCreationException() throw() {}
 };
 
-class VoltTableException : public Exception {
+class TableException : public Exception {
 private:
     std::string m_what;
+    explicit TableException() {}
 public:
-    explicit VoltTableException() {
-        m_what = "Encountered exception when operating with VoltTable";
-    }
 
-    explicit VoltTableException(const std::string& msg) {
-        m_what = "Encountered exception when operating with VoltTable: " + msg;
-    }
+
+    explicit TableException(const std::string& msg) : m_what(msg){ }
 
     const char* what() const throw() {
         return m_what.c_str();
     }
 
-    ~VoltTableException() throw() {}
+    ~TableException() throw() {}
 };
 /*
  * Thrown by ByteBuffer when an attempt is made to get or put data beyond the limit or capacity of the ByteBuffer
@@ -396,9 +393,9 @@ public:
     explicit UninitializedColumnException() : Exception() {
         m_what = "Uninitialized column exception";
     }
-    explicit UninitializedColumnException(size_t currentColumnIndex, size_t numberOfColumns) : Exception() {
+    explicit UninitializedColumnException(size_t neededColumns, size_t providedColumns) : Exception() {
         char msg[1024];
-        snprintf(msg, sizeof (msg), "Not at all columns of the row were initialized. Number of columns in schema: %ld, columns initialized: %ld", numberOfColumns, currentColumnIndex);
+        snprintf(msg, sizeof (msg), "Row must contain data for all columns. %ld columns required, only %ld columns provided", neededColumns, providedColumns);
         m_what = std::string(msg);
     }
 

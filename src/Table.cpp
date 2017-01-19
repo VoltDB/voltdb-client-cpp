@@ -54,9 +54,10 @@ namespace voltdb {
         m_buffer.position(m_buffer.limit());
     }
 
-    Table::Table(const std::vector<Column> &columns) {
+    Table::Table(const std::vector<Column> &columns) throw (TableException) {
         if (columns.empty()) {
-            throw VoltTableException("volt table construction requires at least one column");
+            throw TableException("Failed to create table. Provided schema can't be empty, "
+                    "it must contain at least one column");
         }
         const int initialBuffSize = 8192;
         char *data = new char[initialBuffSize];
@@ -150,7 +151,7 @@ namespace voltdb {
         }
     }
 
-    void Table::addRow(RowBuilder& row) {
+    void Table::addRow(RowBuilder& row) throw (TableException, UninitializedColumnException, InCompatibleSchemaException) {
         const std::vector<Column> schema = row.columns();
         validateRowScehma(schema);
         m_buffer.limit(m_buffer.capacity());
@@ -158,7 +159,7 @@ namespace voltdb {
         int32_t serializeRowSize = row.getSerializedSize();
         assert(serializeRowSize <= MAX_TUPLE_LENGTH);
         if (serializeRowSize > MAX_TUPLE_LENGTH) {
-            throw VoltTableException("Row size exceeded max tuple size");
+            throw TableException("Cannot add row to the table. Row size too large (over 2MB)");
         }
 
         m_buffer.ensureRemaining(serializeRowSize);
@@ -180,17 +181,15 @@ namespace voltdb {
     }
 
     /*
-     * Serialize Volt table to byte buffer
+     * Serialize table to byte buffer. Ensure there is sufficient space
+     * in the passed in byte buffer to serialize the data. Needed space
+     * to serialize can be obtained by Table::getSerializedSize()
      */
-    int32_t Table::serializeTo(ByteBuffer& buffer) {
-        // ensure there is sufficient size in the buffer
-        // to serialize the data
+    int32_t Table::serializeTo(ByteBuffer& buffer) throw (TableException){
         buffer.limit(buffer.capacity());
         if (buffer.remaining() < getSerializedSize()) {
-            std::ostringstream os;
-            os << "Insufficient space in destination buffer. Remaining size in passed-in buffer: "
-                    << buffer.remaining() << ", needed: " << getSerializedSize();
-            throw VoltTableException(os.str());
+            throw TableException("Cannot serialize table as the specified buffer is not large enough. "
+                    "Use the getSerializedSize method to determine the necessary size");
         }
 
         int32_t startPosition = buffer.position();

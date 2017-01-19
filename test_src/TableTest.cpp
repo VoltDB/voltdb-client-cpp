@@ -490,8 +490,7 @@ private:
             }
             catch (const voltdb::UninitializedColumnException &excp) {
                 std::string msg(excp.what());
-                std::string expected = "Not at all columns of the row were initialized. "
-                        "Number of columns in schema: 2, columns initialized: 1";
+                std::string expected = "Row must contain data for all columns. 2 columns required, only 1 columns provided";
                 CPPUNIT_ASSERT_MESSAGE("Exception message missing supplied type name",
                                         msg.find(expected) != std::string::npos);
             }
@@ -546,9 +545,9 @@ private:
                 Table table (columns);
                 CPPUNIT_ASSERT_MESSAGE("table construction with empty schema expected to fail", false);
             }
-            catch (const voltdb::VoltTableException &excp) {
+            catch (const voltdb::TableException &excp) {
                 std::string msg(excp.what());
-                expected = "table construction requires at least one column";
+                expected = "Failed to create table. Provided schema can't be empty, it must contain at least one column";
                 CPPUNIT_ASSERT_MESSAGE("Exception message empty schema message not found",
                                         msg.find(expected) != std::string::npos);
             }
@@ -557,9 +556,9 @@ private:
                 RowBuilder row(columns);
                 CPPUNIT_ASSERT_MESSAGE("row construction with empty schema expected to fail", false);
             }
-            catch (const voltdb::ColumnPopulateException &excp) {
+            catch (const voltdb::RowCreationException &excp) {
                 std::string msg(excp.what());
-                expected = "schema for row should contain at least one column";
+                expected = "Failed to create row. The schema for row must contain at least one column";
                 CPPUNIT_ASSERT_MESSAGE("Exception message empty schema message not found",
                                        msg.find(expected) != std::string::npos);
             }

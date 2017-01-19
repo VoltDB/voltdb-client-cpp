@@ -46,7 +46,7 @@ class TableTest;
 class RowBuilder {
 friend class TableTest;
 private:
-    void validateType(WireType type) throw (InvalidColumnException, ColumnPopulateException){
+    void validateType(WireType type) throw (InvalidColumnException, RowCreationException) {
         if (m_currentColumnIndex >= m_columns.size()) {
             throw InvalidColumnException(m_currentColumnIndex, m_columns.size());
         }
@@ -59,16 +59,16 @@ private:
         }
         if (m_columns[m_currentColumnIndex].type() == WIRE_TYPE_ARRAY) {
             // array types for row in row builder is not implemented at present
-            throw ColumnPopulateException("Support for array type when constructing row is not available at present");
+            throw RowCreationException("Support for array type when constructing row is not available at present");
         }
     }
 
 public:
     // Initializes the Rowbuilder with schema of the table for which the row will be constructed
-    RowBuilder(const std::vector<Column> &schema) throw (ColumnPopulateException);
+    RowBuilder(const std::vector<Column> &schema) throw (RowCreationException);
 
 
-    RowBuilder& addInt64(int64_t val) {
+    RowBuilder& addInt64(int64_t val) throw (InvalidColumnException, RowCreationException) {
         validateType(WIRE_TYPE_BIGINT);
         m_buffer.ensureRemaining(8);
         m_buffer.putInt64(val);
@@ -76,7 +76,7 @@ public:
         return *this;
     }
 
-    RowBuilder& addInt32(int32_t val) {
+    RowBuilder& addInt32(int32_t val) throw (InvalidColumnException, RowCreationException) {
         validateType(WIRE_TYPE_INTEGER);
         m_buffer.ensureRemaining(4);
         m_buffer.putInt32(val);
@@ -84,7 +84,7 @@ public:
         return *this;
     }
 
-    RowBuilder& addInt16(int16_t val) {
+    RowBuilder& addInt16(int16_t val) throw (InvalidColumnException, RowCreationException) {
         validateType(WIRE_TYPE_SMALLINT);
         m_buffer.ensureRemaining(2);
         m_buffer.putInt16(val);
@@ -92,7 +92,7 @@ public:
         return *this;
     }
 
-    RowBuilder& addInt8(int8_t val) {
+    RowBuilder& addInt8(int8_t val) throw (InvalidColumnException, RowCreationException) {
         validateType(WIRE_TYPE_TINYINT);
         m_buffer.ensureRemaining(1);
         m_buffer.putInt8(val);
@@ -100,7 +100,7 @@ public:
         return *this;
     }
 
-    RowBuilder& addDouble(double val) {
+    RowBuilder& addDouble(double val) throw (InvalidColumnException, RowCreationException) {
         validateType(WIRE_TYPE_FLOAT);
         m_buffer.ensureRemaining(8);
         m_buffer.putDouble(val);
@@ -108,7 +108,7 @@ public:
         return *this;
     }
 
-    RowBuilder& addNull() {
+    RowBuilder& addNull() throw (InvalidColumnException) {
         if (m_currentColumnIndex >= m_columns.size()) {
             throw InvalidColumnException(m_currentColumnIndex, m_columns.size());
         }
@@ -169,7 +169,7 @@ public:
         return *this;
     }
 
-    RowBuilder& addString(const std::string& val) {
+    RowBuilder& addString(const std::string& val) throw (InvalidColumnException, RowCreationException) {
         validateType(WIRE_TYPE_STRING);
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(val.size()));
         m_buffer.putString(val);
@@ -177,7 +177,7 @@ public:
         return *this;
     }
 
-    RowBuilder& addVarbinary(const int32_t bufsize, const uint8_t *in_value) {
+    RowBuilder& addVarbinary(const int32_t bufsize, const uint8_t *in_value) throw (InvalidColumnException, RowCreationException) {
         validateType(WIRE_TYPE_VARBINARY);
         m_buffer.ensureRemaining(4 + bufsize);
         m_buffer.putBytes(bufsize, in_value);
@@ -185,7 +185,7 @@ public:
         return *this;
     }
 
-    RowBuilder& addTimeStamp(int64_t value) {
+    RowBuilder& addTimeStamp(int64_t value) throw (InvalidColumnException, RowCreationException) {
         validateType(WIRE_TYPE_TIMESTAMP);
         m_buffer.ensureRemaining(8);
         m_buffer.putInt64(value);
@@ -201,7 +201,7 @@ public:
         return *this;
     }
 
-    RowBuilder& addGeographyPoint(const GeographyPoint &val) {
+    RowBuilder& addGeographyPoint(const GeographyPoint &val) throw (InvalidColumnException, RowCreationException)  {
         validateType(WIRE_TYPE_GEOGRAPHY_POINT);
         // 2*sizeof(double) bytes for the payload.
         m_buffer.ensureRemaining(2*sizeof(double));
@@ -211,7 +211,7 @@ public:
         return *this;
     }
 
-    RowBuilder& addGeography(const Geography &val) {
+    RowBuilder& addGeography(const Geography &val) throw (InvalidColumnException, RowCreationException) {
         validateType(WIRE_TYPE_GEOGRAPHY);
         int32_t valSize = val.getSerializedSize();
         m_buffer.ensureRemaining(1 + valSize);
@@ -230,9 +230,9 @@ public:
      * Precondition:  All the columns of the row schema should be
      * populated/initialized
      */
-    int32_t serializeTo(ByteBuffer &buffer) {
+    int32_t serializeTo(ByteBuffer &buffer) throw (UninitializedColumnException) {
         if (m_currentColumnIndex != m_columns.size()) {
-            throw UninitializedColumnException(m_currentColumnIndex, m_columns.size());
+            throw UninitializedColumnException(m_columns.size(), m_currentColumnIndex);
         }
 
         int32_t startPosition = buffer.position();

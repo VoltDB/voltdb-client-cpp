@@ -25,10 +25,10 @@
 #include "Table.h"
 
 namespace voltdb {
-    RowBuilder::RowBuilder(const std::vector<Column> &schema) throw (ColumnPopulateException) :
+    RowBuilder::RowBuilder(const std::vector<Column> &schema) throw (RowCreationException) :
     m_columns(schema), m_buffer(8192), m_currentColumnIndex(0) {
         if (m_columns.empty()) {
-            throw ColumnPopulateException("schema for row should contain at least one column");
+            throw RowCreationException("The schema for row must contain at least one column");
         }
     }
 }

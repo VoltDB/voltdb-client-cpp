@@ -46,7 +46,7 @@ public:
      * to the shared buffer indefinitely so watch out for unwanted memory retension.
      */
     Table(SharedByteBuffer buffer);
-    Table(const std::vector<Column> &columns);
+    Table(const std::vector<Column> &columns) throw (TableException);
     Table() {}
 
     ~Table() {
@@ -67,7 +67,13 @@ public:
      * Retrieve the number of rows contained in this table
      */
     int32_t rowCount() const;
-    void addRow(RowBuilder& row) ;
+
+    /*
+     * Adds the row specified in RowBuilder to table.
+     * Precondition: Row and Table schema should be same
+     * and all the row columns should be init'ed
+     */
+    void addRow(RowBuilder& row) throw (TableException, UninitializedColumnException, InCompatibleSchemaException);
 
     /*
      * Retrieve a copy of the column metadata.
@@ -85,13 +91,15 @@ public:
     std::string toString() const;
 
     /*
-     * Serialize Volt table to byte buffer
+     * Serialize Volt table to specified byte buffer. The specified buffer should
+     * have ample space available to serialize table data. The needed space can
+     * be queried using getSerializedSize()
      */
-    int32_t serializeTo(ByteBuffer& buffer);
+    int32_t serializeTo(ByteBuffer& buffer) throw (TableException);
 
     /**
      * Returns the size in bytes needed to serialize the current table data
-     * including size
+     * including 4 byte size meta-data
      */
     int32_t getSerializedSize() const;
 
