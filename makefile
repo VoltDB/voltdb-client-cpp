@@ -24,10 +24,9 @@ ifeq ($(PLATFORM),Darwin)
 endif
 ifeq ($(PLATFORM),Linux)
     OPENSSL_LIBS=/usr/lib/x86_64-linux-gnu/
-	#CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION}
-	CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS
+	CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION}
 	THIRD_PARTY_DIR := third_party_libs/linux
-	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system-mt -lboost_thread-mt -L$(OPENSSL_LIBS) -lssl -lcrypto 
+	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system -lboost_thread -L$(OPENSSL_LIBS) -lssl -lcrypto
 	CFLAGS += -fPIC
 endif
 

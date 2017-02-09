@@ -4,7 +4,9 @@ VOLT_LIBS=$(VOLT_LIBDIR)
 VOLT_INCLUDES=-I$(VOLT_INCLUDEDIR)/include
 CC=g++
 RM=rm -rf
-CFLAGS=$(BOOST_INCLUDES) $(VOLT_INCLUDES) -g3 -O3
+OPTIMIZATION=-O3
+CFLAGS=$(BOOST_INCLUDES) $(VOLT_INCLUDES) -g3 ${OPTIMIZATION}
+CFLAGS += -fPIC
 
 PLATFORM = $(shell uname)
 ifeq ($(PLATFORM),Darwin)
@@ -23,8 +25,7 @@ ifeq ($(PLATFORM),Linux)
     THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a \
                         $(THIRD_PARTY_DIR)/libevent_openssl.a \
                         $(THIRD_PARTY_DIR)/libevent_pthreads.a
-    SYSTEM_LIBS := -L$(OPENSSL_LIBS) -lssl -lcrypto -lpthread -lrt -lboost_system-mt -lboost_thread-mt
-	#SYSTEM_LIBS := -lpthread -lrt -lboost_system-mt -lboost_thread-mt
+    SYSTEM_LIBS := -L$(OPENSSL_LIBS) -lssl -lcrypto -lpthread -lrt -lboost_system -lboost_thread
 endif
 
 all: helloworld asynchelloworld voter svoter
@@ -37,7 +38,7 @@ helloworld: HelloWorld.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 
 voter: Voter.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 	$(CC) $(CFLAGS) Voter.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o voter
-	
+
 svoter: SVoter.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 	$(CC) $(CFLAGS) SVoter.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o svoter
 
