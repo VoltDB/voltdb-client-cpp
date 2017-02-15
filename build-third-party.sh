@@ -21,14 +21,14 @@ function install-open-ssl() {
 
 	cd ${OPENSSL_DIR}
 	if [ "$(uname)" == "Darwin" ]; then
-		echo "Openssl pacakagin not implemented for MAC, use default ones"
+		echo "Configuration and installation of OpenSSL for libevent not implemented for MAC at present, using the openssl libraries installed on the system"
 		return 0
 	elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-		echo "Configure openssl ... ${OPENSSL_VERSION}"
+		echo "Configure openssl ... openssl-${OPENSSL_VERSION}"
 		./config --openssldir=${INSTALL_DIR} -fPIC -DOPENSSL_PIC  -Wformat -Werror=format-security -fstack-protector
 	fi
 
-	echo "Build and install openssl at  INSTALL_DIR"
+	echo "Build and install openssl at ${INSTALL_DIR}"
 	make
 	make install
 
@@ -57,7 +57,6 @@ function install-libevent() {
 		./configure CPPFLAGS="-I${INSTALL_DIR}/include" LDFLAGS="-L${INSTALL_DIR}/lib" LIBS="-ldl" --disable-shared --with-pic --prefix=${INSTALL_DIR}
 	fi
 
-	#make clean
 	make
 	make install
 	cd ${CURRENT_DIR}
@@ -81,7 +80,7 @@ function cleanup-and-prep() {
 	tar -xzf libevent-${LIBEVENT_VERSION}-stable.tar.gz
 
 	mkdir ${INSTALL_DIR}
-	echo "Install dir ${INSTALL_DIR}"
+	echo "Install directory for third party includes and libs ${INSTALL_DIR}"
 }
 
 cleanup-and-prep

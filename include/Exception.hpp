@@ -310,7 +310,7 @@ public:
         m_what = "Lib event generated an unexpected error";
     }
     explicit LibEventException(const std::string& msg) : Exception() {
-        m_what = "Lib event generated an unexpected error: " + msg;
+        m_what = "Encountered an error from libevent library. " + msg;
     }
     virtual ~LibEventException() throw() {}
     const char* what() const throw() {
@@ -414,13 +414,12 @@ public:
 
 class SSLException : public Exception {
     std::string m_what;
-public:
     explicit SSLException() : Exception() {
-        m_what = "OpenSSL Exception";
+        m_what = "Unknown SSL Exception";
     }
-
+public:
     explicit SSLException(const std::string& msg) {
-        m_what = "Open SSL Exception: " + msg;
+        m_what = msg;
     }
 
     virtual ~SSLException() throw() {
@@ -434,13 +433,12 @@ public:
 
 class MDHashException : public Exception {
     std::string m_what;
-public:
     explicit MDHashException() : Exception() {
-        m_what = "MD Hash Exception";
+        m_what = "Encountered unknown error generating hash digest";
     }
-
+public:
     explicit MDHashException(const std::string& msg) {
-        m_what = "MD Hash Exception: " + msg;
+        m_what = "Encountered error generating hash digest. " + msg;
     }
 
     virtual ~MDHashException() throw() {

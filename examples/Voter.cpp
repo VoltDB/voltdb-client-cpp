@@ -166,7 +166,8 @@ int main(int argc, char* argv[])
 	int64_t lastMillisecond = millisec_time();
 	int64_t thisMillisecond = millisec_time();
 
-	voltdb::Client client = voltdb::Client::create();
+	voltdb::ClientConfig config("myusername", "mypassword", voltdb::HASH_SHA256);
+	voltdb::Client client = voltdb::Client::create(config);
 	vector<string> servers;
 	Tokenize(serverList, servers, ",");
 	for (int i = 0; i < (int)servers.size(); i++)

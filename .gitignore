@@ -2,7 +2,7 @@
 /libvoltdbcpp.a
 /libvoltdbcpp.so
 /libvoltdbcpp.tgz
-/libeventinstall/
+/third-party-install/
 /voltdb-client-cpp-*
 /*.tar.gz
 *.d

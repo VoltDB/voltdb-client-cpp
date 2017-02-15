@@ -61,17 +61,21 @@ public:
      * @param port Port to connect to
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
+     * @throws voltdb::PipeCreationException Fails to create pipe for communication
+     *         between two event bases to monitor for expired queries
+     * @throws voltdb::TimerThreadException error happens when creating query timer monitor thread
+     * @throws voltdb::SSLException ssl operations returns an error
      */
-    void createConnection(const std::string &hostname, const unsigned short port, const bool keepConnecting) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException, voltdb::PipeCreationException, voltdb::TimerThreadException, SSLException);
+    void createConnection(const std::string &hostname, const unsigned short port, const bool keepConnecting) throw (Exception, ConnectException, LibEventException, PipeCreationException, TimerThreadException, SSLException);
 
     /*
      * Synchronously invoke a stored procedure and return a the response.
      */
-    InvocationResponse invoke(Procedure &proc) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException);
-    void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::ElasticModeMismatchException);
-    void invoke(Procedure &proc, ProcedureCallback *callback) throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::ElasticModeMismatchException);
-    void runOnce() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
-    void run() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
+    InvocationResponse invoke(Procedure &proc) throw (Exception, NoConnectionsException, UninitializedParamsException, LibEventException);
+    void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (Exception, NoConnectionsException, UninitializedParamsException, LibEventException, ElasticModeMismatchException);
+    void invoke(Procedure &proc, ProcedureCallback *callback) throw (Exception, NoConnectionsException, UninitializedParamsException, LibEventException, ElasticModeMismatchException);
+    void runOnce() throw (Exception, NoConnectionsException, LibEventException);
+    void run() throw (Exception, NoConnectionsException, LibEventException);
 
    /*
     * Enter the event loop and process pending events until all responses have been received and then return.
@@ -81,7 +85,7 @@ public:
     * @throws LibEventException An unknown error occured in libevent
     * @return true if all requests were drained and false otherwise
     */
-    bool drain() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
+    bool drain() throw (Exception, NoConnectionsException, LibEventException);
     bool isDraining() const { return m_isDraining; }
     ~ClientImpl();
 
@@ -91,7 +95,7 @@ public:
     void eventBaseLoopBreak();
     void reconnectEventCallback();
 
-    void runTimeoutMonitor() throw (voltdb::LibEventException);
+    void runTimeoutMonitor() throw (LibEventException);
     void purgeExpiredRequests();
     void triggerScanForTimeoutRequestsEvent();
 
@@ -129,10 +133,10 @@ public:
     int64_t getResponseWithHandlesNotInCallback() const { return m_responseHandleNotFound; }
 
 private:
-    ClientImpl(ClientConfig config) throw (voltdb::Exception, voltdb::LibEventException, MDHashException, SSLException);
+    ClientImpl(ClientConfig config) throw (Exception, LibEventException, MDHashException, SSLException);
 
-    void initiateAuthentication(struct bufferevent *bev, const std::string& hostname, unsigned short port) throw (voltdb::LibEventException);
-    void finalizeAuthentication(PendingConnection* pc) throw (voltdb::Exception, voltdb::ConnectException);
+    void initiateAuthentication(struct bufferevent *bev, const std::string& hostname, unsigned short port) throw (LibEventException);
+    void finalizeAuthentication(PendingConnection* pc) throw (Exception, ConnectException);
 
     /*
      * Updates procedures and topology information for transaction routing algorithm
@@ -152,7 +156,7 @@ private:
     /*
      * Initiate connection based on pending connection instance
      */
-    void initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException, voltdb::LibEventException, SSLException);
+    void initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (ConnectException, LibEventException, SSLException);
 
     /*
      * Creates a pending connection that is handled in the reconnect callback
@@ -163,15 +167,17 @@ private:
     void createPendingConnection(const std::string &hostname, const unsigned short port, const int64_t time=0);
     void erasePendingConnection(PendingConnection *);
 
-    /*
-     * Generates digest for the for the password. Hash functions supported for
-     * generating digest are SHA1 and 256
-     * @param: password for which hash disgest will generated
+    /**
+     * Generates hash-digest for the for the password. Supported hash functions are
+     * SHA-1 and SHA-256
+     * @param: password for which hash digest will be generated
+     * @throws MDHashException: An error occurred generating hash for the password
      */
     void hashPassword(const std::string& password) throw (MDHashException);
 
-    /*
+    /**
      * Initializes SSL library, contexts and algorithms to use
+     * @throws SSLException: An error occurred during initialization of SSL
      */
     void initSsl() throw (SSLException);
     inline void notifySslClose(bufferevent *bev) {
@@ -193,8 +199,8 @@ private:
      */
     void logMessage(ClientLogger::CLIENT_LOG_LEVEL severity, const std::string& msg);
 
-    void setUpTimeoutCheckerMonitor() throw (voltdb::LibEventException);
-    void startMonitorThread() throw (voltdb::TimerThreadException);
+    void setUpTimeoutCheckerMonitor() throw (LibEventException);
+    void startMonitorThread() throw (TimerThreadException);
     bool isReadOnly(const Procedure &proc) ;
 
 private:
@@ -298,9 +304,8 @@ private:
     ClientAuthHashScheme m_hashScheme;
     const bool m_enableSSL;
     SSL_CTX *m_clientSslCtx;
-    // Reference count number of clients running so that global resource like ssl
-    // error strings and digests, which are shared between clients running on separate
-    // threads can cleaned up
+    // Reference count number of clients running to help in release of the global resource like
+    // ssl ciphers, error strings and digests can be unloaded that are shared between clients
     static boost::atomic<uint32_t> m_numberOfClients;
     static boost::mutex m_globalResourceLock;
 
