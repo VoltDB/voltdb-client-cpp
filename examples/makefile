@@ -20,12 +20,14 @@ ifeq ($(PLATFORM),Darwin)
                         $(THIRD_PARTY_DIR)/libevent_pthreads.a
 endif
 ifeq ($(PLATFORM),Linux)
-    OPENSSL_LIBS=/usr/lib/x86_64-linux-gnu/
 	THIRD_PARTY_DIR := $(VOLT_LIBS)/third_party_libs/linux
     THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a \
                         $(THIRD_PARTY_DIR)/libevent_openssl.a \
-                        $(THIRD_PARTY_DIR)/libevent_pthreads.a
-    SYSTEM_LIBS := -L$(OPENSSL_LIBS) -lssl -lcrypto -lpthread -lrt -lboost_system -lboost_thread
+                        $(THIRD_PARTY_DIR)/libevent_pthreads.a \
+                        $(THIRD_PARTY_DIR)/libssl.a \
+                        $(THIRD_PARTY_DIR)/libcrypto.a \
+						-ldl
+	SYSTEM_LIBS := -lpthread -lrt -lboost_system -lboost_thread
 endif
 
 all: helloworld asynchelloworld voter svoter
@@ -43,4 +45,4 @@ svoter: SVoter.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 	$(CC) $(CFLAGS) SVoter.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o svoter
 
 clean:
-	$(RM) asynchelloworld helloworld voter svoter *.dSYM *~
+	$(RM) asynchelloworld helloworld voter svoter keepalive skeepalive *.dSYM *~

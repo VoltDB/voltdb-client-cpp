@@ -1,5 +1,5 @@
 /* This file is part of VoltDB.
- * Copyright (C) 2008-2010 VoltDB L.L.C.
+ * Copyright (C) 2008-2017 VoltDB Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -42,7 +42,10 @@
 #include "ParameterSet.hpp"
 #include "ProcedureCallback.hpp"
 
-using namespace std;
+using std::string;
+using std::cout;
+using std::endl;
+using std::vector;
 
 int64_t minExecutionMilliseconds = 999999999;
 int64_t maxExecutionMilliseconds = -1;
@@ -164,8 +167,8 @@ int main(int argc, char* argv[]) {
     int64_t lastMillisecond = millisec_time();
     int64_t thisMillisecond = millisec_time();
 
-    //voltdb::ClientConfig config = voltdb::ClientConfig(username, password, voltdb::HASH_SHA256);
-    voltdb::ClientConfig config = voltdb::ClientConfig(username, password, voltdb::HASH_SHA1);
+    voltdb::ClientConfig config = voltdb::ClientConfig(username, password, voltdb::HASH_SHA256);
+    //voltdb::ClientConfig config = voltdb::ClientConfig(username, password, voltdb::HASH_SHA1);
     config.m_useSSL = true;
     voltdb::Client client = voltdb::Client::create(config);
     vector<string> servers;

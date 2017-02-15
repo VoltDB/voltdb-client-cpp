@@ -23,10 +23,10 @@ ifeq ($(PLATFORM),Darwin)
 	SYSTEM_LIBS := -L$(BOOST_LIBS) -lc -lpthread -lboost_system-mt -lboost_thread-mt -L$(OPENSSL_LIBS) -lssl -lcrypto
 endif
 ifeq ($(PLATFORM),Linux)
-    OPENSSL_LIBS=/usr/lib/x86_64-linux-gnu/
 	CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION}
 	THIRD_PARTY_DIR := third_party_libs/linux
-	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system -lboost_thread -L$(OPENSSL_LIBS) -lssl -lcrypto
+
+	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system -lboost_thread
 	CFLAGS += -fPIC
 endif
 
@@ -59,7 +59,10 @@ CPTEST_OBJS := test_obj/ConnectionPoolTest.o \
 
 THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a \
 					$(THIRD_PARTY_DIR)/libevent_openssl.a \
-					$(THIRD_PARTY_DIR)/libevent_pthreads.a
+					$(THIRD_PARTY_DIR)/libevent_pthreads.a \
+					$(THIRD_PARTY_DIR)/libssl.a \
+					$(THIRD_PARTY_DIR)/libcrypto.a \
+					-ldl
 
 RM := rm -rf
 
@@ -104,6 +107,7 @@ $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 	@echo 'Building distribution kit'
 	rm -rf $(KIT_NAME)
 	mkdir -p $(KIT_NAME)/include/ttmath
+	mkdir -p $(KIT_NAME)/include/openssl
 	mkdir -p $(KIT_NAME)/$(THIRD_PARTY_DIR)
 
 	cp -R include/ByteBuffer.hpp include/Client.h include/ClientConfig.h \
@@ -115,7 +119,7 @@ $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
                   include/ClientLogger.h include/Distributer.h include/ElasticHashinator.h \
                   include/MurmurHash3.h include/Geography.hpp include/GeographyPoint.hpp $(KIT_NAME)/include/
 	cp -R include/ttmath/*.h $(KIT_NAME)/include/ttmath/
-	#cp -R include/boost $(KIT_NAME)/include/
+	cp include/openssl/*.h $(KIT_NAME)/include/openssl/
 
 	cp -R examples $(KIT_NAME)/
 	cp README.md $(KIT_NAME)/
