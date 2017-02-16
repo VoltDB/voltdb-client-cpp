@@ -72,6 +72,8 @@ public:
 
     void cleanupBev() {
         if (m_bufferEvent) {
+            // if in SSL mode, the allocated SSL context for bev will
+            // get released by bufferevent_free
             bufferevent_free(m_bufferEvent);
             m_bufferEvent = NULL;
         }
@@ -302,6 +304,8 @@ ClientImpl::~ClientImpl() {
         if (m_enableSSL) {
             notifySslClose(*bevItr);
         }
+        // if in SSL mode, the allocated SSL context for bev will
+        // get released by bufferevent_free
         bufferevent_free(*bevItr);
     }
     m_bevs.clear();
@@ -575,6 +579,8 @@ void ClientImpl::close() {
         if (m_enableSSL) {
             notifySslClose(*bevEntryItr);
         }
+        // if in SSL mode, the allocated SSL context for bev will
+        // get released by bufferevent_free
         bufferevent_free(*bevEntryItr);
     }
     m_bevs.clear();
