@@ -21,8 +21,8 @@ function install-open-ssl() {
 
 	cd ${OPENSSL_DIR}
 	if [ "$(uname)" == "Darwin" ]; then
-		echo "Configuration and installation of OpenSSL for libevent not implemented for MAC at present, using the openssl libraries installed on the system"
-		return 0
+		echo "Configure openssl-${OPENSSL_VERSION} for MAC"
+		./Configure darwin64-x86_64-cc --openssldir=${INSTALL_DIR} -fPIC -DOPENSSL_PIC  -Wformat -Werror=format-security -fstack-protector
 	elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
 		echo "Configure openssl ... openssl-${OPENSSL_VERSION}"
 		./config --openssldir=${INSTALL_DIR} -fPIC -DOPENSSL_PIC  -Wformat -Werror=format-security -fstack-protector
@@ -33,11 +33,11 @@ function install-open-ssl() {
 	make install
 
 	cd ${CURRENT_DIR}
-	# delete files that are not needed
+	# delete openssl files that are not needed
 	rm -rf ${INSTALL_DIR}/bin ${INSTALL_DIR}/certs ${INSTALL_DIR}/man \
 	${INSTALL_DIR}/misc ${INSTALL_DIR}/private ${INSTALL_DIR}/openssl.cnf \
 	${INSTALL_DIR}/lib/engines ${INSTALL_DIR}/lib/pkgconfig
-
+	#remove openssl deflated dir
 	rm -rf ${OPENSSL_DIR}
 }
 
@@ -46,39 +46,32 @@ function install-libevent() {
 	echo "libevent version ${LIBEVENT_VERSION}, tar file ${LIBEVENT_TAR}"
 	echo "openssl dir ${LIBEVENT_DIR}"
 
-	# build libevent binaries with the right configuration
+	# build libevent libraries
 	cd ${LIBEVENT_DIR}
-
-	if [ "$(uname)" == "Darwin" ]; then
-		echo "Configure libevent ${LIBEVENT_VERSION} for Mac"
-		./configure CPPFLAGS="-I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/opt/openssl/lib" --disable-shared --with-pic --prefix=${INSTALL_DIR}
-	elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-		echo "Configure libevent ${LIBEVENT_VERSION} for Linux"
-		./configure CPPFLAGS="-I${INSTALL_DIR}/include" LDFLAGS="-L${INSTALL_DIR}/lib" LIBS="-ldl" --disable-shared --with-pic --prefix=${INSTALL_DIR}
-	fi
+	echo "Configure libevent-${LIBEVENT_VERSION}"
+	./configure CPPFLAGS="-I${INSTALL_DIR}/include" LDFLAGS="-L${INSTALL_DIR}/lib" LIBS="-ldl" --disable-shared --with-pic --prefix=${INSTALL_DIR}
 
 	make
 	make install
-	cd ${CURRENT_DIR}
 
+	cd ${CURRENT_DIR}
 	# delete files that are not needed
 	rm -rf ${INSTALL_DIR}/bin ${INSTALL_DIR}/lib/pkgconfig
 	rm -f ${INSTALL_DIR}/include/*.h ${INSTALL_DIR}/lib/*.la ${INSTALL_DIR}/lib/libevent_core.a ${INSTALL_DIR}/lib/libevent_extra.a
-
 	# remove the unpacked tarbal
 	rm -rf ${LIBEVENT_DIR}
 }
 
 # remove the files and directories from previous build, if any and lay out dir for libs
 function cleanup-and-prep() {
-	# unpack openssl
+	# delete files from previous installation
 	rm -rf ${OPENSSL_DIR} ${LIBEVENT_DIR}
 	rm -rf ${INSTALL_DIR}
 
-	# unpack the bundled libevent tarball, overwriting existing
+	# unpack the libevent and openssl
 	tar -xzf openssl-${OPENSSL_VERSION}.tar.gz
 	tar -xzf libevent-${LIBEVENT_VERSION}-stable.tar.gz
-
+	#setup dir for installing libevent and openssl
 	mkdir ${INSTALL_DIR}
 	echo "Install directory for third party includes and libs ${INSTALL_DIR}"
 }

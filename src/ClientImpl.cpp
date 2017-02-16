@@ -411,7 +411,9 @@ void ClientImpl::hashPassword(const std::string& password) throw (MDHashExceptio
         throw MDHashException("Supported hash-schemes are SHA1 and SHA256. Update provided has to either");
     }
     if (md == NULL) {
-        throw MDHashException("Failed to get digest for " + (m_hashScheme == HASH_SHA1) ? "SHA1" : "SHA256");
+        char msg[256];
+        snprintf(msg, sizeof(msg), "Failed to get digest for %s", ((m_hashScheme == HASH_SHA1) ? "SHA1" : "SHA256"));
+        throw MDHashException(msg);
     }
     unsigned int md_len = -1;
     m_passwordHash = (unsigned char *) malloc(hashDataLength);
@@ -520,7 +522,7 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
         }
         pc->m_bufferEvent = bufferevent_openssl_socket_new(m_base, -1, bevSsl, BUFFEREVENT_SSL_CONNECTING,
                 BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
-        bufferevent_openssl_get_allow_dirty_shutdown(pc->m_bufferEvent);
+        // If dirty shutdown needs to be supported, it needs to be set here. Leaving comment as a placeholder
     }
     else {
         pc->m_bufferEvent = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);

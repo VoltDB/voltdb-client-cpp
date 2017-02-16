@@ -14,20 +14,28 @@ BOOST_LIBS=/usr/local/lib
 LIB_NAME=libvoltdbcpp
 KIT_NAME=voltdb-client-cpp-x86_64-6.8
 
+CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} -fPIC
 PLATFORM = $(shell uname)
-ifeq ($(PLATFORM),Darwin)
-	OPENSSL_INCLUDES=/usr/local/opt/openssl/include
-	OPENSSL_LIBS=/usr/local/opt/openssl/lib
-	CFLAGS=-I$(BOOST_INCLUDES) -I$(OPENSSL_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION}
-	THIRD_PARTY_DIR := third_party_libs/osx
-	SYSTEM_LIBS := -L$(BOOST_LIBS) -lc -lpthread -lboost_system-mt -lboost_thread-mt -L$(OPENSSL_LIBS) -lssl -lcrypto
-endif
-ifeq ($(PLATFORM),Linux)
-	CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION}
-	THIRD_PARTY_DIR := third_party_libs/linux
 
+ifeq ($(PLATFORM),Darwin)
+	THIRD_PARTY_DIR := third_party_libs/osx
+	THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a \
+					$(THIRD_PARTY_DIR)/libevent_openssl.a \
+					$(THIRD_PARTY_DIR)/libevent_pthreads.a \
+					$(THIRD_PARTY_DIR)/libssl.a \
+					$(THIRD_PARTY_DIR)/libcrypto.a
+	SYSTEM_LIBS := -L$(BOOST_LIBS) -lc -lpthread -lboost_system-mt -lboost_thread-mt
+endif
+
+ifeq ($(PLATFORM),Linux)
+	THIRD_PARTY_DIR := third_party_libs/linux
+	THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a \
+					$(THIRD_PARTY_DIR)/libevent_openssl.a \
+					$(THIRD_PARTY_DIR)/libevent_pthreads.a \
+					$(THIRD_PARTY_DIR)/libssl.a \
+					$(THIRD_PARTY_DIR)/libcrypto.a \
+					-ldl
 	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system -lboost_thread
-	CFLAGS += -fPIC
 endif
 
 .PHONEY: all clean test kit
@@ -39,8 +47,8 @@ OBJS := obj/Client.o \
 		obj/RowBuilder.o \
 		obj/Table.o \
 		obj/WireType.o \
-                obj/Distributer.o \
-                obj/MurmurHash3.o \
+		obj/Distributer.o \
+		obj/MurmurHash3.o \
 		obj/GeographyPoint.o \
 		obj/Geography.o
 
@@ -55,14 +63,6 @@ TEST_OBJS := test_obj/ByteBufferTest.o \
 
 CPTEST_OBJS := test_obj/ConnectionPoolTest.o \
 			 test_obj/Tests.o
-
-
-THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a \
-					$(THIRD_PARTY_DIR)/libevent_openssl.a \
-					$(THIRD_PARTY_DIR)/libevent_pthreads.a \
-					$(THIRD_PARTY_DIR)/libssl.a \
-					$(THIRD_PARTY_DIR)/libcrypto.a \
-					-ldl
 
 RM := rm -rf
 
