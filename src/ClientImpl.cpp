@@ -40,6 +40,11 @@ namespace voltdb {
 static bool voltdb_clientimpl_debug_init_libevent = false;
 #endif
 
+const static char* CIPHER_SUITES_TO_SET = "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:"
+        "RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS";
+const static long SSL_OPTIONS_TO_SET = SSL_OP_ALL | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1
+                    | SSL_OP_NO_TLSv1_1;
+
 int64_t get_sec_time() {
     struct timeval tp;
     int res = gettimeofday(&tp, NULL);
@@ -271,10 +276,15 @@ void ClientImpl::initSsl() throw (SSLException) {
         // allocate SSL context for the client
         //boost::mutex::scoped_lock(m_globalResourceLock);
         if (m_clientSslCtx == NULL) {
-            m_clientSslCtx = SSL_CTX_new(SSLv23_client_method());
+            m_clientSslCtx = SSL_CTX_new(TLSv1_2_client_method());
             if (m_clientSslCtx == NULL) {
                 throw SSLException("Failed to create and initialize ssl client context");
             }
+            if (SSL_CTX_set_cipher_list(m_clientSslCtx, CIPHER_SUITES_TO_SET) != 1) {
+                std::string cipherList(CIPHER_SUITES_TO_SET);
+                throw SSLException("Failed to set cipher list: " + cipherList);
+            }
+            SSL_CTX_set_options(m_clientSslCtx, SSL_OPTIONS_TO_SET);
         }
     }
 }
