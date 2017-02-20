@@ -269,7 +269,10 @@ void initOpenSSL() {
 }
 
 void ClientImpl::initSsl() throw (SSLException) {
-    //init_ssl_locking();
+
+    // If global locking support for SSL is needed, which at present is not, the global
+    // SSL locks will need to initialized here
+
     // initialize SSL once
     pthread_once(&once_initOpenSSL, initOpenSSL);
     {
@@ -609,8 +612,6 @@ void ClientImpl::initiateAuthentication(struct bufferevent *bev, const std::stri
         os << "initiateAuthentication: failed to enable read events "<< hostname << ":" << (unsigned int) port << "; bev:" << bev;
         if (m_pLogger) {
             m_pLogger->log(ClientLogger::ERROR, os.str());
-        } else {
-            std::cerr << os.str() << std::endl;
         }
         throw LibEventException(os.str());
     }
@@ -624,8 +625,6 @@ void ClientImpl::initiateAuthentication(struct bufferevent *bev, const std::stri
         os << "initiateAuthentication: failed to add data event buffer"<< hostname << ":" << (unsigned int) port << "; bev:" << bev;
         if (m_pLogger) {
             m_pLogger->log(ClientLogger::ERROR, os.str());
-        } else {
-            std::cerr << os.str() <<std::endl;
         }
         throw LibEventException(os.str());
     }
@@ -1310,9 +1309,6 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
                     else {
                         ++m_responseHandleNotFound;
                     }
-                }
-                else {
-                    //std::cout << "bev entry not detected: "<< bev << std::endl;
                 }
             }
 
