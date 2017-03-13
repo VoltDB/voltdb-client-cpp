@@ -31,7 +31,7 @@ ifeq ($(PLATFORM),Linux)
 	SYSTEM_LIBS := -lpthread -lrt -lboost_system -lboost_thread
 endif
 
-all: helloworld asynchelloworld voter svoter
+all: helloworld asynchelloworld voter sslvoter
 
 asynchelloworld: AsyncHelloWorld.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 	$(CC) $(CFLAGS) AsyncHelloWorld.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o asynchelloworld
@@ -42,8 +42,8 @@ helloworld: HelloWorld.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 voter: Voter.cpp $(VOLT_LIBS)/libvoltdbcpp.a
 	$(CC) $(CFLAGS) Voter.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o voter
 
-svoter: SVoter.cpp $(VOLT_LIBS)/libvoltdbcpp.a
-	$(CC) $(CFLAGS) SVoter.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o svoter
+sslvoter: SSLVoter.cpp $(VOLT_LIBS)/libvoltdbcpp.a
+	$(CC) $(CFLAGS) SSLVoter.cpp $(VOLT_LIBS)/libvoltdbcpp.a $(THIRD_PARTY_LIBS) $(SYSTEM_LIBS) -o sslvoter
 
 clean:
-	$(RM) asynchelloworld helloworld voter svoter *.dSYM *~
+	$(RM) asynchelloworld helloworld voter sslvoter *.dSYM *~
