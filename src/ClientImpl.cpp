@@ -259,37 +259,31 @@ static void regularEventCallback(struct bufferevent *bev, short events, void *ct
 boost::atomic<uint32_t> ClientImpl::m_numberOfClients(0);
 boost::mutex ClientImpl::m_globalResourceLock;
 
-// Initialization of OpenSSL library that gets called only once
-pthread_once_t once_initOpenSSL = PTHREAD_ONCE_INIT;
-void initOpenSSL() {
+void initOpenSSLLib() {
     SSL_library_init();
     ERR_load_crypto_strings();
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
 }
 
-void ClientImpl::initSsl() throw (SSLException) {
+void ClientImpl::initSslConext() throw (SSLException) {
 
     // If global locking support for SSL is needed, which at present is not, the global
     // SSL locks will need to initialized here
 
-    // initialize SSL once
-    pthread_once(&once_initOpenSSL, initOpenSSL);
-    {
-        // allocate SSL context for the client
-        //boost::mutex::scoped_lock(m_globalResourceLock);
+    // allocate SSL context for the client
+    if (m_clientSslCtx == NULL) {
+        m_clientSslCtx = SSL_CTX_new(TLSv1_2_client_method());
         if (m_clientSslCtx == NULL) {
-            m_clientSslCtx = SSL_CTX_new(TLSv1_2_client_method());
-            if (m_clientSslCtx == NULL) {
-                throw SSLException("Failed to create and initialize ssl client context");
-            }
-            if (SSL_CTX_set_cipher_list(m_clientSslCtx, CIPHER_SUITES_TO_SET) != 1) {
-                std::string cipherList(CIPHER_SUITES_TO_SET);
-                throw SSLException("Failed to set cipher list: " + cipherList);
-            }
-            SSL_CTX_set_options(m_clientSslCtx, SSL_OPTIONS_TO_SET);
+            throw SSLException("Failed to create and initialize ssl client context");
         }
+        if (SSL_CTX_set_cipher_list(m_clientSslCtx, CIPHER_SUITES_TO_SET) != 1) {
+            std::string cipherList(CIPHER_SUITES_TO_SET);
+            throw SSLException("Failed to set cipher list: " + cipherList);
+        }
+        SSL_CTX_set_options(m_clientSslCtx, SSL_OPTIONS_TO_SET);
     }
+
 }
 
 /**
@@ -478,9 +472,6 @@ ClientImpl::ClientImpl(ClientConfig config) throw (Exception, LibEventException,
         throw LibEventException("Failed to create and initialize main event base");
     }
     hashPassword(config.m_password);
-    if (m_enableSSL) {
-        initSsl();
-    }
     m_wakeupPipe[0] = -1;
     m_wakeupPipe[1] = -1;
 
@@ -493,7 +484,22 @@ ClientImpl::ClientImpl(ClientConfig config) throw (Exception, LibEventException,
     m_timerCheckPipe[0] = -1;
     m_timerCheckPipe[1] = -1;
 
-    ++m_numberOfClients;
+    {
+        // Initialize the OpenSSL resources that needs to initialized only once for the process.
+        // When client count goes to zero, the OpenSSL library are released in destructor.
+        // Check client count and initialize the resources if needed
+        boost::mutex::scoped_lock lock(m_globalResourceLock);
+        if ((++m_numberOfClients == 1) && m_enableSSL) {
+            if (m_enableSSL) {
+                initOpenSSLLib();
+            }
+        }
+    }
+
+    if (m_enableSSL) {
+        // Initialize per client SSL context
+        initSslConext();
+    }
 }
 
 class FreeBEVOnFailure {
@@ -1187,7 +1193,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
     //route transaction to correct event if client affinity is enabled and hashinator updating is not in progress
     //elastic scalability is disabled
     if (m_useClientAffinity && !m_distributer.isUpdating()) {
-         routed_bev = routeProcedure(proc, sbb);
+        routed_bev = routeProcedure(proc, sbb);
         // Check if the routed_bev is valid and has not been removed due to lost connection
         if ((routed_bev != NULL) && (m_callbacks.find(routed_bev) != m_callbacks.end())) {
             bev = routed_bev;

@@ -179,13 +179,13 @@ private:
      * Initializes SSL library, contexts and algorithms to use
      * @throws SSLException: An error occurred during initialization of SSL
      */
-    void initSsl() throw (SSLException);
+    void initSslConext() throw (SSLException);
     inline void notifySslClose(bufferevent *bev) {
         SSL *ssl = bufferevent_openssl_get_ssl(bev);
         if (ssl == NULL) {
             return;
         }
-        if (SSL_get_shutdown(ssl) & SSL_RECEIVED_SHUTDOWN) {
+        if ((SSL_get_shutdown(ssl) & SSL_RECEIVED_SHUTDOWN) == SSL_RECEIVED_SHUTDOWN) {
             int closeStatus = SSL_shutdown(ssl);
             if (closeStatus == 0) {
                 SSL_shutdown(ssl);
