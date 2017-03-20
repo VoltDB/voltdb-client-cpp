@@ -12,7 +12,7 @@ BOOST_INCLUDES=/usr/local/include
 BOOST_LIBS=/usr/local/lib
 
 LIB_NAME=libvoltdbcpp
-KIT_NAME=voltdb-client-cpp-x86_64-6.8
+KIT_NAME=voltdb-client-cpp-x86_64-7.1
 
 CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} -fPIC
 PLATFORM = $(shell uname)

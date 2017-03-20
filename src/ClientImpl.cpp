@@ -490,9 +490,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw (Exception, LibEventException,
         // Check client count and initialize the resources if needed
         boost::mutex::scoped_lock lock(m_globalResourceLock);
         if ((++m_numberOfClients == 1) && m_enableSSL) {
-            if (m_enableSSL) {
-                initOpenSSLLib();
-            }
+            initOpenSSLLib();
         }
     }
 
