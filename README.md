@@ -18,6 +18,21 @@ The OSX binary was compiled with Xcode 7.2 on OSX 10.11.
 The source code is available in the [VoltDB Github repository]
 (https://github.com/VoltDB/voltdb-client-cpp). 
 
+New Features in 7.1
+==================
+- Add SSL support to C++ client to enable communication between VoltDB server and C++ client over SSL transport.
+To enable communication between a VoltDB server with SSL enabled for the external ports and a C++ client, the client
+needs to be instantiated using client config (voltdb::ClientConfig) with the ssl field (m_useSSL) set to true. Code
+snippet:
+```C++
+voltdb::ClientConfig config;
+...
+...
+config.m_useSSL = true;
+...
+voltdb::Client client = voltdb::Client::create(config);
+```
+
 New Features in 7.0
 ==================
 - Support for Table (synomous to VoltTable on server side) in parameter set.

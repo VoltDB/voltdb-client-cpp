@@ -53,7 +53,7 @@ public:
  * Thrown when attempting to retrieve a column from a Row using a column
  * index that is < 0, > num columns, or when using a getter with an inappropriate data type
  */
-class InvalidColumnException : public voltdb::Exception {
+class InvalidColumnException : public Exception {
     std::string m_what;
 public:
     explicit InvalidColumnException() :
@@ -87,7 +87,7 @@ public:
     }
 };
 
-class RowCreationException : public voltdb::Exception {
+class RowCreationException : public Exception {
 private:
     std::string m_what;
     explicit RowCreationException():Exception() {}
@@ -125,7 +125,7 @@ public:
  * through message wrappers like AuthenticationRequest, AuthenticationResponse, InvocationResponse, Table,
  * TableIterator, and Row.
  */
-class OverflowUnderflowException : public voltdb::Exception {
+class OverflowUnderflowException : public Exception {
 public:
     OverflowUnderflowException() : Exception() {}
     virtual const char* what() const throw() {
@@ -137,7 +137,7 @@ public:
  * Thrown by ByteBuffer when an attempt is made to access a value at a specific index or set the position/limit
  * to a specific index that is < 0 or > the limit/capacity. This should never be seen by users.
  */
-class IndexOutOfBoundsException : public voltdb::Exception {
+class IndexOutOfBoundsException : public Exception {
 public:
     IndexOutOfBoundsException() : Exception() {}
     virtual const char* what() const throw() {
@@ -149,7 +149,7 @@ public:
  * Thrown by ByteBuffer when an attempt is made to expand a buffer that is not expandable. Should
  * never be seen by users.
  */
-class NonExpandableBufferException : public voltdb::Exception {
+class NonExpandableBufferException : public Exception {
 public:
     NonExpandableBufferException() : Exception() {}
     virtual const char* what() const throw() {
@@ -161,7 +161,7 @@ public:
  * Thrown when an attempt is made to invoke a procedure without initializing all the parameters to the procedure.
  * Users may see this exception.
  */
-class UninitializedParamsException : public voltdb::Exception {
+class UninitializedParamsException : public Exception {
 public:
     UninitializedParamsException() : Exception() {}
     virtual const char* what() const throw() {
@@ -173,7 +173,7 @@ public:
  * Thrown when an attempt is made to add a parameter to a parameter set that is the wrong type for the argument
  * or an extra argument. Users may see this exception.
  */
-class ParamMismatchException : public voltdb::Exception {
+class ParamMismatchException : public Exception {
     std::string m_what;
 public:
     explicit ParamMismatchException() : Exception() {
@@ -195,7 +195,7 @@ public:
  * Thrown when a user attempts to use a type that is not supported.
  * Users may see this exception.
  */
-class UnsupportedTypeException : public voltdb::Exception {
+class UnsupportedTypeException : public Exception {
 public:
 
     explicit UnsupportedTypeException(const std::string& typeName) :
@@ -219,7 +219,7 @@ private:
 /*
  * Thrown by Distributer when detects server run in LEGACY mode
  */
-class ElasticModeMismatchException : public voltdb::Exception {
+class ElasticModeMismatchException : public Exception {
 public:
     ElasticModeMismatchException() : Exception() {}
    virtual const char* what() const throw() {
@@ -230,7 +230,7 @@ public:
 /*
  * Thrown by TableIterator when next() is invoked when there are no more rows to return. Users may see this exceptino.
  */
-class NoMoreRowsException : public voltdb::Exception {
+class NoMoreRowsException : public Exception {
 public:
     NoMoreRowsException() : Exception() {}
     virtual const char* what() const throw() {
@@ -242,7 +242,7 @@ public:
  * Thrown by the Decimal string constructor when an attempt is made to construct a Decimal with
  * an invalid string. Users may see this exception.
  */
-class StringToDecimalException : public voltdb::Exception {
+class StringToDecimalException : public Exception {
 public:
     StringToDecimalException() : Exception() {}
     virtual const char* what() const throw() {
@@ -254,7 +254,7 @@ public:
  * Thrown when an application specific error occurs during the connection process.
  * e.g. Authentication fails while attempting to connect to a node
  */
-class ConnectException : public voltdb::Exception {
+class ConnectException : public Exception {
     std::string m_what;
 public:
     explicit ConnectException() : Exception() {
@@ -279,7 +279,7 @@ public:
  * Thrown when an attempt is made to invoke a procedure or run the event loop when
  * there are no connections to VoltDB.
  */
-class NoConnectionsException : public voltdb::Exception {
+class NoConnectionsException : public Exception {
 public:
     NoConnectionsException() : Exception() {}
     virtual const char* what() const throw() {
@@ -291,7 +291,7 @@ public:
  * Thrown when an attempt is made to return a client that does not belong to this thread
  * back to connection pool.
  */
-class MisplacedClientException : public voltdb::Exception {
+class MisplacedClientException : public Exception {
 public:
     MisplacedClientException() : Exception() {}
     virtual const char* what() const throw() {
@@ -303,14 +303,14 @@ public:
  * Thrown when libevent returns a failure code. These codes are not specific so it isn't possible
  * to tell what happened.
  */
-class LibEventException : public voltdb::Exception {
+class LibEventException : public Exception {
     std::string m_what;
 public:
     explicit LibEventException() : Exception() {
         m_what = "Lib event generated an unexpected error";
     }
     explicit LibEventException(const std::string& msg) : Exception() {
-        m_what = "Lib event generated an unexpected error: " + msg;
+        m_what = "Encountered an error from libevent library. " + msg;
     }
     virtual ~LibEventException() throw() {}
     const char* what() const throw() {
@@ -318,7 +318,7 @@ public:
     }
 };
 
-class ClusterInstanceMismatchException : public voltdb::Exception {
+class ClusterInstanceMismatchException : public Exception {
 public:
     ClusterInstanceMismatchException() : Exception() {}
     virtual const char* what() const throw() {
@@ -326,7 +326,7 @@ public:
     }
 };
 
-class UnknownProcedureException : public voltdb::Exception {
+class UnknownProcedureException : public Exception {
     std::string m_what;
 public:
     explicit UnknownProcedureException() : Exception() {
@@ -341,7 +341,7 @@ public:
     }
 };
 
-class CoordinateOutOfRangeException : public voltdb::Exception {
+class CoordinateOutOfRangeException : public Exception {
     std::string m_what;
 public:
     explicit CoordinateOutOfRangeException() : Exception() {
@@ -356,7 +356,7 @@ public:
     }
 };
 
-class PipeCreationException : public voltdb::Exception {
+class PipeCreationException : public Exception {
     std::string m_what;
 public:
     explicit PipeCreationException() : Exception() {
@@ -369,8 +369,7 @@ public:
     }
 };
 
-
-class TimerThreadException : public voltdb::Exception {
+class TimerThreadException : public Exception {
 private:
     std::string m_msg;
 public:
@@ -385,6 +384,7 @@ public:
 
     const char* what() const throw () { return m_msg.c_str();}
 };
+
 
 class UninitializedColumnException : public Exception {
 private:
@@ -409,9 +409,45 @@ public:
     explicit InCompatibleSchemaException() : Exception() {}
     const char* what() const throw() { return "Incompatible schema"; }
     ~InCompatibleSchemaException() throw() {}
+};
+
+
+class SSLException : public Exception {
+    std::string m_what;
+    explicit SSLException() : Exception() {
+        m_what = "Unknown SSL Exception";
+    }
+public:
+    explicit SSLException(const std::string& msg) {
+        m_what = msg;
+    }
+
+    virtual ~SSLException() throw() {
+    }
+
+    const char* what() const throw() {
+        return m_what.c_str();
+    }
 
 };
 
+class MDHashException : public Exception {
+    std::string m_what;
+    explicit MDHashException() : Exception() {
+        m_what = "Encountered unknown error generating hash digest";
+    }
+public:
+    explicit MDHashException(const std::string& msg) {
+        m_what = "Encountered error generating hash digest. " + msg;
+    }
+
+    virtual ~MDHashException() throw() {
+    }
+
+    const char* what() const throw() {
+        return m_what.c_str();
+    }
+};
 }
 
 #endif /* VOLTDB_EXCEPTION_HPP_ */
