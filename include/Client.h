@@ -48,14 +48,16 @@ class ProcedureCallback;
 class Client {
     friend class MockVoltDB;
 public:
+
     /*
-     * Create a connection to the VoltDB process running at the specified host authenticating
-     * using the username and password provided when this client was constructed
+     * Creates a pending connection that is handled in the reconnect callback 
      * @param hostname Hostname or IP address to connect to
+     * @param port Port to connect to
+     * @param defer if true defer connection establishment
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(const std::string &hostname, const unsigned short port = 21212, const bool keepConnecting = false) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
+    void createConnection(const std::string &hostname, const unsigned short port = 21212, const bool keepConnecting = false, const bool defer = false) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
 
     /*
      * Close client connection.

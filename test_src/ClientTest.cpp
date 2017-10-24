@@ -360,8 +360,8 @@ public:
         (m_client)->invoke(proc, callback);
         m_voltdb->hangupOnRequestCount(1);
 
-        (m_client)->run();
-        (m_client)->runOnce();
+       (m_client)->run();
+       (m_client)->runOnce();
     }
 
     class BreakingSyncCallback : public ProcedureCallback {

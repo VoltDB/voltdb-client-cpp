@@ -36,12 +36,13 @@ Client::Client(ClientImpl *impl) : m_impl(impl) {}
 Client::~Client() {
 }
 
-void Client::createConnection(const std::string &hostname,
-                              const unsigned short port,
-                              const bool keepConnecting) throw (voltdb::Exception,
-                                                                voltdb::ConnectException,
-                                                                voltdb::LibEventException) {
-    m_impl->createConnection(hostname, port, keepConnecting);
+void 
+Client::createConnection(
+        const std::string &hostname, 
+        const unsigned short port,
+	const bool keepConnecting,
+        const bool defer)  throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+    m_impl->createConnection(hostname, port, defer);
 }
 
 void Client::close() {
