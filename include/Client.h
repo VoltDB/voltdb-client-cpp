@@ -50,14 +50,14 @@ class Client {
 public:
 
     /*
-     * Creates a pending connection that is handled in the reconnect callback 
+     * Creates a pending connection that is handled in the reconnect callback
      * @param hostname Hostname or IP address to connect to
      * @param port Port to connect to
      * @param defer if true defer connection establishment
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(const std::string &hostname, const unsigned short port = 21212, const bool keepConnecting = false, const bool defer = false) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
+    void createConnection(const std::string &hostname, const unsigned short port = 21212, const bool autoReconnect = false, const bool defer = false) throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException);
 
     /*
      * Close client connection.

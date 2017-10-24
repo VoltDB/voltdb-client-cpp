@@ -56,10 +56,10 @@ class ClientImpl {
 public:
     /*
      * Create a connection to the VoltDB process running at the specified host authenticating
-     * using the username and password provided when this client was constructed     
+     * using the username and password provided when this client was constructed
      * @param  hostname Hostname or IP address to connect to
      * @param  port Port to connect to
-     * @param  defer if true defer connection establishment 
+     * @param  defer if true defer connection establishment
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      * @throws voltdb::PipeCreationException Fails to create pipe for communication
@@ -67,7 +67,7 @@ public:
      * @throws voltdb::TimerThreadException error happens when creating query timer monitor thread
      * @throws voltdb::SSLException ssl operations returns an error
      */
-    void createConnection(const std::string &hostname, const unsigned short port=21212, const bool keepConnecting=false, const bool defer=false)
+    void createConnection(const std::string &hostname, const unsigned short port=21212, const bool autoReconnect=false, const bool defer=false)
         throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException, voltdb::PipeCreationException, voltdb::TimerThreadException, voltdb::SSLException);
 
     /*
@@ -238,7 +238,7 @@ private:
     // data member variables
     Distributer  m_distributer;
     struct event_base *m_base;
-    struct event * m_ev;
+    struct event* m_pipeEvent;
     struct event_config * m_cfg;
     int64_t m_nextRequestId;
     size_t m_nextConnectionIndex;
@@ -307,7 +307,7 @@ private:
     SSL_CTX *m_clientSslCtx;
     // Reference count number of clients running to help in release of the global resource like
     // ssl ciphers, error strings and digests can be unloaded that are shared between clients
-    static boost::atomic<uint32_t> m_numberOfClients;
+    static uint32_t m_numberOfClients;
     static boost::mutex m_globalResourceLock;
 
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
