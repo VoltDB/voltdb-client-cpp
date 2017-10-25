@@ -925,8 +925,6 @@ public:
         return true;
     }
 
-    void abandon(AbandonReason reason) {}
-
 private:
     InvocationResponse *m_responseOut;
 };
@@ -1009,17 +1007,16 @@ InvocationResponse ClientImpl::invoke(Procedure &proc) throw (Exception, NoConne
 class DummyCallback : public ProcedureCallback {
 public:
     ProcedureCallback *m_callback;
-    DummyCallback(ProcedureCallback *callback) : m_callback(callback) {}
+    DummyCallback(ProcedureCallback *callback) : m_callback(callback) {
+        m_allowAbandon = m_callback->allowAbandon();
+    }
     bool callback(InvocationResponse response) throw (Exception) {
         return m_callback->callback(response);
     }
 
-    void abandon(AbandonReason reason) {}
-
-    bool allowAbandon() const {
-        return m_callback->allowAbandon();
+    void abandon(AbandonReason reason) {
+        m_callback->abandon(reason);
     }
-
 };
 
 void ClientImpl::invoke(Procedure &proc, ProcedureCallback *callback) throw (Exception, NoConnectionsException, UninitializedParamsException, LibEventException, ElasticModeMismatchException) {
@@ -1032,7 +1029,7 @@ bool ClientImpl::isReadOnly(const Procedure &proc) {
     return (procInfo != NULL && procInfo->m_readOnly);
 }
 
-struct bufferevent *ClientImpl::routeProcedure(Procedure &proc, ScopedByteBuffer &sbb){
+struct bufferevent *ClientImpl::routeProcedure(Procedure &proc, ScopedByteBuffer &sbb, boost::shared_ptr<ProcedureCallback> callback){
     ProcedureInfo *procInfo = m_distributer.getProcedure(proc.getName());
 
     //route transaction to correct event if procedure is found, transaction is single partitioned
@@ -1040,6 +1037,7 @@ struct bufferevent *ClientImpl::routeProcedure(Procedure &proc, ScopedByteBuffer
     if (procInfo && !procInfo->m_multiPart){
         const int hashedPartition = m_distributer.getHashedPartitionForParameter(sbb, procInfo->m_partitionParameter);
         if (hashedPartition >= 0) {
+	    callback->invokePartition(hashedPartition);
             hostId = m_distributer.getHostIdByPartitionId(hashedPartition);
         }
     }
@@ -1047,11 +1045,17 @@ struct bufferevent *ClientImpl::routeProcedure(Procedure &proc, ScopedByteBuffer
     {
         //use MIP partition instead
         hostId = m_distributer.getHostIdByPartitionId(Distributer::MP_INIT_PID);
+	callback->invokeMultipart(true);
     }
     if (hostId >= 0) {
         std::map<int, bufferevent*>::iterator bevEntry = m_hostIdToEvent.find(hostId);
         if (bevEntry != m_hostIdToEvent.end()) {
-            return bevEntry->second;
+		//aici
+	    bufferevent* bev = bevEntry->second; 
+            const boost::shared_ptr<CxnContext> ctx = m_contexts[bev];
+	    callback->invokeHostName(ctx->m_name);
+	    callback->invokeHostId(ctx->m_hostId);
+            return bev;
         }
     }
     return NULL;
@@ -1187,24 +1191,27 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
     }
 
     bool procReadOnly = false;
-    struct bufferevent *routed_bev = NULL;
     //route transaction to correct event if client affinity is enabled and hashinator updating is not in progress
     //elastic scalability is disabled
     if (m_useClientAffinity && !m_distributer.isUpdating()) {
-        routed_bev = routeProcedure(proc, sbb);
+        struct bufferevent* routed_bev = routeProcedure(proc, sbb, callback);
         // Check if the routed_bev is valid and has not been removed due to lost connection
         if ((routed_bev != NULL) && (m_callbacks.find(routed_bev) != m_callbacks.end())) {
             bev = routed_bev;
-        }
+        } else {
+	    // routing has failed, set invokation info from the roudrobin bev
+            const boost::shared_ptr<CxnContext> ctx = m_contexts[bev];
+            callback->invokeHostName(ctx->m_name);
+            callback->invokeHostId(ctx->m_hostId);
+	}
 
-        if (isReadOnly(proc)) {
-            procReadOnly = true;
-        }
+        procReadOnly = isReadOnly(proc);
+        callback->invokeReadonly(procReadOnly);
     }
 
-    CallBackBookeeping *cbPtr = new CallBackBookeeping(callback, expirationTime, procReadOnly);
-    assert (cbPtr != NULL);
-    boost::shared_ptr<CallBackBookeeping> cb (cbPtr);
+    callback->invokeProcName(proc.getName());
+    boost::shared_ptr<CallBackBookeeping> cb(new CallBackBookeeping(callback, expirationTime, procReadOnly));
+    assert (cb);
 
     BEVToCallbackMap::iterator bevFromCBMap = m_callbacks.find(bev);
     if ( bevFromCBMap == m_callbacks.end()) {
@@ -1224,8 +1231,6 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
     if (evbuffer_get_length(evbuf) >  262144) {
         m_backpressuredBevs.insert(bev);
     }
-
-    return;
 }
 
 void ClientImpl::runOnce() throw (Exception, NoConnectionsException, LibEventException) {
@@ -1507,7 +1512,9 @@ bool ClientImpl::drain() throw (Exception, NoConnectionsException, LibEventExcep
 class TopoUpdateCallback : public ProcedureCallback
 {
 public:
-    TopoUpdateCallback(Distributer *dist, ClientLogger *logger) : m_dist(dist), m_logger(logger) {}
+    TopoUpdateCallback(Distributer *dist, ClientLogger *logger) : m_dist(dist), m_logger(logger) {
+	m_allowAbandon = false;
+    }
 
     bool callback(InvocationResponse response) throw (Exception)
     {
@@ -1526,8 +1533,6 @@ public:
         return true;
     }
 
-    bool allowAbandon() const {return false;}
-
  private:
     Distributer *m_dist;
     ClientLogger *m_logger;
@@ -1536,7 +1541,9 @@ public:
 class SubscribeCallback : public ProcedureCallback
 {
 public:
-    SubscribeCallback(ClientLogger *logger) : m_logger(logger) {}
+    SubscribeCallback(ClientLogger *logger) : m_logger(logger) {
+	m_allowAbandon = false;
+    }
 
     bool callback(InvocationResponse response) throw (Exception)
     {
@@ -1553,7 +1560,6 @@ public:
         return true;
     }
 
-    bool allowAbandon() const {return false;}
 private:
     ClientLogger *m_logger;
 };
@@ -1564,7 +1570,9 @@ private:
 class ProcUpdateCallback : public ProcedureCallback
 {
 public:
-    ProcUpdateCallback(Distributer *dist, ClientLogger *logger) : m_dist(dist), m_logger(logger) {}
+    ProcUpdateCallback(Distributer *dist, ClientLogger *logger) : m_dist(dist), m_logger(logger) {
+	m_allowAbandon = false;
+    }
 
     bool callback(InvocationResponse response) throw (Exception)
     {
@@ -1583,8 +1591,6 @@ public:
         m_dist->updateProcedurePartitioning(response.results());
         return true;
     }
-
-    bool allowAbandon() const {return false;}
 
  private:
     Distributer *m_dist;

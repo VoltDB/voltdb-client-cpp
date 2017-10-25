@@ -36,6 +36,58 @@ public:
 
     enum AbandonReason { NOT_ABANDONED, TOO_BUSY };
 
+    typedef struct {
+	    std::string procName;
+	    std::string hostName;
+	    int hostId;
+	    int partition;
+	    bool readonly;
+	    bool multipart;
+    } InvokeInfo;
+
+    ProcedureCallback():
+	    m_reason(NOT_ABANDONED), m_allowAbandon(true), m_info({"", "", ~0, ~0, false, false}){
+    }
+
+    virtual void abandon(AbandonReason reason) {
+	    m_reason = reason;
+    }
+
+    // Mechanism for procedure to over-ride abandon property set in client in event of backpressure.
+    // @return true: allow abandoning of requests in case of back pressure
+    //         false: don't abandon the requests in back pressure scenario.
+    bool allowAbandon() const {
+	    return m_allowAbandon;
+    }
+
+
+    void invokeProcName(const std::string& n) {
+	m_info.procName = n;
+    }
+    void invokeHostName(const std::string& h) {
+	 m_info.hostName = h;
+    }
+
+    void invokeHostId(const int id) {
+	m_info.hostId = id;
+    }
+
+    void invokePartition(const int p) {
+	m_info.partition = p;
+    }
+
+    void invokeReadonly(const bool r) {
+	m_info.readonly = r;
+    }
+
+    void invokeMultipart(const bool m) {
+	m_info.multipart = m;
+    }
+
+    const InvokeInfo& invokeInfo() const {
+	return m_info;
+    }
+
     /*
      * Invoked when a response to an invocation is available or
      * the connection to the node the invocation was sent to was lost.
@@ -46,12 +98,12 @@ public:
      * @return true if the event loop should break after invoking this callback, false otherwise
      */
     virtual bool callback(InvocationResponse response) throw (voltdb::Exception) = 0;
-    virtual void abandon(AbandonReason reason) {}
-    // Mechanism for procedure to over-ride abandon property set in client in event of backpressure.
-    // @return true: allow abandoning of requests in case of back pressure
-    //         false: don't abandon the requests in back pressure scenario.
-    virtual bool allowAbandon() const {return true;}
     virtual ~ProcedureCallback() {}
+
+protected:
+    AbandonReason m_reason;
+    bool          m_allowAbandon;
+    InvokeInfo    m_info;
 };
 }
 
