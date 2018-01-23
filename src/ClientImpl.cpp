@@ -36,8 +36,9 @@
 
 namespace voltdb {
 
-#ifdef DEBUG
+#ifdef DEBUG_EVENTS
 static bool voltdb_clientimpl_debug_init_libevent = false;
+static ClientImpl* voltdb_client_singleton = NULL;
 #endif
 
 const static char* CIPHER_SUITES_TO_SET = "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:"
@@ -443,6 +444,28 @@ void ClientImpl::hashPassword(const std::string& password) throw (MDHashExceptio
     }
 }
 
+#ifdef DEBUG_EVENTS
+static void debugEventCallback(int severity, const char* msg) {
+        std::ostringstream oss;
+        oss << msg;
+        ClientLogger::CLIENT_LOG_LEVEL voltdb_severity;
+        switch(severity) {
+        case _EVENT_LOG_DEBUG:
+            voltdb_severity = ClientLogger::DEBUG;
+            break;
+        case _EVENT_LOG_MSG:
+            voltdb_severity = ClientLogger::INFO;
+            break;
+        case _EVENT_LOG_WARN:
+            voltdb_severity = ClientLogger::WARNING;
+            break;
+        default:
+            voltdb_severity = ClientLogger::ERROR;
+        }
+        voltdb_client_singleton->logMessage(voltdb_severity, oss.str());
+}
+#endif
+
 ClientImpl::ClientImpl(ClientConfig config) throw (Exception, LibEventException, MDHashException, SSLException) :
         m_base(NULL), m_ev(NULL), m_cfg(NULL), m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
         m_listener(config.m_listener), m_invocationBlockedOnBackpressure(false),
@@ -455,9 +478,13 @@ ClientImpl::ClientImpl(ClientConfig config) throw (Exception, LibEventException,
         m_queryExpirationTime(config.m_queryTimeout), m_scanIntervalForTimedoutQuery(config.m_scanIntervalForTimedoutQuery),
         m_pLogger(0), m_hashScheme(config.m_hashScheme), m_enableSSL(config.m_useSSL), m_clientSslCtx(NULL) {
     pthread_once(&once_initLibevent, initLibevent);
-#ifdef DEBUG
+#ifdef DEBUG_EVENTS
     if (!voltdb_clientimpl_debug_init_libevent) {
+        event_enable_debug_logging(EVENT_DBG_ALL);
         event_enable_debug_mode();
+        event_set_log_callback(debugEventCallback);
+        assert(voltdb_client_singleton == NULL);
+        voltdb_client_singleton = this;
         voltdb_clientimpl_debug_init_libevent = true;
     }
 #endif
@@ -465,7 +492,7 @@ ClientImpl::ClientImpl(ClientConfig config) throw (Exception, LibEventException,
     if (m_cfg == NULL) {
         throw LibEventException("Failed to create configuration for event");
     }
-    event_config_set_flag(m_cfg, EVENT_BASE_FLAG_NO_CACHE_TIME);//, EVENT_BASE_FLAG_NOLOCK);
+    event_config_set_flag(m_cfg, EVENT_BASE_FLAG_NO_CACHE_TIME | EVENT_BASE_FLAG_PRECISE_TIMER);
     m_base = event_base_new_with_config(m_cfg);
     assert(m_base);
     if (m_base == NULL) {
@@ -1252,6 +1279,21 @@ void ClientImpl::run() throw (Exception, NoConnectionsException, LibEventExcepti
     if (event_base_dispatch(m_base) == -1) {
         throw LibEventException("run: Failed running event base loop");
     }
+    m_loopBreakRequested = false;
+}
+
+static void interrupt_callback(evutil_socket_t fd, short events, void *clientData);
+
+void ClientImpl::runForMaxTime(uint64_t uSec) throw (Exception, NoConnectionsException, LibEventException){
+    struct timeval timeOut;
+    logMessage(ClientLogger::DEBUG, "ClientImpl::runForMaxTime");
+
+    timeOut.tv_sec = uSec / 1000000;
+    timeOut.tv_usec = uSec % 1000000;
+
+    event_base_once(m_base, -1, EV_TIMEOUT, interrupt_callback, this, &timeOut);
+    event_base_dispatch(m_base);
+
     m_loopBreakRequested = false;
 }
 
