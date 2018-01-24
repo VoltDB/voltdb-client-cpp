@@ -57,8 +57,9 @@ public:
     /*
      * Create a connection to the VoltDB process running at the specified host authenticating
      * using the username and password provided when this client was constructed
-     * @param hostname Hostname or IP address to connect to
-     * @param port Port to connect to
+     * @param  hostname Hostname or IP address to connect to
+     * @param  port Port to connect to
+     * @param  defer if true defer connection establishment
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      * @throws voltdb::PipeCreationException Fails to create pipe for communication
@@ -66,7 +67,8 @@ public:
      * @throws voltdb::TimerThreadException error happens when creating query timer monitor thread
      * @throws voltdb::SSLException ssl operations returns an error
      */
-    void createConnection(const std::string &hostname, const unsigned short port, const bool keepConnecting) throw (Exception, ConnectException, LibEventException, PipeCreationException, TimerThreadException, SSLException);
+    void createConnection(const std::string &hostname, const unsigned short port=21212, const bool autoReconnect=false, const bool defer=false)
+        throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException, voltdb::PipeCreationException, voltdb::TimerThreadException, voltdb::SSLException);
 
     /*
      * Synchronously invoke a stored procedure and return a the response.
@@ -93,7 +95,7 @@ public:
     void regularEventCallback(struct bufferevent *bev, short events);
     void regularWriteCallback(struct bufferevent *bev);
     void eventBaseLoopBreak();
-    void reconnectEventCallback();
+    void reconnectEventCallback(const boost::shared_ptr<PendingConnection>& pc);
 
     void runTimeoutMonitor() throw (LibEventException);
     void purgeExpiredRequests();
@@ -135,8 +137,10 @@ public:
 private:
     ClientImpl(ClientConfig config) throw (Exception, LibEventException, MDHashException, SSLException);
 
-    void initiateAuthentication(struct bufferevent *bev, const std::string& hostname, unsigned short port) throw (LibEventException);
-    void finalizeAuthentication(PendingConnection* pc) throw (Exception, ConnectException);
+    void createConnectionSync(const std::string &hostname, const unsigned short port, const bool keepConnecting)
+	  throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException, voltdb::PipeCreationException, voltdb::TimerThreadException, voltdb::SSLException);
+    void initiateAuthentication(struct bufferevent *bev, const std::string& hostname, unsigned short port) throw (voltdb::LibEventException);
+    void finalizeAuthentication(PendingConnection* pc) throw (voltdb::Exception, voltdb::ConnectException);
 
     /*
      * Updates procedures and topology information for transaction routing algorithm
@@ -156,7 +160,7 @@ private:
     /*
      * Initiate connection based on pending connection instance
      */
-    void initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (ConnectException, LibEventException, SSLException);
+    void initiateConnection(const boost::shared_ptr<PendingConnection> &pc) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::SSLException);
 
     /*
      * Creates a pending connection that is handled in the reconnect callback
@@ -192,7 +196,6 @@ private:
             }
         }
     }
-
     /*
      * Method for sinking messages.
      * If a logger callback is not set then skip all messages
@@ -235,7 +238,7 @@ private:
     // data member variables
     Distributer  m_distributer;
     struct event_base *m_base;
-    struct event * m_ev;
+    struct event* m_pipeEvent;
     struct event_config * m_cfg;
     int64_t m_nextRequestId;
     size_t m_nextConnectionIndex;
@@ -266,9 +269,7 @@ private:
     //If to use abandon in case of backpressure.
     bool m_enableAbandon;
 
-    std::list<boost::shared_ptr<PendingConnection> > m_pendingConnectionList;
-    boost::atomic<size_t> m_pendingConnectionSize;
-    boost::mutex m_pendingConnectionLock;
+    std::vector<boost::shared_ptr<PendingConnection> > m_pendingConnectionList;
 
     int m_wakeupPipe[2];
     boost::mutex m_wakeupPipeLock;
@@ -306,7 +307,7 @@ private:
     SSL_CTX *m_clientSslCtx;
     // Reference count number of clients running to help in release of the global resource like
     // ssl ciphers, error strings and digests can be unloaded that are shared between clients
-    static boost::atomic<uint32_t> m_numberOfClients;
+    static uint32_t m_numberOfClients;
     static boost::mutex m_globalResourceLock;
 
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;

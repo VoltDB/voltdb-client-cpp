@@ -52,12 +52,12 @@ int64_t get_sec_time() {
     return tp.tv_sec;
 }
 
-class PendingConnection {
+class PendingConnection: public boost::enable_shared_from_this<PendingConnection> {
 public:
-    PendingConnection(const std::string& hostname, const unsigned short port, const bool keepConnecting,
+    PendingConnection(const std::string& hostname, const unsigned short port, const bool autoReconnect,
                       struct event_base *base, ClientImpl* ci) : m_hostname(hostname),
                                                                  m_port(port),
-                                                                 m_keepConnecting(keepConnecting),
+                                                                 m_autoReconnect(autoReconnect),
                                                                  m_base(base),
                                                                  m_bufferEvent(NULL),
                                                                  m_authenticationResponseLength(-1),
@@ -84,6 +84,11 @@ public:
         }
     }
 
+    void reconnectEventCallback() {
+        m_clientImpl->reconnectEventCallback(shared_from_this());
+    }
+
+
     ~PendingConnection() {}
 
     /*
@@ -91,7 +96,7 @@ public:
      * */
     const std::string m_hostname;
     const unsigned short m_port;
-    const bool m_keepConnecting;
+    const bool m_autoReconnect;
 
     /*
      *Event and event base associated with connection
@@ -113,12 +118,13 @@ class CxnContext {
  * Data associated with a specific connection
  */
 public:
-    CxnContext(const std::string& name, unsigned short port, int hostId) : m_name(name),
-        m_port(port), m_nextLength(4), m_lengthOrMessage(true), m_hostId(hostId) { }
+    CxnContext(const std::string& name, unsigned short port, const int hostId, const bool autoReconnect) : m_name(name),
+        m_port(port), m_nextLength(4), m_lengthOrMessage(true), m_hostId(hostId), m_autoReconnect(autoReconnect) { }
     const std::string m_name;
     const unsigned short m_port;
     int32_t m_nextLength;
     bool m_lengthOrMessage;
+    bool m_autoReconnect;
     int m_hostId;
 };
 
@@ -256,7 +262,7 @@ static void regularEventCallback(struct bufferevent *bev, short events, void *ct
     impl->regularEventCallback(bev, events);
 }
 
-boost::atomic<uint32_t> ClientImpl::m_numberOfClients(0);
+uint32_t ClientImpl::m_numberOfClients(0);
 boost::mutex ClientImpl::m_globalResourceLock;
 
 void initOpenSSLLib() {
@@ -306,16 +312,9 @@ static void regularWriteCallback(struct bufferevent *bev, void *ctx) {
 
 ClientImpl::~ClientImpl() {
     bool cleanupEvp = false;
-    bool cleanupErrorStrings = false;
-    for (std::vector<struct bufferevent *>::iterator bevItr = m_bevs.begin(); bevItr != m_bevs.end(); ++bevItr) {
-        if (m_enableSSL) {
-            notifySslClose(*bevItr);
-        }
-        // if in SSL mode, the allocated SSL context for bev will
-        // get released by bufferevent_free
-        bufferevent_free(*bevItr);
-    }
-    m_bevs.clear();
+ 
+    this->close();
+    
     m_contexts.clear();
     m_callbacks.clear();
     if (m_passwordHash != NULL) {
@@ -324,9 +323,6 @@ ClientImpl::~ClientImpl() {
     }
     if (m_cfg != NULL) {
         event_config_free(m_cfg);
-    }
-    if (m_ev != NULL) {
-        event_free(m_ev);
     }
 
     if (m_timerMonitorEventInitialized) {
@@ -351,19 +347,11 @@ ClientImpl::~ClientImpl() {
     }
 
     event_base_free(m_base);
-
-    if (m_wakeupPipe[1] != -1) {
-       ::close(m_wakeupPipe[0]);
-       ::close(m_wakeupPipe[1]);
-    }
-
-    if (m_enableSSL) {
-        if (m_clientSslCtx != NULL) {
-            // free clients ssl context
-            SSL_CTX_free(m_clientSslCtx);
-            m_clientSslCtx = NULL;
-        }
-        cleanupErrorStrings = true;
+  
+    if (m_enableSSL && m_clientSslCtx != NULL) {
+        // free clients ssl context
+        SSL_CTX_free(m_clientSslCtx);
+        m_clientSslCtx = NULL;
     }
 
     {
@@ -444,12 +432,12 @@ void ClientImpl::hashPassword(const std::string& password) throw (MDHashExceptio
 }
 
 ClientImpl::ClientImpl(ClientConfig config) throw (Exception, LibEventException, MDHashException, SSLException) :
-        m_base(NULL), m_ev(NULL), m_cfg(NULL), m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
+        m_base(NULL), m_pipeEvent(NULL), m_cfg(NULL), m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
         m_listener(config.m_listener), m_invocationBlockedOnBackpressure(false),
         m_backPressuredForOutstandingRequests(false), m_loopBreakRequested(false),
         m_isDraining(false), m_instanceIdIsSet(false), m_outstandingRequests(0), m_leaderAddress(-1),
         m_clusterStartTime(-1), m_username(config.m_username), m_passwordHash(NULL), m_maxOutstandingRequests(config.m_maxOutstandingRequests),
-        m_ignoreBackpressure(false), m_useClientAffinity(true),m_updateHashinator(false), m_enableAbandon(config.m_enableAbandon), m_pendingConnectionSize(0),
+        m_ignoreBackpressure(false), m_useClientAffinity(true),m_updateHashinator(false), m_enableAbandon(config.m_enableAbandon),
         m_enableQueryTimeout(config.m_enableQueryTimeout), m_queryTimeoutMonitorThread(0), m_timerMonitorBase(NULL), m_timerMonitorEventPtr(NULL),
         m_timeoutServiceEventPtr(NULL), m_timerMonitorEventInitialized(false), m_timedoutRequests(0), m_responseHandleNotFound(0),
         m_queryExpirationTime(config.m_queryTimeout), m_scanIntervalForTimedoutQuery(config.m_scanIntervalForTimedoutQuery),
@@ -472,8 +460,14 @@ ClientImpl::ClientImpl(ClientConfig config) throw (Exception, LibEventException,
         throw LibEventException("Failed to create and initialize main event base");
     }
     hashPassword(config.m_password);
-    m_wakeupPipe[0] = -1;
-    m_wakeupPipe[1] = -1;
+    
+    if (0 == pipe(m_wakeupPipe)) {
+        m_pipeEvent = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
+        event_add(m_pipeEvent, NULL);
+    } else {
+        m_wakeupPipe[0] = -1;
+        m_wakeupPipe[1] = -1;
+    }
 
     if (m_enableQueryTimeout) {
         m_timerMonitorBase = event_base_new();
@@ -523,7 +517,7 @@ private:
     struct bufferevent *m_bev;
 };
 
-void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (ConnectException,
+void ClientImpl::initiateConnection(const boost::shared_ptr<PendingConnection> &pc) throw (ConnectException,
                                                                                      LibEventException,
                                                                                      SSLException) {
     std::ostringstream ss;
@@ -549,9 +543,7 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
         pc->m_bufferEvent = bufferevent_socket_new(m_base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
     }
     if (pc->m_bufferEvent == NULL) {
-        if (pc->m_keepConnecting) {
-            createPendingConnection(pc->m_hostname, pc->m_port);
-        } else {
+        if (!pc->m_autoReconnect) {
             ss.str("");
             ss << "!!!! ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port << " failed getting socket";
             logMessage(ClientLogger::ERROR, ss.str());
@@ -566,14 +558,7 @@ void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) th
     //std::cout << ss.str() << " thread-id: " << (long) pthread_self() << std::endl;
 
     if (bufferevent_socket_connect_hostname(pc->m_bufferEvent, NULL, AF_INET, pc->m_hostname.c_str(), pc->m_port) != 0) {
-        if (pc->m_keepConnecting) {
-            //std::cout << "CI::free bev: " << pc->m_bufevent <<std::endl;
-            if (pc->m_bufferEvent != NULL) {
-                pc->cleanupBev();
-            }
-            protector.success();
-            createPendingConnection(pc->m_hostname, pc->m_port);
-        } else {
+        if (!pc->m_autoReconnect) {
             ss.str("");
             ss << "!!!! ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port << " failed";
             logMessage(ClientLogger::ERROR, ss.str());
@@ -588,11 +573,14 @@ void ClientImpl::close() {
     //drain before we close;
     drain();
     if (m_wakeupPipe[1] != -1) {
+       event_del(m_pipeEvent);
+       event_free(m_pipeEvent);
        ::close(m_wakeupPipe[0]);
        ::close(m_wakeupPipe[1]);
+       m_wakeupPipe[1] = -1;
     }
-    if (m_bevs.empty()) return;
-    for (std::vector<struct bufferevent *>::iterator bevEntryItr = m_bevs.begin(); bevEntryItr != m_bevs.end(); ++bevEntryItr) {
+    
+    for (std::vector<struct bufferevent *>::const_iterator bevEntryItr = m_bevs.begin(); bevEntryItr != m_bevs.end(); ++bevEntryItr) {
         if (m_enableSSL) {
             notifySslClose(*bevEntryItr);
         }
@@ -603,7 +591,7 @@ void ClientImpl::close() {
     m_bevs.clear();
 }
 
-void ClientImpl::initiateAuthentication(struct bufferevent *bev, const std::string& hostname, unsigned short port) throw (LibEventException) {
+void ClientImpl::initiateAuthentication(struct bufferevent *bev, const std::string& hostname, const unsigned short port) throw (LibEventException) {
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::initiateAuthentication");
 
@@ -673,7 +661,7 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc) throw (Exception,
 
         // save connection information for the event
         m_contexts[bev] =
-               boost::shared_ptr<CxnContext>(new CxnContext(pc->m_hostname, pc->m_port, hostId));
+               boost::shared_ptr<CxnContext>(new CxnContext(pc->m_hostname, pc->m_port, hostId, pc->m_autoReconnect));
         boost::shared_ptr<CallbackMap> callbackMap(new CallbackMap());
         m_callbacks[bev] = callbackMap;
 
@@ -684,15 +672,10 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc) throw (Exception,
                           voltdb::regularEventCallback,
                           this);
 
-        {
-            boost::mutex::scoped_lock lock(m_pendingConnectionLock);
-            for (std::list<PendingConnectionSPtr>::iterator i = m_pendingConnectionList.begin();
-                 i != m_pendingConnectionList.end();
-                 ++i) {
+        if (pc->m_autoReconnect) {
+            for (std::vector<PendingConnectionSPtr>::iterator i = m_pendingConnectionList.begin(); i != m_pendingConnectionList.end(); ++i) {
                 if (i->get() == pc) {
                     m_pendingConnectionList.erase(i);
-                    m_pendingConnectionSize.store(m_pendingConnectionList.size(), boost::memory_order_release);
-                    pcRemoved = true;
                     break;
                 }
             }
@@ -752,6 +735,36 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc) throw (Exception,
     protector.success();
 }
 
+static void reconnectCallback(evutil_socket_t fd, short events, void *clientData) {
+    ClientImpl* c = reinterpret_cast<ClientImpl*>(clientData);
+    c->reconnectEventCallback(boost::shared_ptr<voltdb::PendingConnection>());
+}
+
+static void pendingConnectionCallback(evutil_socket_t fd, short events, void *clientData) {
+    PendingConnectionSPtr pc = *reinterpret_cast<PendingConnectionSPtr*>(clientData);
+    pc->reconnectEventCallback();
+}
+
+void ClientImpl::reconnectEventCallback(const PendingConnectionSPtr& pc) {
+    if (pc) {
+        if (pc->m_autoReconnect) m_pendingConnectionList.push_back(pc);
+        else initiateConnection(pc);
+    }
+
+    if (m_pendingConnectionList.empty())  return;
+
+    const int64_t reconnect_deadline = get_sec_time() - RECONNECT_INTERVAL;
+    BOOST_FOREACH( PendingConnectionSPtr& pc, m_pendingConnectionList ) {
+        if (reconnect_deadline > pc->m_startPending){
+            //pc->m_startPending = now;
+            initiateConnection(pc);
+        }
+    }
+
+    struct timeval tv = {RECONNECT_INTERVAL,0};
+    event_base_once(m_base, -1, EV_TIMEOUT, reconnectCallback, this, &tv);
+}
+
 void *timerThreadRun(void *ctx) {
     ClientImpl *client = reinterpret_cast<ClientImpl*>(ctx);
     client->runTimeoutMonitor();
@@ -797,33 +810,17 @@ void ClientImpl::setUpTimeoutCheckerMonitor() throw (LibEventException){
     startMonitorThread();
 }
 
-void ClientImpl::createConnection(const std::string& hostname,
-                                  const unsigned short port,
-                                  const bool keepConnecting) throw (Exception,
-                                                                    ConnectException,
-                                                                    LibEventException,
-                                                                    PipeCreationException,
-                                                                    TimerThreadException,
-                                                                    SSLException) {
-
-
+void ClientImpl::createConnectionSync(const std::string& hostname, const unsigned short port, const bool autoReconnect)
+        throw (Exception, ConnectException, LibEventException, PipeCreationException, TimerThreadException, SSLException) {
     if (m_pLogger) {
         std::ostringstream os;
         os << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
         m_pLogger->log(ClientLogger::INFO, os.str());
     }
 
-    if (0 == pipe(m_wakeupPipe)) {
-        if (m_ev != NULL) {
-            event_free(m_ev);
-        }
-        m_ev = event_new(m_base, m_wakeupPipe[0], EV_READ|EV_PERSIST, wakeupPipeCallback, this);
-        event_add(m_ev, NULL);
-    } else {
-        m_wakeupPipe[1] = -1;
-    }
+    // we'll create a new instance later if autoReconnect == true
+    PendingConnectionSPtr pc(new PendingConnection(hostname, port, false, m_base, this));
 
-    PendingConnectionSPtr pc(new PendingConnection(hostname, port, keepConnecting, m_base, this));
     initiateConnection(pc);
 
     int dispatchStatus = event_base_dispatch(m_base);
@@ -836,22 +833,21 @@ void ClientImpl::createConnection(const std::string& hostname,
         if (dispatchStatus == -1) {
             throw LibEventException("CreateConnection: Failed to run base loop");
         }
-
         if (pc->m_loginExchangeCompleted) {
             return;
         }
     }
-    if (keepConnecting) {
+
+    if (autoReconnect) {
         if (pc->m_bufferEvent != NULL)  {
             pc->cleanupBev();
         }
-        createPendingConnection(hostname, port);
+        createConnection(hostname, port, autoReconnect, true);
     } else {
         // if no error has been reported for the connection, back off and listen if
         // any events were there to process before calling it no-connection
-        int retry = 0;
-        while (pc->m_status && retry < 5) {
-            ++retry;
+        int retry = 5;
+        while (pc->m_status && retry--) {
             dispatchStatus = event_base_dispatch(m_base);
             if (dispatchStatus == -1) {
                 throw LibEventException("CreateConnection: Failed to run base loop");
@@ -868,46 +864,22 @@ void ClientImpl::createConnection(const std::string& hostname,
     }
 }
 
-static void reconnectCallback(evutil_socket_t fd, short events, void *clientData) {
-    ClientImpl *self = reinterpret_cast<ClientImpl*>(clientData);
-    self->reconnectEventCallback();
-}
+void ClientImpl::createConnection(const std::string &hostname, const unsigned short port, const bool autoReconnect, const bool defer)
+	throw (Exception, ConnectException, LibEventException, PipeCreationException, TimerThreadException, SSLException) {
+    std::stringstream ss;
+    ss << "ClientImpl::createConnection" << " hostname:" << hostname << " port:" << port;
+    logMessage(ClientLogger::INFO, ss.str());
 
-void ClientImpl::reconnectEventCallback() {
-    if (m_pendingConnectionSize.load(boost::memory_order_consume) <= 0)  return;
-
-    boost::mutex::scoped_lock lock(m_pendingConnectionLock);
-    const int64_t now = get_sec_time();
-    BOOST_FOREACH( PendingConnectionSPtr& pc, m_pendingConnectionList ) {
-        if ((now - pc->m_startPending) > RECONNECT_INTERVAL) {
-            pc->m_startPending = now;
-            initiateConnection(pc);
-        }
+    if (!defer) {
+	      createConnectionSync(hostname, port, autoReconnect);
+	      return;
     }
 
-    struct timeval tv;
-    tv.tv_sec = RECONNECT_INTERVAL;
-    tv.tv_usec = 0;
+    PendingConnectionSPtr pc(new PendingConnection(hostname, port, autoReconnect, m_base, this));
+    struct timeval tv = {RECONNECT_INTERVAL,0};
+    pc->m_startPending = get_sec_time();
 
-    event_base_once(m_base, -1, EV_TIMEOUT, reconnectCallback, this, &tv);
-}
-
-void ClientImpl::createPendingConnection(const std::string &hostname, const unsigned short port, int64_t time) {
-    logMessage(ClientLogger::DEBUG, "ClientImpl::createPendingConnection");
-
-    PendingConnectionSPtr pc(new PendingConnection(hostname, port, false, m_base, this));
-    pc->m_startPending = time;
-    {
-        boost::mutex::scoped_lock lock(m_pendingConnectionLock);
-        m_pendingConnectionList.push_back(pc);
-        m_pendingConnectionSize.store(m_pendingConnectionList.size(), boost::memory_order_release);
-    }
-
-    struct timeval tv;
-    tv.tv_sec = (time > 0)? RECONNECT_INTERVAL : 0;
-    tv.tv_usec = 0;
-
-    event_base_once(m_base, -1, EV_TIMEOUT, reconnectCallback, this, &tv);
+    event_base_once(m_base, -1, EV_TIMEOUT, pendingConnectionCallback, &pc, &tv);
 }
 
 
@@ -1232,8 +1204,8 @@ void ClientImpl::runOnce() throw (Exception, NoConnectionsException, LibEventExc
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::runOnce");
 
-    if (m_bevs.empty() && m_pendingConnectionSize.load(boost::memory_order_consume) <= 0) {
-        throw NoConnectionsException();
+    if (m_bevs.empty() && m_pendingConnectionList.empty()) {
+        throw voltdb::NoConnectionsException();
     }
 
     if (event_base_loop(m_base, EVLOOP_NONBLOCK) == -1) {
@@ -1246,8 +1218,8 @@ void ClientImpl::run() throw (Exception, NoConnectionsException, LibEventExcepti
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::run");
 
-    if (m_bevs.empty() && m_pendingConnectionSize.load(boost::memory_order_consume) <= 0) {
-        throw NoConnectionsException();
+    if (m_bevs.empty() && m_pendingConnectionList.empty()) {
+        throw voltdb::NoConnectionsException();
     }
     if (event_base_dispatch(m_base) == -1) {
         throw LibEventException("run: Failed running event base loop");
@@ -1368,6 +1340,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
 
         std::map<struct bufferevent *, boost::shared_ptr<CxnContext> >::iterator connectionCtxIter = m_contexts.find(bev);
         assert(connectionCtxIter != m_contexts.end());
+        const boost::shared_ptr<CxnContext>& ctx = connectionCtxIter->second;
         // First drain anything in the read buffer
         regularReadCallback(bev);
 
@@ -1381,10 +1354,10 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         }
 
         //Notify client that a connection was lost
-        if (m_listener.get() != NULL) {
+        if (m_listener) {
             try {
                 m_ignoreBackpressure = true;
-                breakEventLoop |= m_listener->connectionLost( connectionCtxIter->second->m_name, m_bevs.size() - 1);
+                breakEventLoop |= m_listener->connectionLost(ctx->m_name, m_bevs.size() - 1);
                 m_ignoreBackpressure = false;
             } catch (const std::exception& e) {
                 std::string msg(e.what());
@@ -1418,18 +1391,20 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
             breakEventLoop = true;
         }
 
-        m_hostIdToEvent.erase(connectionCtxIter->second->m_hostId);
+        m_hostIdToEvent.erase(ctx->m_hostId);
 
         //remove the entry for the backpressured connection set
         m_backpressuredBevs.erase(bev);
+        if (ctx->m_autoReconnect) {
+            createConnection(ctx->m_name, ctx->m_port, true, true);
+        }
+
         if (m_outstandingRequests < m_maxOutstandingRequests) {
             m_backPressuredForOutstandingRequests = false;
         }
 
-        createPendingConnection(connectionCtxIter->second->m_name, connectionCtxIter->second->m_port, get_sec_time());
-
         //Remove the connection context
-        m_contexts.erase(bev);
+        m_contexts.erase(connectionCtxIter);
 
         std::vector<bufferevent *>::iterator entry = std::find(m_bevs.begin(), m_bevs.end(), bev);
         if (entry != m_bevs.end()) {
@@ -1442,12 +1417,12 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
             m_instanceIdIsSet = false;
         }
 
-        if (breakEventLoop || (m_bevs.size() == 0)) {
+        if (breakEventLoop || m_bevs.empty()) {
             event_base_loopbreak( m_base );
         }
 
         //update topology info and procedures info
-        if (m_useClientAffinity && (m_bevs.size() > 0)) {
+        if (m_useClientAffinity && !m_bevs.empty()) {
             updateHashinator();
         }
     }

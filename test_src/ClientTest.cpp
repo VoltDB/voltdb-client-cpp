@@ -46,25 +46,25 @@ public:
            std::exception exception,
            boost::shared_ptr<voltdb::ProcedureCallback> callback,
            InvocationResponse response) {
-       if (m_listener != NULL) {
+       if (m_listener) {
            return m_listener->uncaughtException(exception, callback, response);
        }
        return false;
    }
    virtual bool connectionLost(std::string hostname, int32_t connectionsLeft) {
-       if (m_listener != NULL) {
+       if (m_listener) {
            return m_listener->connectionLost(hostname, connectionsLeft);
        }
        return false;
    }
    virtual bool connectionActive(std::string hostname, int32_t connectionsActive) {
-       if (m_listener != NULL) {
+       if (m_listener) {
            return m_listener->connectionActive(hostname, connectionsActive);
        }
        return false;
    }
    virtual bool backpressure(bool hasBackpressure) {
-       if (m_listener != NULL) {
+       if (m_listener) {
            return m_listener->backpressure(hasBackpressure);
        }
        return false;
@@ -94,15 +94,14 @@ CPPUNIT_TEST_SUITE_END();
 
 public:
     void setUp() {
-        m_dlistener = new boost::shared_ptr<DelegatingListener>(new DelegatingListener());
-        ClientConfig config = ClientConfig("hello", "world", *m_dlistener);
+        m_dlistener = boost::shared_ptr<DelegatingListener>(new DelegatingListener());
+        ClientConfig config = ClientConfig("hello", "world", m_dlistener);
         m_voltdb.reset(new MockVoltDB(Client::create(config)));
         m_client = m_voltdb->client();
         m_client->setClientAffinity(false);
     }
 
     void tearDown() {
-        delete m_dlistener;
         m_voltdb.reset(NULL);
     }
 
@@ -274,7 +273,7 @@ public:
                 return false;
             }
         }  listener;
-        (*m_dlistener)->m_listener = &listener;
+        m_dlistener->m_listener = &listener;
         (m_client)->createConnection("localhost");
 
         std::vector<Parameter> signature;
@@ -303,7 +302,7 @@ public:
 
     void testPendingConnection() {
         m_voltdb.reset(0);
-        Client client = Client::create(ClientConfig("hello", "world", *m_dlistener));
+        Client client = Client::create(ClientConfig("hello", "world", m_dlistener));
         m_client = &client;
         m_client->createConnection("localhost", 21212, true);
         std::vector<Parameter> signature;
@@ -347,7 +346,7 @@ public:
                 return false;
             }
         }  listener;
-        (*m_dlistener)->m_listener = &listener;
+        m_dlistener->m_listener = &listener;
         (m_client)->createConnection("localhost");
         (m_client)->createConnection("localhost");
 
@@ -362,6 +361,8 @@ public:
 
         (m_client)->run();
         (m_client)->runOnce();
+        
+        m_dlistener->m_listener = NULL;
     }
 
     class BreakingSyncCallback : public ProcedureCallback {
@@ -426,7 +427,7 @@ public:
             }
         }  listener;
 
-        (*m_dlistener)->m_listener = &listener;
+        m_dlistener->m_listener = &listener;
 
         (m_client)->createConnection("localhost");
         std::vector<Parameter> signature;
@@ -443,6 +444,7 @@ public:
         (m_client)->invoke(proc, callback);
 
         (m_client)->run();
+        m_dlistener->m_listener = NULL;
     }
 
     void testBackpressure() {
@@ -470,7 +472,7 @@ public:
                 return true;
             }
         }  listener;
-        (*m_dlistener)->m_listener = &listener;
+        m_dlistener->m_listener = &listener;
 
         (m_client)->createConnection("localhost");
         std::vector<Parameter> signature;
@@ -482,6 +484,8 @@ public:
             (m_client)->invoke(proc, callback);
             (m_client)->runOnce();
         }
+        
+        m_dlistener->m_listener = NULL;
     }
 
     class CountingCallback : public voltdb::ProcedureCallback {
@@ -577,7 +581,7 @@ public:
 private:
     Client *m_client;
     boost::scoped_ptr<MockVoltDB> m_voltdb;
-    boost::shared_ptr<DelegatingListener> *m_dlistener;
+    boost::shared_ptr<DelegatingListener> m_dlistener;
 };
 CPPUNIT_TEST_SUITE_REGISTRATION( ClientTest );
 }
