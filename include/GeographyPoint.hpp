@@ -160,7 +160,7 @@ public:
     int32_t deserializeFrom(ByteBuffer &message,
                             int32_t     offset,
                             bool       &wasNull);
-    static const double NULL_COORDINATE = 360.0;
+    static const double NULL_COORDINATE;
 private:
     double m_longitude;
     double m_latitude;
