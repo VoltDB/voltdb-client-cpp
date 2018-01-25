@@ -76,6 +76,7 @@ public:
     void invoke(Procedure &proc, ProcedureCallback *callback) throw (Exception, NoConnectionsException, UninitializedParamsException, LibEventException, ElasticModeMismatchException);
     void runOnce() throw (Exception, NoConnectionsException, LibEventException);
     void run() throw (Exception, NoConnectionsException, LibEventException);
+    void runForMaxTime(uint64_t microseconds) throw (Exception, NoConnectionsException, LibEventException);
 
    /*
     * Enter the event loop and process pending events until all responses have been received and then return.
@@ -131,6 +132,12 @@ public:
 
     int64_t getExpiredRequestsCount() const { return m_timedoutRequests; }
     int64_t getResponseWithHandlesNotInCallback() const { return m_responseHandleNotFound; }
+
+    /*
+     * Method for sinking messages.
+     * If a logger callback is not set then skip all messages
+     */
+    void logMessage(ClientLogger::CLIENT_LOG_LEVEL severity, const std::string& msg);
 
 private:
     ClientImpl(ClientConfig config) throw (Exception, LibEventException, MDHashException, SSLException);
@@ -192,12 +199,6 @@ private:
             }
         }
     }
-
-    /*
-     * Method for sinking messages.
-     * If a logger callback is not set then skip all messages
-     */
-    void logMessage(ClientLogger::CLIENT_LOG_LEVEL severity, const std::string& msg);
 
     void setUpTimeoutCheckerMonitor() throw (LibEventException);
     void startMonitorThread() throw (TimerThreadException);

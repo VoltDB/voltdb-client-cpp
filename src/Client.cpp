@@ -86,6 +86,12 @@ void Client::run() throw (voltdb::Exception,
     m_impl->run();
 }
 
+void Client::runForMaxTime(uint64_t uSec) throw (voltdb::Exception,
+                                                 voltdb::NoConnectionsException,
+                                                 voltdb::LibEventException) {
+    m_impl->runForMaxTime(uSec);
+}
+
 bool Client::drain() throw (voltdb::Exception,
                             voltdb::NoConnectionsException,
                             voltdb::LibEventException) {

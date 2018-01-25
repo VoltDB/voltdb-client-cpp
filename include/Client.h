@@ -115,6 +115,15 @@ public:
     void run() throw (voltdb::NoConnectionsException, voltdb::LibEventException, voltdb::Exception);
 
     /*
+     * Enter the event loop and process pending events until the specified time in microseconds has expired.
+     * This writes requests to any ready connections and reads all responses and invokes the appropriate callbacks.
+     * Returns only immediately after the loop is broken by a callback.
+     * @throws NoConnectionsException No connections to the database so there is no work to be done
+     * @throws LibEventException An unknown error occured in libevent
+     */
+    void runForMaxTime(uint64_t microseconds) throw (voltdb::NoConnectionsException, voltdb::LibEventException, voltdb::Exception);
+
+    /*
      * Enter the event loop and process pending events until all responses have been received and then return.
      * It is possible for drain to exit without having received all responses if a callback requests that the event
      * loop break in which case false will be returned.
