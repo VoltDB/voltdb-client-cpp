@@ -158,7 +158,7 @@ private:
     /*
      * Get the buffered event based on transaction routing algorithm
      */
-    struct bufferevent *routeProcedure(Procedure &proc, ScopedByteBuffer &sbb);
+    struct bufferevent *routeProcedure(Procedure &proc, ScopedByteBuffer &sbb, boost::shared_ptr<ProcedureCallback> callback);
 
     /*
      * Initiate connection based on pending connection instance
