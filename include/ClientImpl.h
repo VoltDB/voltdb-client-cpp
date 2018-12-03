@@ -29,14 +29,13 @@
 #include <openssl/ssl.h>
 
 #include <map>
+#include <mutex>
 #include <set>
 #include <list>
 #include <string>
 #include "ProcedureCallback.hpp"
 #include "Client.h"
 #include "Procedure.hpp"
-#include <boost/atomic.hpp>
-#include <boost/thread/mutex.hpp>
 #include "ClientConfig.h"
 #include "Distributer.h"
 
@@ -245,10 +244,10 @@ private:
     std::shared_ptr<voltdb::StatusListener> m_listener;
     bool m_invocationBlockedOnBackpressure;
     bool m_backPressuredForOutstandingRequests;
-    boost::atomic<bool> m_loopBreakRequested;
+    std::atomic<bool> m_loopBreakRequested;
     bool m_isDraining;
     bool m_instanceIdIsSet;
-    boost::atomic<int32_t> m_outstandingRequests;
+    std::atomic<int32_t> m_outstandingRequests;
     //Identifier of the database instance this client is connected to
     int64_t m_clusterStartTime;
     int32_t m_leaderAddress;
@@ -265,11 +264,11 @@ private:
     bool m_enableAbandon;
 
     std::list<std::shared_ptr<PendingConnection> > m_pendingConnectionList;
-    boost::atomic<size_t> m_pendingConnectionSize;
-    boost::mutex m_pendingConnectionLock;
+    std::atomic<size_t> m_pendingConnectionSize;
+    std::mutex m_pendingConnectionLock;
 
     int m_wakeupPipe[2];
-    boost::mutex m_wakeupPipeLock;
+    std::mutex m_wakeupPipeLock;
 
     // query timeout management
 
@@ -304,8 +303,8 @@ private:
     SSL_CTX *m_clientSslCtx;
     // Reference count number of clients running to help in release of the global resource like
     // ssl ciphers, error strings and digests can be unloaded that are shared between clients
-    static boost::atomic<uint32_t> m_numberOfClients;
-    static boost::mutex m_globalResourceLock;
+    static std::atomic<uint32_t> m_numberOfClients;
+    static std::mutex m_globalResourceLock;
 
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
     static const std::string SERVICE;

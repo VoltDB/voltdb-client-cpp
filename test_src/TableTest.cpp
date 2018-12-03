@@ -27,7 +27,6 @@
 #include "TableIterator.h"
 #include "RowBuilder.h"
 #include "Decimal.hpp"
-#include <boost/scoped_ptr.hpp>
 
 namespace voltdb {
 
@@ -270,7 +269,7 @@ private:
             }
             case WIRE_TYPE_VARBINARY: {
                 uint8_t* data = (uint8_t*) malloc(sizeof(m_binData));
-                boost::scoped_ptr<uint8_t> value(data);
+                std::unique_ptr<uint8_t> value(data);
                 int outLen = 0;
                 bool status = row.getVarbinary(i, sizeof(m_binData), data, &outLen);
                 CPPUNIT_ASSERT(status);
@@ -344,7 +343,7 @@ private:
 
             case WIRE_TYPE_VARBINARY: {
                 uint8_t* data = (uint8_t*) malloc(sizeof(m_binData));
-                boost::scoped_ptr<uint8_t> value(data);
+                std::unique_ptr<uint8_t> value(data);
                 int outLen = 0;
                 bool status = row.getVarbinary(i, sizeof(m_binData), data, &outLen);
                 CPPUNIT_ASSERT(status);
@@ -459,7 +458,7 @@ private:
             // serialization
             int32_t tableSerializeSize = table.getSerializedSize();
             char *data = new char[tableSerializeSize];
-            boost::scoped_ptr<char> scopedData(data);
+            std::unique_ptr<char> scopedData(data);
             ByteBuffer tableBB(scopedData.get(), tableSerializeSize);
             int32_t serializedSize = table.serializeTo(tableBB);
             if (tableSerializeSize != serializedSize) {

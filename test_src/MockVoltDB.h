@@ -26,7 +26,6 @@
 #include <event2/event.h>
 #include <event2/bufferevent.h>
 #include <event2/listener.h>
-#include <boost/shared_ptr.hpp>
 #include <vector>
 #include <map>
 #include <set>
@@ -89,7 +88,7 @@ private:
     struct event_base *m_base;
     struct evconnlistener *m_listener;
     std::set<struct bufferevent*> m_connections;
-    std::map<struct bufferevent*, boost::shared_ptr<CxnContext> > m_contexts;
+    std::map<struct bufferevent*, std::shared_ptr<CxnContext> > m_contexts;
     std::string m_filenameForNextResponse;
     int32_t m_hangupOnRequestCounter;
     bool m_dontRead;

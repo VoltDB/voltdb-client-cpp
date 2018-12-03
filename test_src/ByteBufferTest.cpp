@@ -25,7 +25,6 @@
 #include <cppunit/TestFixture.h>
 #include "Exception.hpp"
 #include "ByteBuffer.hpp"
-#include <boost/scoped_ptr.hpp>
 
 namespace voltdb {
 

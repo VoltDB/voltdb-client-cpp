@@ -24,17 +24,13 @@
 #ifndef DISTRIBUTER_H_
 #define DISTRIBUTER_H_
 
-#include <boost/scoped_ptr.hpp>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/shared_mutex.hpp>
 #include "TheHashinator.h"
 #include "Table.h"
 #include "ByteBuffer.hpp"
 #include "Exception.hpp"
 #include <map>
+#include <mutex>
 #include <string>
-
-
 
 namespace voltdb {
 
@@ -90,9 +86,9 @@ private:
      std::map<int, int> m_PartitionToHostId;
      bool m_isUpdating;
      bool m_isElastic;
-     boost::scoped_ptr<TheHashinator> m_hashinator;
+     std::unique_ptr<TheHashinator> m_hashinator;
 
-     static boost::shared_mutex m_procInfoLock;
+     static std::mutex m_procInfoLock;
 
      voltdb::Table m_savedTopoTable;
 };

@@ -82,7 +82,7 @@ public:
     }
 
 private:
-    boost::scoped_ptr<ConnectionPool> m_connectionPool;
+    std::unique_ptr<ConnectionPool> m_connectionPool;
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION( ConnectionPoolTest );

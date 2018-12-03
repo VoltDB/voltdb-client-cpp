@@ -25,7 +25,6 @@
 #include <cassert>
 #include <exception>
 #include <iostream>
-#include <boost/scoped_ptr.hpp>
 #include <cstdio>
 #include "InvocationResponse.hpp"
 #include "ClientConfig.h"
@@ -125,7 +124,7 @@ void cleanupOnScriptEnd(void *ptr) {
         LockGuard guard(gPool->m_lock);
         ClientSet *clients = reinterpret_cast<ClientSet*>(ptr);
         if (clients != NULL) {
-            boost::scoped_ptr<ClientSet> guard(clients);
+           std::unique_ptr<ClientSet> guard(clients);
             for(ClientSet::iterator i = clients->begin(); i != clients->end(); i++) {
                 (*i)->m_listener->m_listener = NULL;
                 gPool->m_clients[(*i)->m_identifier].push_back(*i);

@@ -32,12 +32,10 @@
 #include "Row.hpp"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/foreach.hpp>
-#include <boost/scoped_array.hpp>
 #include <stdlib.h>
 namespace voltdb {
 
-boost::shared_mutex Distributer::m_procInfoLock;
+std::mutex Distributer::m_procInfoLock;
 const int Distributer::MP_INIT_PID = 16383;
 
 ProcedureInfo::ProcedureInfo(const std::string & jsonText):PARAMETER_NONE(-1){
@@ -192,7 +190,7 @@ void Distributer::updateAffinityTopology(const std::vector<voltdb::Table>& topoT
     const std::string hashMode = hashRow.getString(0);
     //Check if token ring is correct
     if (hashMode.compare("ELASTIC") == 0 ) {
-        boost::scoped_array<char> tokens(new char[realsize]);
+       std::unique_ptr<char[]> tokens(new char[realsize]);
         hashRow.getVarbinary(1, realsize, (uint8_t*)(tokens.get()), &realsize);
         m_hashinator.reset(new ElasticHashinator(tokens.get()));
         m_isElastic = true;
@@ -209,7 +207,7 @@ void Distributer::updateAffinityTopology(const std::vector<voltdb::Table>& topoT
 void Distributer::updateProcedurePartitioning(const std::vector<voltdb::Table>& procInfoTable){
 
     debug_msg("updateProcedurePartitioning ");
-    boost::unique_lock<boost::shared_mutex> lock(m_procInfoLock);
+    std::unique_lock<std::mutex> lock(m_procInfoLock);
     m_procedureInfo.clear();
 
     voltdb::TableIterator tableIter = procInfoTable[0].iterator();

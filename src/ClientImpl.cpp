@@ -27,7 +27,6 @@
 #include <event2/buffer.h>
 #include <event2/thread.h>
 #include <event2/event.h>
-#include <boost/foreach.hpp>
 #include <sstream>
 #include <openssl/err.h>
 
@@ -257,8 +256,8 @@ static void regularEventCallback(struct bufferevent *bev, short events, void *ct
     impl->regularEventCallback(bev, events);
 }
 
-boost::atomic<uint32_t> ClientImpl::m_numberOfClients(0);
-boost::mutex ClientImpl::m_globalResourceLock;
+std::atomic<uint32_t> ClientImpl::m_numberOfClients(0);
+std::mutex ClientImpl::m_globalResourceLock;
 
 void initOpenSSLLib() {
     SSL_library_init();
@@ -368,7 +367,7 @@ ClientImpl::~ClientImpl() {
     }
 
     {
-        boost::mutex::scoped_lock lock(m_globalResourceLock);
+        std::lock_guard<std::mutex> lock(m_globalResourceLock);
         if (--m_numberOfClients == 0) {
             if (cleanupEvp) {
                 // release global resource allocated for generating digest/hash
@@ -515,7 +514,7 @@ ClientImpl::ClientImpl(ClientConfig config) :
         // Initialize the OpenSSL resources that needs to initialized only once for the process.
         // When client count goes to zero, the OpenSSL library are released in destructor.
         // Check client count and initialize the resources if needed
-        boost::mutex::scoped_lock lock(m_globalResourceLock);
+       std::lock_guard<std::mutex> lock(m_globalResourceLock);
         if ((++m_numberOfClients == 1) && m_enableSSL) {
             initOpenSSLLib();
         }
@@ -709,13 +708,13 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc) {
                           this);
 
         {
-            boost::mutex::scoped_lock lock(m_pendingConnectionLock);
+            std::lock_guard<std::mutex> lock(m_pendingConnectionLock);
             for (std::list<PendingConnectionSPtr>::iterator i = m_pendingConnectionList.begin();
                  i != m_pendingConnectionList.end();
                  ++i) {
                 if (i->get() == pc) {
                     m_pendingConnectionList.erase(i);
-                    m_pendingConnectionSize.store(m_pendingConnectionList.size(), boost::memory_order_release);
+                    m_pendingConnectionSize.store(m_pendingConnectionList.size(), std::memory_order_release);
                     pcRemoved = true;
                     break;
                 }
@@ -893,11 +892,11 @@ static void reconnectCallback(evutil_socket_t fd, short events, void *clientData
 }
 
 void ClientImpl::reconnectEventCallback() {
-    if (m_pendingConnectionSize.load(boost::memory_order_consume) <= 0)  return;
+    if (m_pendingConnectionSize.load(std::memory_order_consume) <= 0)  return;
 
-    boost::mutex::scoped_lock lock(m_pendingConnectionLock);
+    std::lock_guard<std::mutex> lock(m_pendingConnectionLock);
     const int64_t now = get_sec_time();
-    BOOST_FOREACH( PendingConnectionSPtr& pc, m_pendingConnectionList ) {
+    for(PendingConnectionSPtr& pc : m_pendingConnectionList) {
         if ((now - pc->m_startPending) > RECONNECT_INTERVAL) {
             pc->m_startPending = now;
             initiateConnection(pc);
@@ -917,9 +916,9 @@ void ClientImpl::createPendingConnection(const std::string &hostname, const unsi
     PendingConnectionSPtr pc(new PendingConnection(hostname, port, false, m_base, this));
     pc->m_startPending = time;
     {
-        boost::mutex::scoped_lock lock(m_pendingConnectionLock);
+       std::lock_guard<std::mutex> lock(m_pendingConnectionLock);
         m_pendingConnectionList.push_back(pc);
-        m_pendingConnectionSize.store(m_pendingConnectionList.size(), boost::memory_order_release);
+        m_pendingConnectionSize.store(m_pendingConnectionList.size(), std::memory_order_release);
     }
 
     struct timeval tv;
@@ -1247,7 +1246,7 @@ void ClientImpl::runOnce() {
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::runOnce");
 
-    if (m_bevs.empty() && m_pendingConnectionSize.load(boost::memory_order_consume) <= 0) {
+    if (m_bevs.empty() && m_pendingConnectionSize.load(std::memory_order_consume) <= 0) {
         throw NoConnectionsException();
     }
 
@@ -1261,7 +1260,7 @@ void ClientImpl::run() {
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::run");
 
-    if (m_bevs.empty() && m_pendingConnectionSize.load(boost::memory_order_consume) <= 0) {
+    if (m_bevs.empty() && m_pendingConnectionSize.load(std::memory_order_consume) <= 0) {
         throw NoConnectionsException();
     }
     if (event_base_dispatch(m_base) == -1) {
@@ -1667,13 +1666,11 @@ void ClientImpl::setClientAffinity(bool enable){
 
 void ClientImpl::wakeup() {
    if (m_wakeupPipe[1] != -1) {
-        static unsigned char c = 'w';
-        boost::mutex::scoped_lock lock(m_wakeupPipeLock, boost::try_to_lock);
-        if (lock) {
-            ssize_t bytesWrote = write(m_wakeupPipe[1], &c, 1);
-            (void) bytesWrote;
-        }
-    } else {
+      static unsigned char c = 'w';
+      std::lock_guard<std::mutex> lock(m_wakeupPipeLock);
+      ssize_t bytesWrote = write(m_wakeupPipe[1], &c, 1);
+      (void) bytesWrote;
+   } else {
       event_base_loopbreak(m_base);
     }
 }

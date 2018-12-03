@@ -576,7 +576,7 @@ public:
 
 private:
     Client *m_client;
-    boost::scoped_ptr<MockVoltDB> m_voltdb;
+    std::unique_ptr<MockVoltDB> m_voltdb;
     std::shared_ptr<DelegatingListener> *m_dlistener;
 };
 CPPUNIT_TEST_SUITE_REGISTRATION( ClientTest );
