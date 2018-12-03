@@ -36,7 +36,6 @@
 #include "Client.h"
 #include "Procedure.hpp"
 #include <boost/atomic.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 #include "ClientConfig.h"
 #include "Distributer.h"
@@ -72,7 +71,7 @@ public:
      * Synchronously invoke a stored procedure and return a the response.
      */
     InvocationResponse invoke(Procedure &proc);
-    void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback);
+    void invoke(Procedure &proc, std::shared_ptr<ProcedureCallback> callback);
     void invoke(Procedure &proc, ProcedureCallback *callback);
     void runOnce();
     void run();
@@ -163,7 +162,7 @@ private:
     /*
      * Initiate connection based on pending connection instance
      */
-    void initiateConnection(boost::shared_ptr<PendingConnection> &pc);
+    void initiateConnection(std::shared_ptr<PendingConnection> &pc);
 
     /*
      * Creates a pending connection that is handled in the reconnect callback
@@ -207,15 +206,13 @@ private:
 private:
     class CallBackBookeeping {
     public:
-        CallBackBookeeping(const boost::shared_ptr<ProcedureCallback> &callback,
-                timeval timeout, bool readOnly = false) : m_procCallBack(callback),
-                                                          m_expirationTime(timeout),
-                                                          m_readOnly(readOnly) {}
+        CallBackBookeeping(const std::shared_ptr<ProcedureCallback> &callback,
+                timeval timeout, bool readOnly = false) : m_procCallBack(callback), m_expirationTime(timeout), m_readOnly(readOnly) {}
 
         CallBackBookeeping(const CallBackBookeeping& other) : m_procCallBack (other.m_procCallBack),
                 m_expirationTime (other.m_expirationTime),  m_readOnly (other.m_readOnly) {}
 
-        inline boost::shared_ptr<ProcedureCallback>  getCallback() const { return m_procCallBack; }
+        inline std::shared_ptr<ProcedureCallback>  getCallback() const { return m_procCallBack; }
         // fetch the query/proc timeout/expiration value
         inline timeval getExpirationTime() const { return m_expirationTime; }
         // returns true if the procedure is readOnly.
@@ -223,15 +220,15 @@ private:
         // helper function to set if the proc is readonly or not
         inline void setReadOnly(bool value) { m_readOnly = value; }
     private:
-        const boost::shared_ptr<ProcedureCallback> m_procCallBack;
+        const std::shared_ptr<ProcedureCallback> m_procCallBack;
         const timeval m_expirationTime;
         bool m_readOnly;
     };
 
     // Map from client data to the appropriate callback for a specific connection
-    typedef std::map< int64_t, boost::shared_ptr<CallBackBookeeping> > CallbackMap;
+    typedef std::map< int64_t, std::shared_ptr<CallBackBookeeping> > CallbackMap;
     // Map from buffer event (connection) to the connection's callback map
-    typedef std::map< struct bufferevent*, boost::shared_ptr<CallbackMap> > BEVToCallbackMap;
+    typedef std::map< struct bufferevent*, std::shared_ptr<CallbackMap>> BEVToCallbackMap;
 
     // data member variables
     Distributer  m_distributer;
@@ -241,11 +238,11 @@ private:
     int64_t m_nextRequestId;
     size_t m_nextConnectionIndex;
     std::vector<struct bufferevent*> m_bevs;
-    std::map<struct bufferevent *, boost::shared_ptr<CxnContext> > m_contexts;
+    std::map<struct bufferevent *, std::shared_ptr<CxnContext> > m_contexts;
     std::map<int, struct bufferevent *> m_hostIdToEvent;
     std::set<struct bufferevent *> m_backpressuredBevs;
     BEVToCallbackMap m_callbacks;
-    boost::shared_ptr<voltdb::StatusListener> m_listener;
+    std::shared_ptr<voltdb::StatusListener> m_listener;
     bool m_invocationBlockedOnBackpressure;
     bool m_backPressuredForOutstandingRequests;
     boost::atomic<bool> m_loopBreakRequested;
@@ -267,7 +264,7 @@ private:
     //If to use abandon in case of backpressure.
     bool m_enableAbandon;
 
-    std::list<boost::shared_ptr<PendingConnection> > m_pendingConnectionList;
+    std::list<std::shared_ptr<PendingConnection> > m_pendingConnectionList;
     boost::atomic<size_t> m_pendingConnectionSize;
     boost::mutex m_pendingConnectionLock;
 

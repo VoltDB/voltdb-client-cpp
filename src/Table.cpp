@@ -35,8 +35,8 @@ namespace voltdb {
         buffer.position(5);
         size_t columnCount = static_cast<size_t>(buffer.getInt16());
         assert(columnCount > 0);
-        boost::shared_ptr<std::vector< voltdb::Column> > columns(
-                                new std::vector< voltdb::Column>(columnCount));
+        std::shared_ptr<std::vector<voltdb::Column>> columns(
+              new std::vector<voltdb::Column>(columnCount));
         m_columns = columns;
 
         std::vector<int8_t> types(columnCount);
@@ -232,7 +232,7 @@ namespace voltdb {
         int32_t size;
         istream.read((char*)&size, sizeof(size));
         if (size != 0) {
-            boost::shared_array<char> buffer(new char[size]);
+            std::shared_ptr<char[]> buffer(new char[size]);
             istream.read(buffer.get(), size);
             return voltdb::SharedByteBuffer(buffer, size);
         } else {

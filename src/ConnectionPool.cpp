@@ -50,7 +50,7 @@ public:
 
     bool uncaughtException(
             std::exception exception,
-            boost::shared_ptr<voltdb::ProcedureCallback> callback,
+            std::shared_ptr<voltdb::ProcedureCallback> callback,
             InvocationResponse response) {
         if (m_listener != NULL) {
             return m_listener->uncaughtException(exception, callback, response);
@@ -179,10 +179,10 @@ ConnectionPool::acquireClient(
         }
     }
 
-    std::vector<boost::shared_ptr<ClientStuff> > *clientStuffs = &m_clients[identifier];
+    std::vector<std::shared_ptr<ClientStuff>> *clientStuffs = &m_clients[identifier];
 
     while (clientStuffs->size() > 0) {
-        boost::shared_ptr<ClientStuff> clientStuff = clientStuffs->back();
+        std::shared_ptr<ClientStuff> clientStuff = clientStuffs->back();
         clientStuffs->pop_back();
 
         // run the event loop once to verify the connection is still available
@@ -203,7 +203,7 @@ ConnectionPool::acquireClient(
     DelegatingStatusListener *delegatingListener = new DelegatingStatusListener();
     Client client = voltdb::Client::create(ClientConfig( username, password, delegatingListener, sha));
     client.createConnection(hostname, port);
-    boost::shared_ptr<ClientStuff> stuff(new ClientStuff(client, identifier, delegatingListener));
+    std::shared_ptr<ClientStuff> stuff(new ClientStuff(client, identifier, delegatingListener));
     stuff->m_listener->m_listener = listener;
     clients->push_back(stuff);
     return client;

@@ -21,7 +21,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <boost/shared_ptr.hpp>
 #include "Distributer.h"
 #include "InvocationResponse.hpp"
 #include "ProcedureCallback.hpp"

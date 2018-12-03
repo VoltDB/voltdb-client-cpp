@@ -33,8 +33,8 @@ namespace voltdb {
 
 class ConnectionPool;
 class ClientStuff;
-typedef std::vector<boost::shared_ptr<ClientStuff> > ClientSet;
-typedef std::map<std::string, std::vector<boost::shared_ptr<ClientStuff> > > ClientMap;
+typedef std::vector<std::shared_ptr<ClientStuff>> ClientSet;
+typedef std::map<std::string, std::vector<std::shared_ptr<ClientStuff>>> ClientMap;
 
 void cleanupOnScriptEnd(ClientSet *clients);
 

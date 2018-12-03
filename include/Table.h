@@ -25,7 +25,6 @@
 #define VOLTDB_TABLE_H_
 
 #include "ByteBuffer.hpp"
-#include <boost/shared_ptr.hpp>
 #include <vector>
 #include "Column.hpp"
 #include <sstream>
@@ -120,7 +119,7 @@ public:
     const static int8_t DEFAULT_STATUS_CODE;
 private:
     void validateRowScehma(const std::vector<Column>& schema) const;
-    boost::shared_ptr<std::vector<voltdb::Column> > m_columns;
+    std::shared_ptr<std::vector<voltdb::Column>> m_columns;
     int32_t m_rowCountPosition;
     int32_t m_rowCount;
     mutable voltdb::SharedByteBuffer m_buffer;

@@ -31,7 +31,7 @@ public:
     DummyStatusListener(StatusListener *listener) : m_listener(listener) {}
     bool uncaughtException(
             std::exception exception,
-            boost::shared_ptr<voltdb::ProcedureCallback> callback,
+            std::shared_ptr<voltdb::ProcedureCallback> callback,
             InvocationResponse response) {
         if (m_listener != NULL) {
             return m_listener->uncaughtException(exception, callback, response);
@@ -93,7 +93,7 @@ public:
     ClientConfig::ClientConfig(
             std::string username,
             std::string password,
-            boost::shared_ptr<StatusListener> listener, ClientAuthHashScheme scheme, bool enableAbandon,
+            std::shared_ptr<StatusListener> listener, ClientAuthHashScheme scheme, bool enableAbandon,
             bool enableQueryTimeout, int timeoutInSeconds, bool useSSL) :
                 m_username(username), m_password(password), m_listener(listener),
                 m_maxOutstandingRequests(3000), m_hashScheme(scheme), m_enableAbandon(enableAbandon),

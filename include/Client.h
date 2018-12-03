@@ -28,7 +28,6 @@
 #include "Procedure.hpp"
 #include "StatusListener.h"
 #include "ClientLogger.h"
-#include <boost/shared_ptr.hpp>
 #include "ClientConfig.h"
 #include "Exception.hpp"
 
@@ -81,9 +80,9 @@ public:
      * @throws LibEventException An unknown error occured in libevent
      */
 #ifdef SWIG
-%ignore invoke(voltdb::Procedure &proc, boost::shared_ptr<voltdb::ProcedureCallback> callback);
+%ignore invoke(voltdb::Procedure &proc, std::shared_ptr<voltdb::ProcedureCallback> callback);
 #endif
-    void invoke(voltdb::Procedure &proc, boost::shared_ptr<voltdb::ProcedureCallback> callback);
+    void invoke(voltdb::Procedure &proc, std::shared_ptr<voltdb::ProcedureCallback> callback);
 
     /*
      * Asynchronously invoke a stored procedure. Returns immediately if there is no backpressure, but if there is
@@ -199,7 +198,7 @@ private:
     //Actual constructor
     Client(ClientImpl *m_impl);
 
-    boost::shared_ptr<ClientImpl> m_impl;
+    std::shared_ptr<ClientImpl> m_impl;
 };
 
 }

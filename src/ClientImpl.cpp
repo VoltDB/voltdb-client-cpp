@@ -107,7 +107,7 @@ public:
     ClientImpl* m_clientImpl;
 };
 
-typedef boost::shared_ptr<PendingConnection> PendingConnectionSPtr;
+typedef std::shared_ptr<PendingConnection> PendingConnectionSPtr;
 
 class CxnContext {
 /*
@@ -550,7 +550,7 @@ private:
     struct bufferevent *m_bev;
 };
 
-void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) {
+void ClientImpl::initiateConnection(std::shared_ptr<PendingConnection> &pc) {
     std::ostringstream ss;
     ss << "ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port;
 
@@ -697,8 +697,8 @@ void ClientImpl::finalizeAuthentication(PendingConnection* pc) {
 
         // save connection information for the event
         m_contexts[bev] =
-               boost::shared_ptr<CxnContext>(new CxnContext(pc->m_hostname, pc->m_port, hostId));
-        boost::shared_ptr<CallbackMap> callbackMap(new CallbackMap());
+               std::shared_ptr<CxnContext>(new CxnContext(pc->m_hostname, pc->m_port, hostId));
+        std::shared_ptr<CallbackMap> callbackMap(new CallbackMap());
         m_callbacks[bev] = callbackMap;
 
         pc->m_bufferEvent = NULL;
@@ -961,7 +961,7 @@ void ClientImpl::purgeExpiredRequests() {
             dummyTable);
 
     for (BEVToCallbackMap::iterator itr = m_callbacks.begin(); itr != end; ++itr) {
-        boost::shared_ptr<CallbackMap> callbackMap = itr->second;
+        std::shared_ptr<CallbackMap> callbackMap = itr->second;
         for (CallbackMap::iterator cbItr =  callbackMap->begin();
                 cbItr != callbackMap->end(); ++cbItr) {
             timeval expirationTime = cbItr->second->getExpirationTime();
@@ -1003,7 +1003,7 @@ InvocationResponse ClientImpl::invoke(Procedure &proc) {
     proc.serializeTo(&sbb, clientData);
     struct bufferevent *bev = m_bevs[m_nextConnectionIndex++ % m_bevs.size()];
     InvocationResponse response;
-    boost::shared_ptr<ProcedureCallback> callback(new SyncCallback(&response));
+    std::shared_ptr<ProcedureCallback> callback(new SyncCallback(&response));
     struct evbuffer *evbuf = bufferevent_get_output(bev);
     if (evbuffer_add(evbuf, sbb.bytes(), static_cast<size_t>(sbb.remaining()))) {
         throw LibEventException("Synchronous invoke: failed adding data to event buffer");
@@ -1013,7 +1013,7 @@ InvocationResponse ClientImpl::invoke(Procedure &proc) {
     assert(status == 0);
     expirationTime.tv_sec = tv.tv_sec + m_queryExpirationTime.tv_sec;
     expirationTime.tv_usec = tv.tv_usec + m_queryExpirationTime.tv_usec;
-    boost::shared_ptr<CallBackBookeeping> cb (new CallBackBookeeping(callback, expirationTime));
+    std::shared_ptr<CallBackBookeeping> cb (new CallBackBookeeping(callback, expirationTime));
     m_outstandingRequests++;
     (*m_callbacks[bev])[clientData] = cb;
 
@@ -1042,7 +1042,7 @@ public:
 };
 
 void ClientImpl::invoke(Procedure &proc, ProcedureCallback *callback) {
-    boost::shared_ptr<ProcedureCallback> wrapper(new DummyCallback(callback));
+    std::shared_ptr<ProcedureCallback> wrapper(new DummyCallback(callback));
     invoke(proc, wrapper);
 }
 
@@ -1077,7 +1077,7 @@ struct bufferevent *ClientImpl::routeProcedure(Procedure &proc, ScopedByteBuffer
 }
 
 
-void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) {
+void ClientImpl::invoke(Procedure &proc, std::shared_ptr<ProcedureCallback> callback) {
     if (callback.get() == NULL) {
         throw NullPointerException();
     }
@@ -1219,7 +1219,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
 
     CallBackBookeeping *cbPtr = new CallBackBookeeping(callback, expirationTime, procReadOnly);
     assert (cbPtr != NULL);
-    boost::shared_ptr<CallBackBookeeping> cb (cbPtr);
+    std::shared_ptr<CallBackBookeeping> cb (cbPtr);
 
     BEVToCallbackMap::iterator bevFromCBMap = m_callbacks.find(bev);
     if ( bevFromCBMap == m_callbacks.end()) {
@@ -1289,7 +1289,7 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
     struct evbuffer *evbuf = bufferevent_get_input(bev);
     // todo: for debug only
     assert(m_contexts.find(bev) != m_contexts.end());
-    boost::shared_ptr<CxnContext> context = m_contexts[bev];
+    std::shared_ptr<CxnContext> context = m_contexts[bev];
     int32_t remaining = static_cast<int32_t>(evbuffer_get_length(evbuf));
     if (context->m_lengthOrMessage && remaining < 4) {
         return;
@@ -1305,7 +1305,7 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
             context->m_lengthOrMessage = false;
             remaining -= 4;
         } else if (remaining >= context->m_nextLength) {
-            boost::shared_array<char> messageBytes = boost::shared_array<char>(new char[context->m_nextLength]);
+           std::shared_ptr<char[]> messageBytes = std::shared_ptr<char[]>(new char[context->m_nextLength]);
             context->m_lengthOrMessage = true;
             evbuffer_remove( evbuf, messageBytes.get(), static_cast<size_t>(context->m_nextLength));
             remaining -= context->m_nextLength;
@@ -1396,7 +1396,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
             }
         }
 
-        std::map<struct bufferevent *, boost::shared_ptr<CxnContext> >::iterator connectionCtxIter = m_contexts.find(bev);
+        std::map<struct bufferevent *, std::shared_ptr<CxnContext> >::iterator connectionCtxIter = m_contexts.find(bev);
         assert(connectionCtxIter != m_contexts.end());
         // First drain anything in the read buffer
         regularReadCallback(bev);
@@ -1425,7 +1425,7 @@ void ClientImpl::regularEventCallback(struct bufferevent *bev, short events) {
         // with the appropriate error response
         BEVToCallbackMap::iterator callbackMapIter = m_callbacks.find(bev);
         if (callbackMapIter != m_callbacks.end()) {
-            boost::shared_ptr<CallbackMap> callbackMap = callbackMapIter->second;
+            std::shared_ptr<CallbackMap> callbackMap = callbackMapIter->second;
             InvocationResponse response = InvocationResponse();
             for (CallbackMap::iterator i =  callbackMap->begin();
                     i != callbackMap->end(); ++i) {
@@ -1628,7 +1628,7 @@ void ClientImpl::updateHashinator(){
     ParameterSet* params = systemCatalogProc.params();
     params->addString("PROCEDURES");
 
-    boost::shared_ptr<ProcUpdateCallback> procCallback(new ProcUpdateCallback(&m_distributer, m_pLogger));
+    std::shared_ptr<ProcUpdateCallback> procCallback(new ProcUpdateCallback(&m_distributer, m_pLogger));
     invoke(systemCatalogProc, procCallback);
 
     parameterTypes.resize(2);
@@ -1639,7 +1639,7 @@ void ClientImpl::updateHashinator(){
     params = statisticsProc.params();
     params->addString("TOPO").addInt32(0);
 
-    boost::shared_ptr<TopoUpdateCallback> topoCallback(new TopoUpdateCallback(&m_distributer, m_pLogger));
+    std::shared_ptr<TopoUpdateCallback> topoCallback(new TopoUpdateCallback(&m_distributer, m_pLogger));
 
     invoke(statisticsProc, topoCallback);
 }
@@ -1652,7 +1652,7 @@ void ClientImpl::subscribeToTopologyNotifications(){
     ParameterSet* params = statisticsProc.params();
     params->addString("TOPOLOGY");
 
-    boost::shared_ptr<SubscribeCallback> topoCallback(new SubscribeCallback(m_pLogger));
+    std::shared_ptr<SubscribeCallback> topoCallback(new SubscribeCallback(m_pLogger));
 
     invoke(statisticsProc, topoCallback);
 }

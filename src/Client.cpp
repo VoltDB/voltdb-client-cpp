@@ -54,7 +54,7 @@ InvocationResponse Client::invoke(Procedure &proc) {
 }
 
 void Client::invoke(Procedure &proc,
-                    boost::shared_ptr<ProcedureCallback> callback) {
+                    std::shared_ptr<ProcedureCallback> callback) {
     m_impl->invoke(proc, callback);
 }
 

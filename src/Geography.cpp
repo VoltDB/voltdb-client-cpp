@@ -21,6 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <stdint.h>

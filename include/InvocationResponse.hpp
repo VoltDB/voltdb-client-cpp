@@ -23,10 +23,8 @@
 
 #ifndef VOLTDB_INVOCATIONRESPONSE_HPP_
 #define VOLTDB_INVOCATIONRESPONSE_HPP_
-#include <boost/shared_array.hpp>
 #include <vector>
 #include <sstream>
-#include <boost/shared_ptr.hpp>
 #include "ByteBuffer.hpp"
 #include "Table.h"
 #include <iostream>
@@ -97,13 +95,13 @@ public:
     }
 
 #ifdef SWIG
-    %ignore InvocationResponse(boost::shared_array<char> data, int32_t length);
+    %ignore InvocationResponse(std::shared_ptr<char[]> data, int32_t length);
 #endif
     /*
      * Constructor for taking shared ownership of a message buffer
      * containing a response to a stored procedure invocation
      */
-    InvocationResponse(boost::shared_array<char>& data, int32_t length) : m_results(0) {
+    InvocationResponse(std::shared_ptr<char[]>& data, int32_t length) : m_results(0) {
         SharedByteBuffer buffer(data, length);
         int8_t version = buffer.getInt8();
         assert(version == 0);

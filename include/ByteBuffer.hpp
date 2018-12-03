@@ -50,8 +50,6 @@
 
 #include <stdint.h>
 #include <arpa/inet.h>
-#include <boost/shared_array.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <vector>
@@ -513,15 +511,15 @@ public:
     }
 
     SharedByteBuffer(char *data, int32_t length) : ExpandableByteBuffer(data, length), m_ref(data) {}
-    SharedByteBuffer(boost::shared_array<char>& data, int32_t length) : ExpandableByteBuffer(data.get(), length), m_ref(data) {}
+    SharedByteBuffer(std::shared_ptr<char[]>& data, int32_t length) : ExpandableByteBuffer(data.get(), length), m_ref(data) {}
 
 protected:
     void resetRef(char *data)  {
         m_ref.reset(data);
     }
 private:
-    SharedByteBuffer(boost::shared_array<char> ref, char *data, int32_t length) : ExpandableByteBuffer(data, length), m_ref(ref) {}
-    boost::shared_array<char> m_ref;
+    SharedByteBuffer(std::shared_ptr<char[]> ref, char *data, int32_t length) : ExpandableByteBuffer(data, length), m_ref(ref) {}
+    std::shared_ptr<char[]> m_ref;
 };
 
 class ScopedByteBuffer : public ExpandableByteBuffer {

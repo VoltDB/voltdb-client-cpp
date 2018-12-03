@@ -49,9 +49,9 @@ public:
      * Construct a row from a buffer containing the row data.
      */
 #ifdef SWIG
-    %ignore Row(SharedByteBuffer rowData, boost::shared_ptr<std::vector<voltdb::Column> > columns);
+    %ignore Row(SharedByteBuffer rowData, std::shared_ptr<std::vector<voltdb::Column>> columns);
 #endif
-    Row(SharedByteBuffer& rowData, boost::shared_ptr<std::vector<voltdb::Column> >& columns) :
+    Row(SharedByteBuffer& rowData, std::shared_ptr<std::vector<voltdb::Column>>& columns) :
         m_data(rowData), m_columns(columns), m_wasNull(false), m_offsets(columns->size()), m_hasCalculatedOffsets(false) {
     }
 
@@ -622,7 +622,7 @@ private:
     }
 
     SharedByteBuffer m_data;
-    boost::shared_ptr<std::vector<voltdb::Column> > m_columns;
+    std::shared_ptr<std::vector<voltdb::Column> > m_columns;
     bool m_wasNull;
     std::vector<int32_t> m_offsets;
     bool m_hasCalculatedOffsets;

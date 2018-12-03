@@ -44,7 +44,7 @@ public:
      */
     virtual bool uncaughtException(
             std::exception exception,
-            boost::shared_ptr<voltdb::ProcedureCallback> callback,
+            std::shared_ptr<voltdb::ProcedureCallback> callback,
             voltdb::InvocationResponse response) = 0;
 
     /*

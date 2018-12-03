@@ -503,10 +503,10 @@ void testInvocationGeoInsert() {
     // compare originalRequest and generatedRequest.
     compareRequestMessages(originalRequest,  "original_insert_geo.msg",
                            generatedRequest, "generated_insert_geo.msg");
-    
+
     // Investigate the response.  This is less interesting.
     originalResponse.position(4);
-    boost::shared_array<char> copy(new char[originalResponse.remaining()]);
+    std::shared_ptr<char[]> copy(new char[originalResponse.remaining()]);
     originalResponse.get(copy.get(), originalResponse.remaining());
     InvocationResponse response(copy, originalResponse.capacity() - 4);
     CPPUNIT_ASSERT(response.success());
@@ -545,7 +545,7 @@ void testInvocationGeoInsertNulls() {
 
     // Investigate the original response.  Again, this is less interesting.
     originalResponse.position(4);
-    boost::shared_array<char> copy(new char[originalResponse.remaining()]);
+    std::shared_ptr<char[]> copy(new char[originalResponse.remaining()]);
     originalResponse.get(copy.get(), originalResponse.remaining());
     InvocationResponse response(copy, originalResponse.capacity() - 4);
     CPPUNIT_ASSERT(response.success());
@@ -598,7 +598,7 @@ void testInvocationAllParams() {
 void testInvocationResponseSuccess() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_success.msg");
     original.position(4);
-    boost::shared_array<char> copy(new char[original.remaining()]);
+    std::shared_ptr<char[]> copy(new char[original.remaining()]);
     original.get(copy.get(), original.remaining());
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.success());
@@ -613,7 +613,7 @@ void testInvocationResponseSuccess() {
 void testInvocationResponseFailCV() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_fail_cv.msg");
     original.position(4);
-    boost::shared_array<char> copy(new char[original.remaining()]);
+    std::shared_ptr<char[]> copy(new char[original.remaining()]);
     original.get(copy.get(), original.remaining());
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.failure());
@@ -629,7 +629,7 @@ void testInvocationResponseFailCV() {
 void testInvocationResponseSelect() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_select.msg");
     original.position(4);
-    boost::shared_array<char> copy(new char[original.remaining()]);
+    std::shared_ptr<char[]> copy(new char[original.remaining()]);
     original.get(copy.get(), original.remaining());
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.success());
@@ -665,7 +665,7 @@ void testInvocationResponseSelect() {
 void testInvocationGeoSelectBoth() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_geo_both.msg");
     original.position(4);
-    boost::shared_array<char> copy(new char[original.remaining()]);
+    std::shared_ptr<char[]> copy(new char[original.remaining()]);
     original.get(copy.get(), original.remaining());
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.success());
@@ -725,7 +725,7 @@ void testInvocationGeoSelectBoth() {
 void testInvocationGeoSelectBothMid() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_geo_both_mid.msg");
     original.position(4);
-    boost::shared_array<char> copy(new char[original.remaining()]);
+    std::shared_ptr<char[]> copy(new char[original.remaining()]);
     original.get(copy.get(), original.remaining());
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.success());
@@ -784,7 +784,7 @@ void testInvocationGeoSelectBothMid() {
 void testInvocationGeoSelectPolyNull() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_geo_polynull.msg");
     original.position(4);
-    boost::shared_array<char> copy(new char[original.remaining()]);
+    std::shared_ptr<char[]> copy(new char[original.remaining()]);
     original.get(copy.get(), original.remaining());
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.success());
@@ -840,7 +840,7 @@ void testInvocationGeoSelectPolyNull() {
 void testInvocationGeoSelectPointNull() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_geo_ptnull.msg");
     original.position(4);
-    boost::shared_array<char> copy(new char[original.remaining()]);
+    std::shared_ptr<char[]> copy(new char[original.remaining()]);
     original.get(copy.get(), original.remaining());
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.success());
@@ -899,7 +899,7 @@ void testInvocationGeoSelectPointNull() {
 void testInvocationGeoSelectBothNull() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_geo_bothnull.msg");
     original.position(4);
-    boost::shared_array<char> copy(new char[original.remaining()]);
+    std::shared_ptr<char[]> copy(new char[original.remaining()]);
     original.get(copy.get(), original.remaining());
     InvocationResponse response(copy, original.capacity() - 4);
     CPPUNIT_ASSERT(response.success());

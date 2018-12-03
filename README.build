@@ -1,6 +1,6 @@
 Prerequisites
 
-Building the VoltDB CPP client from source requires the boost c++ development libraries. 
+Building the VoltDB CPP client from source requires the boost c++ development libraries.
 Version 1.54+ or better is recommended.
 
 Notes:
@@ -9,7 +9,7 @@ Notes:
     in the file name. If the libraries on your platform are not tagged, you will need to edit the makefile
     and remove the -mt tag. Alternatively you can create a soft link to the to the needed libraries using
     the tagged name referenced by the makefile.
-    
+
     If your platform's package manager does not provide the required version of boost you can build it from source
     using these commands:
 
@@ -46,7 +46,7 @@ version of libevent - simply replace the libevent tarball.
 Running the tests
 
 The tests require CPPUnit. You can install cppunit on ubuntu with the
-command: `apt get install libcppunit-dev`
+command: `apt-get install libcppunit-dev`
 
 Once you have built either version of the shared library you can build the
 tests using the makefile in Tests and then run the Tests executable that is
