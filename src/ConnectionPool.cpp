@@ -160,8 +160,7 @@ ConnectionPool::acquireClient(
         std::string password,
         StatusListener *listener,
         unsigned short port,
-        ClientAuthHashScheme sha)
-throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+        ClientAuthHashScheme sha) {
     LockGuard guard(m_lock);
     ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
     if (clients == NULL) {
@@ -216,12 +215,11 @@ ConnectionPool::acquireClient(
         std::string username,
         std::string password,
         unsigned short port,
-        ClientAuthHashScheme sha)
-throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+        ClientAuthHashScheme sha) {
     return acquireClient(hostname, username, password, NULL, port, sha);
 }
 
-void ConnectionPool::returnClient(Client client) throw (voltdb::Exception) {
+void ConnectionPool::returnClient(Client client) {
     LockGuard guard(m_lock);
     ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
     if (clients == NULL) {
@@ -240,7 +238,7 @@ void ConnectionPool::returnClient(Client client) throw (voltdb::Exception) {
     throw MisplacedClientException();
 }
 
-void ConnectionPool::closeClientConnection(Client client) throw (voltdb::Exception) {
+void ConnectionPool::closeClientConnection(Client client) {
     LockGuard guard(m_lock);
     ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
     if (clients == NULL) {

@@ -127,8 +127,7 @@ int Distributer::getHashedPartitionForParameter(ByteBuffer &paramBuffer, int par
     return parseParameter(paramBuffer, index);
 }
 
-ProcedureInfo* Distributer::getProcedure(const std::string& procName) throw (UnknownProcedureException)
-{
+ProcedureInfo* Distributer::getProcedure(const std::string& procName) {
     std::map<std::string, ProcedureInfo>::iterator it = m_procedureInfo.find(procName);
     if (it == m_procedureInfo.end())
         return NULL;

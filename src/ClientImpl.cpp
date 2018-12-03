@@ -267,7 +267,7 @@ void initOpenSSLLib() {
     OpenSSL_add_all_algorithms();
 }
 
-void ClientImpl::initSslConext() throw (SSLException) {
+void ClientImpl::initSslConext() {
 
     // If global locking support for SSL is needed, which at present is not, the global
     // SSL locks will need to initialized here
@@ -408,7 +408,7 @@ private:
     EVP_MD_CTX* m_ctx;
 };
 
-void ClientImpl::hashPassword(const std::string& password) throw (MDHashException) {
+void ClientImpl::hashPassword(const std::string& password) {
     const EVP_MD *md = NULL;
     size_t hashDataLength;
     if (m_hashScheme == HASH_SHA1) {
@@ -466,7 +466,7 @@ static void debugEventCallback(int severity, const char* msg) {
 }
 #endif
 
-ClientImpl::ClientImpl(ClientConfig config) throw (Exception, LibEventException, MDHashException, SSLException) :
+ClientImpl::ClientImpl(ClientConfig config) :
         m_base(NULL), m_ev(NULL), m_cfg(NULL), m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
         m_listener(config.m_listener), m_invocationBlockedOnBackpressure(false),
         m_backPressuredForOutstandingRequests(false), m_loopBreakRequested(false),
@@ -550,9 +550,7 @@ private:
     struct bufferevent *m_bev;
 };
 
-void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (ConnectException,
-                                                                                     LibEventException,
-                                                                                     SSLException) {
+void ClientImpl::initiateConnection(boost::shared_ptr<PendingConnection> &pc) {
     std::ostringstream ss;
     ss << "ClientImpl::initiateConnection to " << pc->m_hostname << ":" << pc->m_port;
 
@@ -630,7 +628,7 @@ void ClientImpl::close() {
     m_bevs.clear();
 }
 
-void ClientImpl::initiateAuthentication(struct bufferevent *bev, const std::string& hostname, unsigned short port) throw (LibEventException) {
+void ClientImpl::initiateAuthentication(struct bufferevent *bev, const std::string& hostname, unsigned short port) {
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::initiateAuthentication");
 
@@ -662,8 +660,7 @@ void ClientImpl::initiateAuthentication(struct bufferevent *bev, const std::stri
     protector.success();
 }
 
-void ClientImpl::finalizeAuthentication(PendingConnection* pc) throw (Exception,
-                                                                      ConnectException) {
+void ClientImpl::finalizeAuthentication(PendingConnection* pc) {
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::finalizeAuthentication");
 
@@ -784,7 +781,7 @@ void *timerThreadRun(void *ctx) {
     client->runTimeoutMonitor();
 }
 
-void ClientImpl::runTimeoutMonitor() throw (LibEventException) {
+void ClientImpl::runTimeoutMonitor() {
     if (event_base_dispatch(m_timerMonitorBase) == -1) {
         throw LibEventException("runTimeoutMonitor: failed to run event loop for timer monitor");
     } else {
@@ -792,7 +789,7 @@ void ClientImpl::runTimeoutMonitor() throw (LibEventException) {
     }
 }
 
-void ClientImpl::startMonitorThread() throw (TimerThreadException){
+void ClientImpl::startMonitorThread() {
     pthread_attr_t threadAttr;
     pthread_attr_init(&threadAttr);
     pthread_attr_setdetachstate(&threadAttr, PTHREAD_CREATE_DETACHED);
@@ -805,7 +802,7 @@ void ClientImpl::startMonitorThread() throw (TimerThreadException){
     }
 }
 
-void ClientImpl::setUpTimeoutCheckerMonitor() throw (LibEventException){
+void ClientImpl::setUpTimeoutCheckerMonitor() {
     // setup to receive timeout scan notification
     m_timeoutServiceEventPtr = event_new(m_base, m_timerCheckPipe[0], EV_READ | EV_PERSIST, scanForExpiredRequestsCB, this);
     if (m_timeoutServiceEventPtr == NULL) {
@@ -826,12 +823,7 @@ void ClientImpl::setUpTimeoutCheckerMonitor() throw (LibEventException){
 
 void ClientImpl::createConnection(const std::string& hostname,
                                   const unsigned short port,
-                                  const bool keepConnecting) throw (Exception,
-                                                                    ConnectException,
-                                                                    LibEventException,
-                                                                    PipeCreationException,
-                                                                    TimerThreadException,
-                                                                    SSLException) {
+                                  const bool keepConnecting) {
 
 
     if (m_pLogger) {
@@ -947,7 +939,7 @@ public:
     SyncCallback(InvocationResponse *responseOut) : m_responseOut(responseOut) {
     }
 
-    bool callback(InvocationResponse response) throw (Exception) {
+    bool callback(InvocationResponse response) {
         (*m_responseOut) = response;
         return true;
     }
@@ -996,7 +988,7 @@ void ClientImpl::purgeExpiredRequests() {
     }
 }
 
-InvocationResponse ClientImpl::invoke(Procedure &proc) throw (Exception, NoConnectionsException, UninitializedParamsException, LibEventException) {
+InvocationResponse ClientImpl::invoke(Procedure &proc) {
 
     // Before making a synchronous request, process any existing requests.
     while (! drain()) {}
@@ -1037,7 +1029,7 @@ class DummyCallback : public ProcedureCallback {
 public:
     ProcedureCallback *m_callback;
     DummyCallback(ProcedureCallback *callback) : m_callback(callback) {}
-    bool callback(InvocationResponse response) throw (Exception) {
+    bool callback(InvocationResponse response) {
         return m_callback->callback(response);
     }
 
@@ -1049,7 +1041,7 @@ public:
 
 };
 
-void ClientImpl::invoke(Procedure &proc, ProcedureCallback *callback) throw (Exception, NoConnectionsException, UninitializedParamsException, LibEventException, ElasticModeMismatchException) {
+void ClientImpl::invoke(Procedure &proc, ProcedureCallback *callback) {
     boost::shared_ptr<ProcedureCallback> wrapper(new DummyCallback(callback));
     invoke(proc, wrapper);
 }
@@ -1085,11 +1077,7 @@ struct bufferevent *ClientImpl::routeProcedure(Procedure &proc, ScopedByteBuffer
 }
 
 
-void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (Exception,
-                                                                                               NoConnectionsException,
-                                                                                               UninitializedParamsException,
-                                                                                               LibEventException,
-                                                                                               ElasticModeMismatchException) {
+void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) {
     if (callback.get() == NULL) {
         throw NullPointerException();
     }
@@ -1255,7 +1243,7 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
     return;
 }
 
-void ClientImpl::runOnce() throw (Exception, NoConnectionsException, LibEventException) {
+void ClientImpl::runOnce() {
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::runOnce");
 
@@ -1269,7 +1257,7 @@ void ClientImpl::runOnce() throw (Exception, NoConnectionsException, LibEventExc
     m_loopBreakRequested = false;
 }
 
-void ClientImpl::run() throw (Exception, NoConnectionsException, LibEventException) {
+void ClientImpl::run() {
 
     logMessage(ClientLogger::DEBUG, "ClientImpl::run");
 
@@ -1284,7 +1272,7 @@ void ClientImpl::run() throw (Exception, NoConnectionsException, LibEventExcepti
 
 static void interrupt_callback(evutil_socket_t fd, short events, void *clientData);
 
-void ClientImpl::runForMaxTime(uint64_t uSec) throw (Exception, NoConnectionsException, LibEventException){
+void ClientImpl::runForMaxTime(uint64_t uSec) {
     struct timeval timeOut;
     logMessage(ClientLogger::DEBUG, "ClientImpl::runForMaxTime");
 
@@ -1533,7 +1521,7 @@ void ClientImpl::interrupt() {
  * @throws NoConnectionsException No connections to the database so there is no work to be done
  * @throws LibEventException An unknown error occured in libevent
  */
-bool ClientImpl::drain() throw (Exception, NoConnectionsException, LibEventException) {
+bool ClientImpl::drain() {
     if (m_outstandingRequests > 0) {
         m_isDraining = true;
         run();
@@ -1551,8 +1539,7 @@ class TopoUpdateCallback : public ProcedureCallback
 public:
     TopoUpdateCallback(Distributer *dist, ClientLogger *logger) : m_dist(dist), m_logger(logger) {}
 
-    bool callback(InvocationResponse response) throw (Exception)
-    {
+    bool callback(InvocationResponse response) {
         if (response.failure()){
             if (m_logger) {
                 std::string msg = "Failure response TopoUpdateCallback::callback: " + response.statusString();
@@ -1580,8 +1567,7 @@ class SubscribeCallback : public ProcedureCallback
 public:
     SubscribeCallback(ClientLogger *logger) : m_logger(logger) {}
 
-    bool callback(InvocationResponse response) throw (Exception)
-    {
+    bool callback(InvocationResponse response) {
         if (response.failure()) {
             if (m_logger) {
                 std::string msg = "Failure response SubscribeCallback::callback: " + response.statusString();
@@ -1608,8 +1594,7 @@ class ProcUpdateCallback : public ProcedureCallback
 public:
     ProcUpdateCallback(Distributer *dist, ClientLogger *logger) : m_dist(dist), m_logger(logger) {}
 
-    bool callback(InvocationResponse response) throw (Exception)
-    {
+    bool callback(InvocationResponse response) {
         if (response.failure()) {
 
             if (m_logger) {

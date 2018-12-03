@@ -169,7 +169,7 @@ public:
         InvocationResponse m_response;
         bool m_hasResponse;
         SyncCallback() : m_hasResponse(false) {}
-        virtual bool callback(InvocationResponse response) throw (voltdb::Exception) {
+        virtual bool callback(InvocationResponse response) {
             m_response = response;
             m_hasResponse = true;
             return false;
@@ -367,7 +367,7 @@ public:
     class BreakingSyncCallback : public ProcedureCallback {
     public:
         InvocationResponse m_response;
-        virtual bool callback(InvocationResponse response) throw (voltdb::Exception) {
+        virtual bool callback(InvocationResponse response) {
             m_response = response;
             return true;
         }
@@ -393,7 +393,7 @@ public:
 
     class ThrowingCallback : public ProcedureCallback {
     public:
-        virtual bool callback(InvocationResponse response) throw (voltdb::Exception) {
+        virtual bool callback(InvocationResponse response) {
             throw voltdb::Exception();
         }
     };
@@ -488,7 +488,7 @@ public:
     public:
         CountingCallback(int32_t count) : m_count(count) {}
 
-        bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
+        bool callback(voltdb::InvocationResponse response) {
             m_count--;
 
             CPPUNIT_ASSERT(response.success());
@@ -517,7 +517,7 @@ public:
     public:
         CountingSuccessAndConnectionLost() : m_success(0), m_connectionLost(0) {}
 
-        bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
+        bool callback(voltdb::InvocationResponse response) {
             if (response.success()) {
                 m_success++;
             } else {

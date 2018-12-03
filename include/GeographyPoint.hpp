@@ -97,7 +97,7 @@ public:
     bool isNull() const {
         return m_longitude == NULL_COORDINATE && m_latitude == NULL_COORDINATE;
     }
-    
+
     /**
      * Test that this is equal to the other.  We take care to compare points
      * on the poles properly, when the latitude is not defined, and to compare
@@ -131,7 +131,7 @@ public:
      * See the VoltDB wire protocol specification for details.
      */
     static GeographyPoint fromXYZ(double x, double y, double z);
-    
+
     /**
      * Return true iff two points are approximately equal.
      * This is true if their latitudes and longitudes are
@@ -146,7 +146,7 @@ public:
      */
     bool approximatelyEqual(const GeographyPoint &aOther,
                             double epsilon) const;
-    
+
     /**
      * Convert from longitude/latitude to points on the unit
      * sphere.  See the VoltDB wire protocol specification for
@@ -160,7 +160,7 @@ public:
     int32_t deserializeFrom(ByteBuffer &message,
                             int32_t     offset,
                             bool       &wasNull);
-    static const double NULL_COORDINATE = 360.0;
+    static const double NULL_COORDINATE;
 private:
     double m_longitude;
     double m_latitude;

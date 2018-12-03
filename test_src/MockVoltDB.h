@@ -55,7 +55,7 @@ public:
 
     void interrupt();
 
-    void run() throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException);
+    void run();
     void filenameForNextResponse(std::string filename) {
         m_filenameForNextResponse = filename;
     }

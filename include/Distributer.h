@@ -77,7 +77,7 @@ public:
          m_PartitionToHostId.clear();
      }
 
-     ProcedureInfo* getProcedure(const std::string& procName) throw (UnknownProcedureException);
+     ProcedureInfo* getProcedure(const std::string& procName);
      int getHashedPartitionForParameter(ByteBuffer &paramBuffer, int parameterId);
      int getHostIdByPartitionId(int partitionId);
      void handleTopologyNotification(const std::vector<voltdb::Table>& t);

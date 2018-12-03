@@ -51,16 +51,16 @@ public:
     /*
      * Retrieve a client that connects to the specified hostname and port using the provided username and password
      */
-    voltdb::Client acquireClient(std::string hostname, std::string username, std::string password, unsigned short port = 21212, ClientAuthHashScheme sha = HASH_SHA1) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
+    voltdb::Client acquireClient(std::string hostname, std::string username, std::string password, unsigned short port = 21212, ClientAuthHashScheme sha = HASH_SHA1);
 
     /*
      * Retrieve a client that connects to the specified hostname and port using the provided username and password
      */
-    voltdb::Client acquireClient(std::string hostname, std::string username, std::string password, StatusListener *listener, unsigned short port = 21212, ClientAuthHashScheme sha = HASH_SHA1) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
+    voltdb::Client acquireClient(std::string hostname, std::string username, std::string password, StatusListener *listener, unsigned short port = 21212, ClientAuthHashScheme sha = HASH_SHA1);
 
-    void returnClient(Client client) throw (voltdb::Exception);
+    void returnClient(Client client);
 
-    void closeClientConnection(Client client) throw (voltdb::Exception);
+    void closeClientConnection(Client client);
 
     /*
      * Return the number of clients held by this thread

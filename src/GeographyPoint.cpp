@@ -30,6 +30,8 @@
 #include "ByteBuffer.hpp"
 
 namespace voltdb {
+const double GeographyPoint::NULL_COORDINATE = 360.0;
+
 GeographyPoint::GeographyPoint()
     : m_longitude(360.0),
       m_latitude(360.0) {
