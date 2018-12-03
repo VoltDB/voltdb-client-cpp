@@ -91,9 +91,7 @@ $(LIB_NAME).so: $(OBJS)
 $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 	@echo 'Building distribution kit'
 	rm -rf $(KIT_NAME)
-	mkdir -p $(KIT_NAME)/include/ttmath
-	mkdir -p $(KIT_NAME)/include/openssl
-	mkdir -p $(KIT_NAME)/$(THIRD_PARTY_DIR)
+	mkdir -p $(KIT_NAME)/include/ttmath $(KIT_NAME)/include/openssl $(KIT_NAME)/include/property_tree $(KIT_NAME)/$(THIRD_PARTY_DIR)
 
 	cp -R include/ByteBuffer.hpp include/Client.h include/ClientConfig.h \
 		  include/Column.hpp include/ConnectionPool.h include/Decimal.hpp \

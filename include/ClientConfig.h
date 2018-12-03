@@ -36,7 +36,7 @@ public:
             std::string username = std::string(""),
             std::string password = std::string(""),
             ClientAuthHashScheme scheme = HASH_SHA1, bool enableAbandon = false,
-            bool enableQueryTimeout = false, int timeoutInSec =  DEFAULT_QUERY_TIMEOUT_SEC,
+            bool enableQueryTimeout = false, int timeoutInSec = DEFAULT_QUERY_TIMEOUT_SEC,
             bool useSSL = false);
 
     ClientConfig(
@@ -59,8 +59,8 @@ public:
     std::shared_ptr<StatusListener> m_listener;
     int32_t m_maxOutstandingRequests;
     ClientAuthHashScheme m_hashScheme;
-    bool m_enableAbandon;
-    bool m_enableQueryTimeout;
+    const bool m_enableAbandon;
+    const bool m_enableQueryTimeout;
     timeval m_queryTimeout;
     timeval m_scanIntervalForTimedoutQuery;
     bool m_useSSL;
