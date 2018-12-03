@@ -16,7 +16,11 @@ The Linux binary was compiled with GCC 4.4.7 on Centos 6.7.
 The OSX binary was compiled with Xcode 7.2 on OSX 10.11.
 
 The source code is available in the [VoltDB Github repository]
-(https://github.com/VoltDB/voltdb-client-cpp). 
+(https://github.com/VoltDB/voltdb-client-cpp).
+
+New Features in 8.4
+==================
+- Removed dependency on Boost library (by taking advantage of C++11 features)
 
 New Features in 7.1
 ==================
@@ -146,10 +150,9 @@ clientvoter.cpp                  \
 ./libevent_pthread.a             \
 -lrt                             \
 -pthread                         \
--lboost_system                   \
--lboost_thread                   \
 -o voter
 ```
 
 Note that -lrt should not be included for the mac edition. See the example makefile
 for more detail.
+

@@ -30,8 +30,8 @@
 #include "Table.h"
 #include "TableIterator.h"
 #include "Row.hpp"
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include "property_tree/ptree.hpp"
+#include "property_tree/json_parser.hpp"
 #include <stdlib.h>
 namespace voltdb {
 
