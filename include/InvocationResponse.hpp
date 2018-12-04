@@ -284,7 +284,6 @@ private:
         } return str;
     }
 
-private:
     int64_t m_clientData;
     int8_t m_statusCode;
     std::string m_statusString;

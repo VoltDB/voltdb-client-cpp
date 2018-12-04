@@ -188,15 +188,15 @@ public:
     int64_t getExpiredRequestsCount() const;
 
     ~Client();
+
+    //Actual constructor
+    Client(ClientImpl *m_impl);
 private:
 
     /*
      * Disable various constructors and assignment
      */
     Client();
-
-    //Actual constructor
-    Client(ClientImpl *m_impl);
 
     std::shared_ptr<ClientImpl> m_impl;
 };

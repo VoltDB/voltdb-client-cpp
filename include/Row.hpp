@@ -55,6 +55,34 @@ public:
         m_data(rowData), m_columns(columns), m_wasNull(false), m_offsets(columns->size()), m_hasCalculatedOffsets(false) {
     }
 
+    std::string get(int32_t column) {
+       switch(m_columns->at(column).type()) {
+          case WIRE_TYPE_TINYINT:
+             return std::to_string(getInt8(column));
+          case WIRE_TYPE_SMALLINT:
+             return std::to_string(getInt16(column));
+          case WIRE_TYPE_INTEGER:
+             return std::to_string(getInt32(column));
+          case WIRE_TYPE_BIGINT:
+             return std::to_string(getInt64(column));
+          case WIRE_TYPE_FLOAT:
+             return std::to_string(getDouble(column));
+          case WIRE_TYPE_STRING:
+             return getString(column);
+          case WIRE_TYPE_TIMESTAMP:
+             return std::to_string(getTimestamp(column));
+          case WIRE_TYPE_DECIMAL:
+             return getDecimal(column).toString();
+          case WIRE_TYPE_VARBINARY:
+             return "VARBINARY VALUE";
+          case WIRE_TYPE_GEOGRAPHY_POINT:
+             return getGeographyPoint(column).toString();
+          case WIRE_TYPE_GEOGRAPHY:
+             return getGeography(column).toString();
+          default:
+             assert(false);
+       }
+    }
     /*
      * Retrieve the value at the specified column index as bytes. The type of the column
      * must be Varbinary.

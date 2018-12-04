@@ -13,6 +13,7 @@ LIB_NAME=libvoltdbcpp
 KIT_NAME=voltdb-client-cpp-x86_64-8.4
 
 CXXFLAGS=-Iinclude -std=c++11 ${OPTIMIZATION} -fPIC
+CFLAGS=-Iinclude ${OPTIMIZATION} -fPIC
 PLATFORM = $(shell uname)
 
 
@@ -39,29 +40,29 @@ endif
 
 .PHONEY: all clean test kit
 
-OBJS := obj/Client.o \
-		obj/ClientConfig.o \
-		obj/ClientImpl.o \
-		obj/ConnectionPool.o \
-		obj/RowBuilder.o \
-		obj/Table.o \
-		obj/WireType.o \
-		obj/Distributer.o \
-		obj/MurmurHash3.o \
-		obj/GeographyPoint.o \
-		obj/Geography.o
+OBJS := obj/CAPI.o obj/Client.o \
+	  obj/ClientConfig.o \
+	  obj/ClientImpl.o \
+	  obj/ConnectionPool.o \
+	  obj/RowBuilder.o \
+	  obj/Table.o \
+	  obj/WireType.o \
+	  obj/Distributer.o \
+	  obj/MurmurHash3.o \
+	  obj/GeographyPoint.o \
+	  obj/Geography.o
 
 TEST_OBJS := test_obj/ByteBufferTest.o \
-			 test_obj/MockVoltDB.o \
-			 test_obj/ClientTest.o \
-			 test_obj/SerializationTest.o \
-			 test_obj/GeographyPointTest.o \
-			 test_obj/GeographyTest.o \
-			 test_obj/TableTest.o \
-			 test_obj/Tests.o
+	  test_obj/MockVoltDB.o \
+	  test_obj/ClientTest.o \
+	  test_obj/SerializationTest.o \
+	  test_obj/GeographyPointTest.o \
+	  test_obj/GeographyTest.o \
+	  test_obj/TableTest.o \
+	  test_obj/Tests.o
 
 CPTEST_OBJS := test_obj/ConnectionPoolTest.o \
-			 test_obj/Tests.o
+	  test_obj/Tests.o
 
 RM := $(RM) -r
 
@@ -72,7 +73,7 @@ obj/%.o: src/%.cpp | obj
 	$(CXX) $(CXXFLAGS) -c -o $@ $< -MMD -MP
 
 obj/%.o: src/%.c | obj
-	$(CXX) $(CXXFLAGS) -c -o $@ $< -MMD -MP
+	$(CC) $(CFLAGS) -c -o $@ $< -MMD -MP
 
 test_obj/%.o: test_src/%.cpp | test_obj
 	$(CXX) $(CXXFLAGS) -c -o $@ $< -MMD -MP
@@ -93,7 +94,7 @@ $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 	rm -rf $(KIT_NAME)
 	mkdir -p $(KIT_NAME)/include/ttmath $(KIT_NAME)/include/openssl $(KIT_NAME)/include/property_tree $(KIT_NAME)/$(THIRD_PARTY_DIR)
 
-	cp -R include/ByteBuffer.hpp include/Client.h include/ClientConfig.h \
+	cp -R include/CAPI.h include/ByteBuffer.hpp include/Client.h include/ClientConfig.h \
 		  include/Column.hpp include/ConnectionPool.h include/Decimal.hpp \
 		  include/Exception.hpp include/InvocationResponse.hpp include/Parameter.hpp \
 		  include/ParameterSet.hpp include/Procedure.hpp include/ProcedureCallback.hpp \

@@ -137,8 +137,8 @@ public:
      */
     void logMessage(ClientLogger::CLIENT_LOG_LEVEL severity, const std::string& msg);
 
-private:
     ClientImpl(ClientConfig config);
+private:
 
     void initiateAuthentication(struct bufferevent *bev, const std::string& hostname, unsigned short port);
     void finalizeAuthentication(PendingConnection* pc);
