@@ -28,6 +28,7 @@
 #include <openssl/ossl_typ.h>
 #include <openssl/ssl.h>
 
+#include <atomic>
 #include <map>
 #include <mutex>
 #include <set>

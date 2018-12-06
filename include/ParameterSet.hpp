@@ -26,7 +26,6 @@
 #include "Parameter.hpp"
 #include <vector>
 #include "Table.h"
-#include "boost/shared_ptr.hpp"
 #include "Decimal.hpp"
 #include "GeographyPoint.hpp"
 #include "Geography.hpp"

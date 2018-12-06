@@ -20,15 +20,18 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "ClientImpl.h"
+#include <algorithm>
 #include <cassert>
-#include "AuthenticationResponse.hpp"
-#include "AuthenticationRequest.hpp"
 #include <event2/buffer.h>
 #include <event2/thread.h>
 #include <event2/event.h>
 #include <sstream>
 #include <openssl/err.h>
+#include <unistd.h>
+
+#include "ClientImpl.h"
+#include "AuthenticationResponse.hpp"
+#include "AuthenticationRequest.hpp"
 
 #define HIGH_WATERMARK 1024 * 1024 * 55
 #define RECONNECT_INTERVAL 10

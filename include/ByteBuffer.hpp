@@ -48,10 +48,10 @@
 #ifndef VOLTDB_BYTEBUFFER_H
 #define VOLTDB_BYTEBUFFER_H
 
-#include <stdint.h>
+#include <cassert>
+#include <cstdint>
 #include <arpa/inet.h>
-#include <boost/scoped_array.hpp>
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 #include <vector>
 #include <string>
 #include <cstring>
@@ -541,6 +541,7 @@ public:
 //
 //        return out(copy, length);
 //    }
+    ScopedByteBuffer(const ScopedByteBuffer &other) : ExpandableByteBuffer(other) { }
 protected:
     void resetRef(char *data)  {
         m_ref.reset(data);
@@ -550,10 +551,8 @@ private:
         assert(other.m_buffer != NULL);
         return *this;
     }
-    ScopedByteBuffer(const ScopedByteBuffer &other) : ExpandableByteBuffer(other) {
-    }
     ScopedByteBuffer() : ExpandableByteBuffer(), m_ref()  {};
-    boost::scoped_array<char> m_ref;
+    std::unique_ptr<char[]> m_ref;
 };
 
 //

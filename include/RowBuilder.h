@@ -27,7 +27,6 @@
 #include "WireType.h"
 #include "Table.h"
 #include "Column.hpp"
-#include "boost/shared_ptr.hpp"
 #include <stdint.h>
 #include "Exception.hpp"
 #include "Decimal.hpp"

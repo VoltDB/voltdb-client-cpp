@@ -2,45 +2,39 @@
 #include "ClientConfig.h"
 #include "Client.h"
 
+#ifdef __cplusplus
 extern "C" {
-   struct c_client{
-      voltdb::ClientConfig* client_config;
-      voltdb::Client* client;
-   };
+#endif
+   struct c_client;
+   struct c_procedure;
+   struct c_invocation_response;
 
-   c_client c_create_client(const char* usrname, const char* pwd, const char* hostname,
+   struct c_client* c_create_client(const char* usrname, const char* pwd, const char* hostname,
          unsigned short port, bool keepConnecting, /*voltdb::ClientAuthHashScheme schema,*/
          bool enableAbandon, bool enableTimeout, int timeoutInSec, bool useSSL);
 
-   void c_close(c_client* config);
+   void c_close(struct c_client* config);
 
-   struct c_procedure {
-      voltdb::Procedure* procedure;
-      int numParams;
-      std::vector<voltdb::Parameter> parameters;
-   };
-
-   c_procedure c_create_procedure(const char* name, int nparams, voltdb::Parameter* params);
-   c_procedure c_create_call();
+   struct c_procedure* c_create_call();
    void c_drop_procedure(c_procedure*);
 
-   struct c_invocation_response {
-      voltdb::InvocationResponse response;
-   };
-
-   c_invocation_response c_exec_proc(c_client* client, c_procedure* proc, const char** params);
-   int c_status_code(c_invocation_response*);
+   struct c_invocation_response* c_exec_proc(struct c_client* client, struct c_procedure* proc, const char** params);
+   struct c_invocation_response* c_exec_adhoc(struct c_client* client, struct c_procedure* proc, const char* param);
+   int c_status_code(struct c_invocation_response*);
+   void c_destroy_response(struct c_invocation_response*);
 
    struct c_stringified_table {
       int num_cols, num_rows;
       char*** tuples;
    };
 
-   struct c_stringified_tables{
+   struct c_stringified_tables {
       int num_tables;
       c_stringified_table* tables;
    };
 
-   c_stringified_tables c_exec_result(c_invocation_response*);
-   void c_destroy_result(c_stringified_tables*);
+   c_stringified_tables* c_exec_result(struct c_invocation_response*);
+   void c_destroy_result(struct c_stringified_tables*);
+#ifdef __cplusplus
 }
+#endif

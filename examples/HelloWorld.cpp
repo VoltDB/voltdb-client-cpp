@@ -68,49 +68,29 @@ int main(int argc, char **argv) {
     parameterTypes[2] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
     {
 
-       c_client client = c_create_client("myusername", "mypassword", "localhost", 21212, false,
+       c_client* client = c_create_client("myusername", "mypassword", "localhost", 21212, false,
              /*voltdb::HASH_SHA1,*/ false, false, 10, false);
-       c_procedure adhoc = c_create_call();
+       c_procedure* adhoc = c_create_call();
        std::vector<std::string> queries{
           "DROP TABLE foo IF EXISTS;",
-          "CREATE TABLE foo(i int);",
-          "INSERT INTO foo VALUES(12);",
-          "INSERT INTO foo VALUES(14);",
-          "INSERT INTO foo VALUES(18);",
-          "SELECT * FROM foo LIMIT 5;"
+          "CREATE TABLE foo(i int, j int);",
+          "INSERT INTO foo VALUES(12, 14);",
+          "INSERT INTO foo VALUES(18, NULL);",
+          "INSERT INTO foo VALUES(14, 16);",
+          "SELECT * FROM foo ORDER BY i;"
        };
        for (std::string const& s : queries) {
           const char* params[] = {s.c_str(), nullptr};
-          voltdb::InvocationResponse response = c_exec_proc(&client, &adhoc, params).response;
-          if (response.failure()) { std::cout <<response.toString() << std::endl; return -1; }
+          c_invocation_response* response = c_exec_proc(client, adhoc, params);
+          if (c_status_code(response) != 1) { std::cout <<"Failed" << std::endl; return -1; }
        }
        const char* params[] = {queries[5].c_str(), nullptr};
-       c_invocation_response response = c_exec_proc(&client, &adhoc, params);
-       c_stringified_tables result = c_exec_result(&response);
-       print_result(&result);
-       c_destroy_result(&result);
-       c_drop_procedure(&adhoc);
-       c_close(&client);
-
-       /*
-          voltdb::Procedure adhoc("@AdHoc", std::vector<voltdb::Parameter>(1, voltdb::WIRE_TYPE_STRING));
-          voltdb::ParameterSet* params = adhoc.params();
-
-          params->addString("CREATE TABLE foo (i int);");
-          voltdb::InvocationResponse response = client.invoke(adhoc);
-          if (response.failure()) { std::cout <<response.toString() << std::endl; return -1; }
-
-          params->addString("INSERT INTO foo VALUES(12);");
-          response = client.invoke(adhoc);
-          if (response.failure()) { std::cout <<response.toString() << std::endl; return -1; }
-
-          params->addString("SELECT * from foo LIMIT 5;");
-          response = client.invoke(adhoc);
-          if (response.failure()) { std::cout <<response.toString() << std::endl; return -1; }
-          std::cout << response.toString();
-          return 0;
-          */
-
+       c_invocation_response* response = c_exec_proc(client, adhoc, params);
+       c_stringified_tables* result = c_exec_result(response);
+       print_result(result);
+       c_destroy_result(result);
+       c_drop_procedure(adhoc);
+       c_close(client);
     }
     voltdb::Procedure procedure("Insert", parameterTypes);
 

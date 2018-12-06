@@ -24,7 +24,6 @@
 #ifndef VOLTDB_PROCEDURECALLBACK_HPP_
 #define VOLTDB_PROCEDURECALLBACK_HPP_
 #include "InvocationResponse.hpp"
-#include <boost/shared_ptr.hpp>
 namespace voltdb {
 
 /*

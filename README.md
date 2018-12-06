@@ -22,6 +22,9 @@ New Features in 8.4
 ==================
 - Removed dependency on Boost library (by taking advantage of C++11 features)
 
+- Added a C wrapper for a few functions to support synchronous execution of Ad-Hoc query.
+The wrapper can serve as a bridge to any client in most other programming languages.
+
 New Features in 7.1
 ==================
 
