@@ -24,7 +24,6 @@
 #ifndef VOLTDB_PROCEDURECALLBACK_HPP_
 #define VOLTDB_PROCEDURECALLBACK_HPP_
 #include "InvocationResponse.hpp"
-#include <boost/shared_ptr.hpp>
 namespace voltdb {
 
 /*
@@ -45,7 +44,7 @@ public:
      * and passes any caught exceptions to the status listener.
      * @return true if the event loop should break after invoking this callback, false otherwise
      */
-    virtual bool callback(InvocationResponse response) throw (voltdb::Exception) = 0;
+    virtual bool callback(InvocationResponse response) = 0;
     virtual void abandon(AbandonReason reason) {}
     // Mechanism for procedure to over-ride abandon property set in client in event of backpressure.
     // @return true: allow abandoning of requests in case of back pressure

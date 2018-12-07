@@ -97,7 +97,7 @@ public:
     }
 
 private:
-    boost::scoped_array<int32_t> m_tokens;
+    std::unique_ptr<int32_t[]> m_tokens;
     uint32_t m_tokenCount;
 
     int32_t partitionForToken(int32_t hash) const {

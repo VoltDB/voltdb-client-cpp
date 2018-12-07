@@ -30,8 +30,6 @@
 #include "ByteBuffer.hpp"
 #include <cstdio>
 #include <event2/buffer.h>
-#include <boost/scoped_ptr.hpp>
-#include <boost/scoped_array.hpp>
 
 namespace voltdb {
 
@@ -165,8 +163,7 @@ void MockVoltDB::interrupt() {
     event_base_once(m_base, -1, EV_TIMEOUT, interrupt_callback, this, NULL);
 }
 
-void MockVoltDB::run() 
-throw (voltdb::Exception, voltdb::NoConnectionsException, voltdb::LibEventException) {
+void MockVoltDB::run() {
     if (event_base_dispatch(m_base) == -1) {
         throw voltdb::LibEventException();
     }
@@ -227,7 +224,7 @@ void MockVoltDB::readCallback(struct bufferevent *bev) {
         return;
     }
 
-    boost::shared_ptr<CxnContext> ctx = m_contexts[bev];
+    std::shared_ptr<CxnContext> ctx = m_contexts[bev];
     if (!ctx->m_authenticated) {
         if (m_hangupOnRequestCounter > 0) {
             m_hangupOnRequestCounter--;
@@ -250,7 +247,7 @@ void MockVoltDB::readCallback(struct bufferevent *bev) {
         evbuffer_remove(evbuf, lengthBytes, 4);
         ByteBuffer lengthBuffer(lengthBytes, 4);
         int32_t length = lengthBuffer.getInt32();
-        boost::scoped_array<char> message(new char[length]);
+        std::unique_ptr<char[]> message(new char[length]);
         evbuffer_remove(evbuf, message.get(), length );
         return;
     }
@@ -276,7 +273,7 @@ void MockVoltDB::readCallback(struct bufferevent *bev) {
         ByteBuffer lengthBuffer(lengthBytes, 4);
         int32_t length = lengthBuffer.getInt32();
         // message
-        boost::scoped_array<char> message(new char[length]);
+        std::unique_ptr<char[]> message(new char[length]);
         evbuffer_remove(evbuf, message.get(), length );
         ByteBuffer messageBuffer(message.get(), length);
         // ??
@@ -315,7 +312,7 @@ void MockVoltDB::readCallback(struct bufferevent *bev) {
                     m_timeoutCount--;
                 }
             }
-            
+
             response.putInt64( 5, clientData);
             evbuf = bufferevent_get_output(bev);
             if (evbuffer_add(evbuf, response.bytes(), static_cast<size_t>(response.remaining()))) {
@@ -344,7 +341,7 @@ void MockVoltDB::acceptCallback(
     bufferevent_setwatermark( bev, EV_READ, 0, 256);
     bufferevent_enable(bev, EV_READ);
     m_connections.insert(bev);
-    m_contexts[bev] = boost::shared_ptr<CxnContext>(new CxnContext(""));
+    m_contexts[bev] = std::shared_ptr<CxnContext>(new CxnContext(""));
 }
 
 }

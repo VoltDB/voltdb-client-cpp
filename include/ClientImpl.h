@@ -28,16 +28,15 @@
 #include <openssl/ossl_typ.h>
 #include <openssl/ssl.h>
 
+#include <atomic>
 #include <map>
+#include <mutex>
 #include <set>
 #include <list>
 #include <string>
 #include "ProcedureCallback.hpp"
 #include "Client.h"
 #include "Procedure.hpp"
-#include <boost/atomic.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/thread/mutex.hpp>
 #include "ClientConfig.h"
 #include "Distributer.h"
 
@@ -66,17 +65,17 @@ public:
      * @throws voltdb::TimerThreadException error happens when creating query timer monitor thread
      * @throws voltdb::SSLException ssl operations returns an error
      */
-    void createConnection(const std::string &hostname, const unsigned short port, const bool keepConnecting) throw (Exception, ConnectException, LibEventException, PipeCreationException, TimerThreadException, SSLException);
+    void createConnection(const std::string &hostname, const unsigned short port, const bool keepConnecting);
 
     /*
      * Synchronously invoke a stored procedure and return a the response.
      */
-    InvocationResponse invoke(Procedure &proc) throw (Exception, NoConnectionsException, UninitializedParamsException, LibEventException);
-    void invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> callback) throw (Exception, NoConnectionsException, UninitializedParamsException, LibEventException, ElasticModeMismatchException);
-    void invoke(Procedure &proc, ProcedureCallback *callback) throw (Exception, NoConnectionsException, UninitializedParamsException, LibEventException, ElasticModeMismatchException);
-    void runOnce() throw (Exception, NoConnectionsException, LibEventException);
-    void run() throw (Exception, NoConnectionsException, LibEventException);
-    void runForMaxTime(uint64_t microseconds) throw (Exception, NoConnectionsException, LibEventException);
+    InvocationResponse invoke(Procedure &proc);
+    void invoke(Procedure &proc, std::shared_ptr<ProcedureCallback> callback);
+    void invoke(Procedure &proc, ProcedureCallback *callback);
+    void runOnce();
+    void run();
+    void runForMaxTime(uint64_t microseconds);
 
    /*
     * Enter the event loop and process pending events until all responses have been received and then return.
@@ -86,7 +85,7 @@ public:
     * @throws LibEventException An unknown error occured in libevent
     * @return true if all requests were drained and false otherwise
     */
-    bool drain() throw (Exception, NoConnectionsException, LibEventException);
+    bool drain();
     bool isDraining() const { return m_isDraining; }
     ~ClientImpl();
 
@@ -96,7 +95,7 @@ public:
     void eventBaseLoopBreak();
     void reconnectEventCallback();
 
-    void runTimeoutMonitor() throw (LibEventException);
+    void runTimeoutMonitor();
     void purgeExpiredRequests();
     void triggerScanForTimeoutRequestsEvent();
 
@@ -139,11 +138,11 @@ public:
      */
     void logMessage(ClientLogger::CLIENT_LOG_LEVEL severity, const std::string& msg);
 
+    ClientImpl(ClientConfig config);
 private:
-    ClientImpl(ClientConfig config) throw (Exception, LibEventException, MDHashException, SSLException);
 
-    void initiateAuthentication(struct bufferevent *bev, const std::string& hostname, unsigned short port) throw (LibEventException);
-    void finalizeAuthentication(PendingConnection* pc) throw (Exception, ConnectException);
+    void initiateAuthentication(struct bufferevent *bev, const std::string& hostname, unsigned short port);
+    void finalizeAuthentication(PendingConnection* pc);
 
     /*
      * Updates procedures and topology information for transaction routing algorithm
@@ -163,7 +162,7 @@ private:
     /*
      * Initiate connection based on pending connection instance
      */
-    void initiateConnection(boost::shared_ptr<PendingConnection> &pc) throw (ConnectException, LibEventException, SSLException);
+    void initiateConnection(std::shared_ptr<PendingConnection> &pc);
 
     /*
      * Creates a pending connection that is handled in the reconnect callback
@@ -180,13 +179,13 @@ private:
      * @param: password for which hash digest will be generated
      * @throws MDHashException: An error occurred generating hash for the password
      */
-    void hashPassword(const std::string& password) throw (MDHashException);
+    void hashPassword(const std::string& password);
 
     /**
      * Initializes SSL library, contexts and algorithms to use
      * @throws SSLException: An error occurred during initialization of SSL
      */
-    void initSslConext() throw (SSLException);
+    void initSslConext();
     inline void notifySslClose(bufferevent *bev) {
         SSL *ssl = bufferevent_openssl_get_ssl(bev);
         if (ssl == NULL) {
@@ -200,22 +199,20 @@ private:
         }
     }
 
-    void setUpTimeoutCheckerMonitor() throw (LibEventException);
-    void startMonitorThread() throw (TimerThreadException);
+    void setUpTimeoutCheckerMonitor();
+    void startMonitorThread();
     bool isReadOnly(const Procedure &proc) ;
 
 private:
     class CallBackBookeeping {
     public:
-        CallBackBookeeping(const boost::shared_ptr<ProcedureCallback> &callback,
-                timeval timeout, bool readOnly = false) : m_procCallBack(callback),
-                                                          m_expirationTime(timeout),
-                                                          m_readOnly(readOnly) {}
+        CallBackBookeeping(const std::shared_ptr<ProcedureCallback> &callback,
+                timeval timeout, bool readOnly = false) : m_procCallBack(callback), m_expirationTime(timeout), m_readOnly(readOnly) {}
 
         CallBackBookeeping(const CallBackBookeeping& other) : m_procCallBack (other.m_procCallBack),
                 m_expirationTime (other.m_expirationTime),  m_readOnly (other.m_readOnly) {}
 
-        inline boost::shared_ptr<ProcedureCallback>  getCallback() const { return m_procCallBack; }
+        inline std::shared_ptr<ProcedureCallback>  getCallback() const { return m_procCallBack; }
         // fetch the query/proc timeout/expiration value
         inline timeval getExpirationTime() const { return m_expirationTime; }
         // returns true if the procedure is readOnly.
@@ -223,15 +220,15 @@ private:
         // helper function to set if the proc is readonly or not
         inline void setReadOnly(bool value) { m_readOnly = value; }
     private:
-        const boost::shared_ptr<ProcedureCallback> m_procCallBack;
+        const std::shared_ptr<ProcedureCallback> m_procCallBack;
         const timeval m_expirationTime;
         bool m_readOnly;
     };
 
     // Map from client data to the appropriate callback for a specific connection
-    typedef std::map< int64_t, boost::shared_ptr<CallBackBookeeping> > CallbackMap;
+    typedef std::map< int64_t, std::shared_ptr<CallBackBookeeping> > CallbackMap;
     // Map from buffer event (connection) to the connection's callback map
-    typedef std::map< struct bufferevent*, boost::shared_ptr<CallbackMap> > BEVToCallbackMap;
+    typedef std::map< struct bufferevent*, std::shared_ptr<CallbackMap>> BEVToCallbackMap;
 
     // data member variables
     Distributer  m_distributer;
@@ -241,17 +238,17 @@ private:
     int64_t m_nextRequestId;
     size_t m_nextConnectionIndex;
     std::vector<struct bufferevent*> m_bevs;
-    std::map<struct bufferevent *, boost::shared_ptr<CxnContext> > m_contexts;
+    std::map<struct bufferevent *, std::shared_ptr<CxnContext> > m_contexts;
     std::map<int, struct bufferevent *> m_hostIdToEvent;
     std::set<struct bufferevent *> m_backpressuredBevs;
     BEVToCallbackMap m_callbacks;
-    boost::shared_ptr<voltdb::StatusListener> m_listener;
+    std::shared_ptr<voltdb::StatusListener> m_listener;
     bool m_invocationBlockedOnBackpressure;
     bool m_backPressuredForOutstandingRequests;
-    boost::atomic<bool> m_loopBreakRequested;
+    std::atomic<bool> m_loopBreakRequested;
     bool m_isDraining;
     bool m_instanceIdIsSet;
-    boost::atomic<int32_t> m_outstandingRequests;
+    std::atomic<int32_t> m_outstandingRequests;
     //Identifier of the database instance this client is connected to
     int64_t m_clusterStartTime;
     int32_t m_leaderAddress;
@@ -267,12 +264,12 @@ private:
     //If to use abandon in case of backpressure.
     bool m_enableAbandon;
 
-    std::list<boost::shared_ptr<PendingConnection> > m_pendingConnectionList;
-    boost::atomic<size_t> m_pendingConnectionSize;
-    boost::mutex m_pendingConnectionLock;
+    std::list<std::shared_ptr<PendingConnection> > m_pendingConnectionList;
+    std::atomic<size_t> m_pendingConnectionSize;
+    std::mutex m_pendingConnectionLock;
 
     int m_wakeupPipe[2];
-    boost::mutex m_wakeupPipeLock;
+    std::mutex m_wakeupPipeLock;
 
     // query timeout management
 
@@ -307,8 +304,8 @@ private:
     SSL_CTX *m_clientSslCtx;
     // Reference count number of clients running to help in release of the global resource like
     // ssl ciphers, error strings and digests can be unloaded that are shared between clients
-    static boost::atomic<uint32_t> m_numberOfClients;
-    static boost::mutex m_globalResourceLock;
+    static std::atomic<uint32_t> m_numberOfClients;
+    static std::mutex m_globalResourceLock;
 
     static const int64_t VOLT_NOTIFICATION_MAGIC_NUMBER;
     static const std::string SERVICE;

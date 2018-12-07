@@ -16,14 +16,26 @@ The Linux binary was compiled with GCC 4.4.7 on Centos 6.7.
 The OSX binary was compiled with Xcode 7.2 on OSX 10.11.
 
 The source code is available in the [VoltDB Github repository]
-(https://github.com/VoltDB/voltdb-client-cpp). 
+(https://github.com/VoltDB/voltdb-client-cpp).
+
+New Features in 8.4
+==================
+- Removed dependency on Boost library (by taking advantage of C++11 features)
+
+- Added a C wrapper for a few functions to support synchronous execution of Ad-Hoc query.
+The wrapper can serve as a bridge to any client in most other programming languages.
 
 New Features in 7.1
 ==================
-- Add SSL support to C++ client to enable communication between VoltDB server and C++ client over SSL transport.
-To enable communication between a VoltDB server with SSL enabled for the external ports and a C++ client, the client
-needs to be instantiated using client config (voltdb::ClientConfig) with the ssl field (m_useSSL) set to true. Code
-snippet:
+
+- Add SSL support to C++ client to enable communication between VoltDB server
+  and C++ client over SSL transport.
+
+To enable communication between a VoltDB server with SSL enabled for the
+external ports and a C++ client, the client needs to be instantiated using
+client config (voltdb::ClientConfig) with the ssl field (m_useSSL) set to true.
+Code snippet:
+
 ```C++
 voltdb::ClientConfig config;
 ...
@@ -36,9 +48,13 @@ voltdb::Client client = voltdb::Client::create(config);
 New Features in 7.0
 ==================
 - Support for Table (synomous to VoltTable on server side) in parameter set.
-How to construct table: initialize table with column schema. Generate row to be inserted - initialize the row with same
-column schema as that of table, populate the row and add the row to the table. After inserting the populated row to the
-table, the row instance can be reused to populate it row with new values and push it table.
+
+How to construct table: initialize table with column schema. Generate row to be
+inserted - initialize the row with same column schema as that of table,
+populate the row and add the row to the table. After inserting the populated
+row to the table, the row instance can be reused to populate with new values
+and push to the table.
+
 ```C++
 std::vector<voltdb::Column> columns;
 columns.push_back(voltdb::Column("col1", voltdb::WIRE_TYPE_BIGINT));
@@ -54,7 +70,10 @@ table.addRow(row);
 
 New Features in V6.9
 ==================
-- Support for timing out outstanding/pending invocation requests. By default the monitoring of the pending requests for timeout is disabled. To exercise feature, timeout has to be enabled using client config. Default timeout is 10 seconds and can be tweaked through client config.
+- Support for timing out outstanding/pending invocation requests. By default
+  the monitoring of the pending requests for timeout is disabled. To exercise
+  feature, timeout has to be enabled using client config. Default timeout is 10
+  seconds and can be tweaked through client config.
 ```C++
 bool enableQueryTimeout = true;
 int queryTimeout = 10;
@@ -65,9 +84,16 @@ voltdb::Client client = voltdb::Client::create(config);
 
 New Features in V6.8
 ==================
-- Update backpressure notification to notify when backpressure on client transitions from on to off
-- Fix handling of pending connection logic where client gets disconnected and tries to reconnect, if socket timeout is longer than 10 seconds, it can potentially crash the client
-- Update setaffinity logic to not drop the set affinity request in case of backpresure with client configured with enable abandon set to true.
+
+- Update backpressure notification to notify when backpressure on client
+  transitions from on to off
+
+- Fix handling of pending connection logic where client gets disconnected and
+  tries to reconnect, if socket timeout is longer than 10 seconds, it can
+  potentially crash the client
+
+- Update setaffinity logic to not drop the set affinity request in case of
+  backpresure with client configured with enable abandon set to true.
 
 New Features in V6.0
 ==================
@@ -146,10 +172,9 @@ clientvoter.cpp                  \
 ./libevent_pthread.a             \
 -lrt                             \
 -pthread                         \
--lboost_system                   \
--lboost_thread                   \
 -o voter
 ```
 
 Note that -lrt should not be included for the mac edition. See the example makefile
 for more detail.
+

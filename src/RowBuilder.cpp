@@ -25,7 +25,7 @@
 #include "Table.h"
 
 namespace voltdb {
-    RowBuilder::RowBuilder(const std::vector<Column> &schema) throw (RowCreationException) :
+    RowBuilder::RowBuilder(const std::vector<Column> &schema) :
     m_columns(schema), m_buffer(8192), m_currentColumnIndex(0) {
         if (m_columns.empty()) {
             throw RowCreationException("The schema for row must contain at least one column");

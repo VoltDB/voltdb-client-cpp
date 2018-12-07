@@ -25,7 +25,6 @@
 #include <cassert>
 #include <exception>
 #include <iostream>
-#include <boost/scoped_ptr.hpp>
 #include <cstdio>
 #include "InvocationResponse.hpp"
 #include "ClientConfig.h"
@@ -50,7 +49,7 @@ public:
 
     bool uncaughtException(
             std::exception exception,
-            boost::shared_ptr<voltdb::ProcedureCallback> callback,
+            std::shared_ptr<voltdb::ProcedureCallback> callback,
             InvocationResponse response) {
         if (m_listener != NULL) {
             return m_listener->uncaughtException(exception, callback, response);
@@ -125,7 +124,7 @@ void cleanupOnScriptEnd(void *ptr) {
         LockGuard guard(gPool->m_lock);
         ClientSet *clients = reinterpret_cast<ClientSet*>(ptr);
         if (clients != NULL) {
-            boost::scoped_ptr<ClientSet> guard(clients);
+           std::unique_ptr<ClientSet> guard(clients);
             for(ClientSet::iterator i = clients->begin(); i != clients->end(); i++) {
                 (*i)->m_listener->m_listener = NULL;
                 gPool->m_clients[(*i)->m_identifier].push_back(*i);
@@ -160,8 +159,7 @@ ConnectionPool::acquireClient(
         std::string password,
         StatusListener *listener,
         unsigned short port,
-        ClientAuthHashScheme sha)
-throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+        ClientAuthHashScheme sha) {
     LockGuard guard(m_lock);
     ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
     if (clients == NULL) {
@@ -180,10 +178,10 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
         }
     }
 
-    std::vector<boost::shared_ptr<ClientStuff> > *clientStuffs = &m_clients[identifier];
+    std::vector<std::shared_ptr<ClientStuff>> *clientStuffs = &m_clients[identifier];
 
     while (clientStuffs->size() > 0) {
-        boost::shared_ptr<ClientStuff> clientStuff = clientStuffs->back();
+        std::shared_ptr<ClientStuff> clientStuff = clientStuffs->back();
         clientStuffs->pop_back();
 
         // run the event loop once to verify the connection is still available
@@ -204,7 +202,7 @@ throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
     DelegatingStatusListener *delegatingListener = new DelegatingStatusListener();
     Client client = voltdb::Client::create(ClientConfig( username, password, delegatingListener, sha));
     client.createConnection(hostname, port);
-    boost::shared_ptr<ClientStuff> stuff(new ClientStuff(client, identifier, delegatingListener));
+    std::shared_ptr<ClientStuff> stuff(new ClientStuff(client, identifier, delegatingListener));
     stuff->m_listener->m_listener = listener;
     clients->push_back(stuff);
     return client;
@@ -216,12 +214,11 @@ ConnectionPool::acquireClient(
         std::string username,
         std::string password,
         unsigned short port,
-        ClientAuthHashScheme sha)
-throw (voltdb::Exception, voltdb::ConnectException, voltdb::LibEventException) {
+        ClientAuthHashScheme sha) {
     return acquireClient(hostname, username, password, NULL, port, sha);
 }
 
-void ConnectionPool::returnClient(Client client) throw (voltdb::Exception) {
+void ConnectionPool::returnClient(Client client) {
     LockGuard guard(m_lock);
     ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
     if (clients == NULL) {
@@ -240,7 +237,7 @@ void ConnectionPool::returnClient(Client client) throw (voltdb::Exception) {
     throw MisplacedClientException();
 }
 
-void ConnectionPool::closeClientConnection(Client client) throw (voltdb::Exception) {
+void ConnectionPool::closeClientConnection(Client client) {
     LockGuard guard(m_lock);
     ClientSet *clients = reinterpret_cast<ClientSet*>(pthread_getspecific(m_borrowedClients));
     if (clients == NULL) {

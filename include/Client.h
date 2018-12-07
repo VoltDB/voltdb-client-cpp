@@ -28,7 +28,6 @@
 #include "Procedure.hpp"
 #include "StatusListener.h"
 #include "ClientLogger.h"
-#include <boost/shared_ptr.hpp>
 #include "ClientConfig.h"
 #include "Exception.hpp"
 
@@ -55,7 +54,7 @@ public:
      * @throws voltdb::ConnectException An error occurs connecting or authenticating
      * @throws voltdb::LibEventException libevent returns an error code
      */
-    void createConnection(const std::string &hostname, const unsigned short port = 21212, const bool keepConnecting = false) throw (voltdb::ConnectException, voltdb::LibEventException, voltdb::Exception);
+    void createConnection(const std::string &hostname, const unsigned short port = 21212, const bool keepConnecting = false);
 
     /*
      * Close client connection.
@@ -69,7 +68,7 @@ public:
      * @throws UninitializedParamsException Some or all of the parameters for the stored procedure were not set
      * @throws LibEventException An unknown error occured in libevent
      */
-    voltdb::InvocationResponse invoke(voltdb::Procedure &proc) throw (voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::Exception);
+    voltdb::InvocationResponse invoke(voltdb::Procedure &proc);
 
     /*
      * Asynchronously invoke a stored procedure. Returns immediately if there is no backpressure, but if there is
@@ -81,9 +80,9 @@ public:
      * @throws LibEventException An unknown error occured in libevent
      */
 #ifdef SWIG
-%ignore invoke(voltdb::Procedure &proc, boost::shared_ptr<voltdb::ProcedureCallback> callback);
+%ignore invoke(voltdb::Procedure &proc, std::shared_ptr<voltdb::ProcedureCallback> callback);
 #endif
-    void invoke(voltdb::Procedure &proc, boost::shared_ptr<voltdb::ProcedureCallback> callback) throw (voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::Exception);
+    void invoke(voltdb::Procedure &proc, std::shared_ptr<voltdb::ProcedureCallback> callback);
 
     /*
      * Asynchronously invoke a stored procedure. Returns immediately if there is no backpressure, but if there is
@@ -94,7 +93,7 @@ public:
      * @throws UninitializedParamsException Some or all of the parameters for the stored procedure were not set
      * @throws LibEventException An unknown error occured in libevent
      */
-    void invoke(voltdb::Procedure &proc, voltdb::ProcedureCallback *callback) throw (voltdb::NoConnectionsException, voltdb::UninitializedParamsException, voltdb::LibEventException, voltdb::Exception);
+    void invoke(voltdb::Procedure &proc, voltdb::ProcedureCallback *callback);
 
     /*
      * Run the event loop once and process pending events. This writes requests to any ready connections
@@ -103,7 +102,7 @@ public:
      * @throws NoConnectionsException No connections to the database so there is no work to be done
      * @throws LibEventException An unknown error occured in libevent
      */
-    void runOnce() throw (voltdb::NoConnectionsException, voltdb::LibEventException, voltdb::Exception);
+    void runOnce();
 
     /*
      * Enter the event loop and process pending events indefinitely. This writes requests to any ready connections
@@ -112,7 +111,7 @@ public:
      * @throws NoConnectionsException No connections to the database so there is no work to be done
      * @throws LibEventException An unknown error occured in libevent
      */
-    void run() throw (voltdb::NoConnectionsException, voltdb::LibEventException, voltdb::Exception);
+    void run();
 
     /*
      * Enter the event loop and process pending events until the specified time in microseconds has expired.
@@ -121,7 +120,7 @@ public:
      * @throws NoConnectionsException No connections to the database so there is no work to be done
      * @throws LibEventException An unknown error occured in libevent
      */
-    void runForMaxTime(uint64_t microseconds) throw (voltdb::NoConnectionsException, voltdb::LibEventException, voltdb::Exception);
+    void runForMaxTime(uint64_t microseconds);
 
     /*
      * Enter the event loop and process pending events until all responses have been received and then return.
@@ -131,7 +130,7 @@ public:
      * @throws LibEventException An unknown error occured in libevent
      * @return true if all requests were drained and false otherwise
      */
-    bool drain() throw (voltdb::NoConnectionsException, voltdb::LibEventException, voltdb::Exception);
+    bool drain();
 
     /*
      * Returns true if this client is draining; i.e., still processing
@@ -165,7 +164,7 @@ public:
     /*
      * Create a client with the specified configuration
      */
-    static Client create(voltdb::ClientConfig config = voltdb::ClientConfig()) throw(voltdb::LibEventException, voltdb::Exception);
+    static Client create(voltdb::ClientConfig config = voltdb::ClientConfig());
 
     /*
      * API to be called to enable client affinity (transaction homing)
@@ -189,17 +188,17 @@ public:
     int64_t getExpiredRequestsCount() const;
 
     ~Client();
+
+    //Actual constructor
+    Client(ClientImpl *m_impl);
 private:
 
     /*
      * Disable various constructors and assignment
      */
-    Client() throw(voltdb::LibEventException);
+    Client();
 
-    //Actual constructor
-    Client(ClientImpl *m_impl);
-
-    boost::shared_ptr<ClientImpl> m_impl;
+    std::shared_ptr<ClientImpl> m_impl;
 };
 
 }

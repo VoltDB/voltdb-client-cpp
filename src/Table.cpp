@@ -35,8 +35,8 @@ namespace voltdb {
         buffer.position(5);
         size_t columnCount = static_cast<size_t>(buffer.getInt16());
         assert(columnCount > 0);
-        boost::shared_ptr<std::vector< voltdb::Column> > columns(
-                                new std::vector< voltdb::Column>(columnCount));
+        std::shared_ptr<std::vector<voltdb::Column>> columns(
+              new std::vector<voltdb::Column>(columnCount));
         m_columns = columns;
 
         std::vector<int8_t> types(columnCount);
@@ -54,7 +54,7 @@ namespace voltdb {
         m_buffer.position(m_buffer.limit());
     }
 
-    Table::Table(const std::vector<Column> &columns) throw (TableException) {
+    Table::Table(const std::vector<Column> &columns) {
         if (columns.empty()) {
             throw TableException("Failed to create table. Provided schema can't be empty, "
                     "it must contain at least one column");
@@ -145,13 +145,13 @@ namespace voltdb {
         }
     }
 
-    void Table::validateRowScehma(const std::vector<Column>& schema) const throw (InCompatibleSchemaException) {
+    void Table::validateRowScehma(const std::vector<Column>& schema) const {
         if (schema.empty() || schema != *m_columns) {
             throw (InCompatibleSchemaException());
         }
     }
 
-    void Table::addRow(RowBuilder& row) throw (TableException, UninitializedColumnException, InCompatibleSchemaException) {
+    void Table::addRow(RowBuilder& row) {
         const std::vector<Column> schema = row.columns();
         validateRowScehma(schema);
         m_buffer.limit(m_buffer.capacity());
@@ -185,7 +185,7 @@ namespace voltdb {
      * in the passed in byte buffer to serialize the data. Needed space
      * to serialize can be obtained by Table::getSerializedSize()
      */
-    int32_t Table::serializeTo(ByteBuffer& buffer) throw (TableException){
+    int32_t Table::serializeTo(ByteBuffer& buffer) {
         buffer.limit(buffer.capacity());
         if (buffer.remaining() < getSerializedSize()) {
             throw TableException("Cannot serialize table as the specified buffer is not large enough. "
@@ -232,7 +232,7 @@ namespace voltdb {
         int32_t size;
         istream.read((char*)&size, sizeof(size));
         if (size != 0) {
-            boost::shared_array<char> buffer(new char[size]);
+            std::shared_ptr<char[]> buffer(new char[size]);
             istream.read(buffer.get(), size);
             return voltdb::SharedByteBuffer(buffer, size);
         } else {

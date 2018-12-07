@@ -44,7 +44,7 @@ public:
    }
    virtual bool uncaughtException(
            std::exception exception,
-           boost::shared_ptr<voltdb::ProcedureCallback> callback,
+           std::shared_ptr<voltdb::ProcedureCallback> callback,
            InvocationResponse response) {
        if (m_listener != NULL) {
            return m_listener->uncaughtException(exception, callback, response);
@@ -94,7 +94,7 @@ CPPUNIT_TEST_SUITE_END();
 
 public:
     void setUp() {
-        m_dlistener = new boost::shared_ptr<DelegatingListener>(new DelegatingListener());
+        m_dlistener = new std::shared_ptr<DelegatingListener>(new DelegatingListener());
         ClientConfig config = ClientConfig("hello", "world", *m_dlistener);
         m_voltdb.reset(new MockVoltDB(Client::create(config)));
         m_client = m_voltdb->client();
@@ -169,7 +169,7 @@ public:
         InvocationResponse m_response;
         bool m_hasResponse;
         SyncCallback() : m_hasResponse(false) {}
-        virtual bool callback(InvocationResponse response) throw (voltdb::Exception) {
+        virtual bool callback(InvocationResponse response) {
             m_response = response;
             m_hasResponse = true;
             return false;
@@ -188,7 +188,7 @@ public:
         m_voltdb->filenameForNextResponse("invocation_response_success.msg");
 
         SyncCallback *cb = new SyncCallback();
-        boost::shared_ptr<ProcedureCallback> callback(cb);
+        std::shared_ptr<ProcedureCallback> callback(cb);
         (m_client)->invoke(proc, callback);
         while (!cb->m_hasResponse) {
             (m_client)->runOnce();
@@ -228,7 +228,7 @@ public:
         Procedure proc("foo", signature);
         proc.params();
         SyncCallback *cb = new SyncCallback();
-        boost::shared_ptr<ProcedureCallback> callback(cb);
+        std::shared_ptr<ProcedureCallback> callback(cb);
         (m_client)->invoke(proc, callback);
     }
 
@@ -244,7 +244,7 @@ public:
         std::vector<Parameter> signature;
         Procedure proc("foo", signature);
         proc.params();
-        (m_client)->invoke(proc, boost::shared_ptr<ProcedureCallback>());
+        (m_client)->invoke(proc, std::shared_ptr<ProcedureCallback>());
     }
 
     void testLostConnection() {
@@ -255,7 +255,7 @@ public:
            Listener() : lostReported(false), activeReported(false) {}
             virtual bool uncaughtException(
                     std::exception exception,
-                    boost::shared_ptr<voltdb::ProcedureCallback> callback,
+                    std::shared_ptr<voltdb::ProcedureCallback> callback,
                     InvocationResponse response) {
                 CPPUNIT_ASSERT(false);
                 return false;
@@ -282,7 +282,7 @@ public:
         proc.params();
 
         SyncCallback *cb = new SyncCallback();
-        boost::shared_ptr<ProcedureCallback> callback(cb);
+        std::shared_ptr<ProcedureCallback> callback(cb);
         (m_client)->invoke(proc, callback);
         m_voltdb->hangupOnRequestCount(1);
 
@@ -330,7 +330,7 @@ public:
         public:
             virtual bool uncaughtException(
                     std::exception exception,
-                    boost::shared_ptr<voltdb::ProcedureCallback> callback,
+                    std::shared_ptr<voltdb::ProcedureCallback> callback,
                     InvocationResponse response) {
                 CPPUNIT_ASSERT(false);
                 return false;
@@ -356,7 +356,7 @@ public:
         proc.params();
 
         SyncCallback *cb = new SyncCallback();
-        boost::shared_ptr<ProcedureCallback> callback(cb);
+        std::shared_ptr<ProcedureCallback> callback(cb);
         (m_client)->invoke(proc, callback);
         m_voltdb->hangupOnRequestCount(1);
 
@@ -367,7 +367,7 @@ public:
     class BreakingSyncCallback : public ProcedureCallback {
     public:
         InvocationResponse m_response;
-        virtual bool callback(InvocationResponse response) throw (voltdb::Exception) {
+        virtual bool callback(InvocationResponse response) {
             m_response = response;
             return true;
         }
@@ -385,7 +385,7 @@ public:
         m_voltdb->filenameForNextResponse("invocation_response_success.msg");
 
         BreakingSyncCallback *cb = new BreakingSyncCallback();
-        boost::shared_ptr<ProcedureCallback> callback(cb);
+        std::shared_ptr<ProcedureCallback> callback(cb);
         (m_client)->invoke(proc, callback);
 
         (m_client)->run();
@@ -393,7 +393,7 @@ public:
 
     class ThrowingCallback : public ProcedureCallback {
     public:
-        virtual bool callback(InvocationResponse response) throw (voltdb::Exception) {
+        virtual bool callback(InvocationResponse response) {
             throw voltdb::Exception();
         }
     };
@@ -406,7 +406,7 @@ public:
            Listener() : lostReported(false), activeReported(false) {}
             virtual bool uncaughtException(
                     std::exception exception,
-                    boost::shared_ptr<voltdb::ProcedureCallback> callback,
+                    std::shared_ptr<voltdb::ProcedureCallback> callback,
                     InvocationResponse response) {
                 lostReported = true;
                 return true;
@@ -439,7 +439,7 @@ public:
         m_voltdb->filenameForNextResponse("invocation_response_success.msg");
 
         ThrowingCallback *cb = new ThrowingCallback();
-        boost::shared_ptr<ProcedureCallback> callback(cb);
+        std::shared_ptr<ProcedureCallback> callback(cb);
         (m_client)->invoke(proc, callback);
 
         (m_client)->run();
@@ -452,7 +452,7 @@ public:
            Listener() : reported(false) {}
             virtual bool uncaughtException(
                     std::exception exception,
-                    boost::shared_ptr<voltdb::ProcedureCallback> callback,
+                    std::shared_ptr<voltdb::ProcedureCallback> callback,
                     InvocationResponse response) {
                 CPPUNIT_ASSERT(false);
                 return true;
@@ -476,7 +476,7 @@ public:
         std::vector<Parameter> signature;
         Procedure proc("Insert", signature);
         SyncCallback *cb = new SyncCallback();
-        boost::shared_ptr<ProcedureCallback> callback(cb);
+        std::shared_ptr<ProcedureCallback> callback(cb);
         m_voltdb->dontRead();
         while (!listener.reported) {
             (m_client)->invoke(proc, callback);
@@ -488,7 +488,7 @@ public:
     public:
         CountingCallback(int32_t count) : m_count(count) {}
 
-        bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
+        bool callback(voltdb::InvocationResponse response) {
             m_count--;
 
             CPPUNIT_ASSERT(response.success());
@@ -504,7 +504,7 @@ public:
         Procedure proc("Insert", signature);
 
         CountingCallback *cb = new CountingCallback(5);
-        boost::shared_ptr<ProcedureCallback> callback(cb);
+        std::shared_ptr<ProcedureCallback> callback(cb);
         for (int ii = 0; ii < 5; ii++) {
             (m_client)->invoke( proc, callback);
         }
@@ -517,7 +517,7 @@ public:
     public:
         CountingSuccessAndConnectionLost() : m_success(0), m_connectionLost(0) {}
 
-        bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
+        bool callback(voltdb::InvocationResponse response) {
             if (response.success()) {
                 m_success++;
             } else {
@@ -537,7 +537,7 @@ public:
         Procedure proc("Insert", signature);
 
         CountingSuccessAndConnectionLost *cb = new CountingSuccessAndConnectionLost();
-        boost::shared_ptr<ProcedureCallback> callback(cb);
+        std::shared_ptr<ProcedureCallback> callback(cb);
         for (int ii = 0; ii < 5; ii++) {
             (m_client)->invoke( proc, callback);
         }
@@ -557,7 +557,7 @@ public:
         Procedure proc("Insert", signature);
 
         CountingSuccessAndConnectionLost *cb = new CountingSuccessAndConnectionLost();
-        boost::shared_ptr<ProcedureCallback> callback(cb);
+        std::shared_ptr<ProcedureCallback> callback(cb);
 
         // Queue up two async SP invocations
         for (int ii = 0; ii < 2; ii++) {
@@ -576,8 +576,8 @@ public:
 
 private:
     Client *m_client;
-    boost::scoped_ptr<MockVoltDB> m_voltdb;
-    boost::shared_ptr<DelegatingListener> *m_dlistener;
+    std::unique_ptr<MockVoltDB> m_voltdb;
+    std::shared_ptr<DelegatingListener> *m_dlistener;
 };
 CPPUNIT_TEST_SUITE_REGISTRATION( ClientTest );
 }

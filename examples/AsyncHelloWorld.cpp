@@ -25,7 +25,6 @@
 #define __STDC_LIMIT_MACROS
 
 #include <vector>
-#include <boost/shared_ptr.hpp>
 #include "Client.h"
 #include "Table.h"
 #include "TableIterator.h"
@@ -44,7 +43,7 @@ class CountingCallback : public voltdb::ProcedureCallback {
 public:
     CountingCallback(int32_t count) : m_count(count) {}
 
-    bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
+    bool callback(voltdb::InvocationResponse response) {
         m_count--;
 
         //Print the error response if there was a problem
@@ -69,7 +68,7 @@ private:
  */
 class PrintingCallback : public voltdb::ProcedureCallback {
 public:
-    bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception) {
+    bool callback(voltdb::InvocationResponse response) {
         std::cout << response.toString();
         return true;
     }
@@ -93,7 +92,7 @@ int main(int argc, char **argv) {
     parameterTypes[2] = voltdb::Parameter(voltdb::WIRE_TYPE_STRING);
     voltdb::Procedure procedure("Insert", parameterTypes);
 
-    boost::shared_ptr<CountingCallback> callback(new CountingCallback(5));
+    std::shared_ptr<CountingCallback> callback(new CountingCallback(5));
 
     /*
      * Load the database.
@@ -130,7 +129,7 @@ int main(int argc, char **argv) {
      * Retrieve the message
      */
     selectProc.params()->addString("Spanish");
-    client.invoke(selectProc, boost::shared_ptr<PrintingCallback>(new PrintingCallback()));
+    client.invoke(selectProc, std::shared_ptr<PrintingCallback>(new PrintingCallback()));
 
     /*
      * Invoke event loop

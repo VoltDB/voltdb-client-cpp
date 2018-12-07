@@ -32,7 +32,6 @@
 #include <time.h>
 #include <algorithm>
 #include <sys/time.h>
-#include <boost/shared_ptr.hpp>
 #include "Client.h"
 #include "Table.h"
 #include "TableIterator.h"
@@ -72,8 +71,7 @@ int64_t millisec_time() {
 class VoterCallback : public voltdb::ProcedureCallback
 {
 public:
-    bool callback(voltdb::InvocationResponse response) throw (voltdb::Exception)
-    {
+    bool callback(voltdb::InvocationResponse response) {
         bool retVal = false;
         if (response.failure())
         {
@@ -202,7 +200,7 @@ int main(int argc, char* argv[]) {
     parameterTypes.clear();
     parameterTypes.resize(3);
 
-    boost::shared_ptr<VoterCallback> callback(new VoterCallback());
+    std::shared_ptr<VoterCallback> callback(new VoterCallback());
 
     while (endTime > currentTime)
     {

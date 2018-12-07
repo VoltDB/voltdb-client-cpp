@@ -25,7 +25,6 @@
 #define VOLTDB_CLIENTCONFIG_H_
 #include <string>
 #include "StatusListener.h"
-#include <boost/shared_ptr.hpp>
 
 namespace voltdb {
 
@@ -37,13 +36,13 @@ public:
             std::string username = std::string(""),
             std::string password = std::string(""),
             ClientAuthHashScheme scheme = HASH_SHA1, bool enableAbandon = false,
-            bool enableQueryTimeout = false, int timeoutInSec =  DEFAULT_QUERY_TIMEOUT_SEC,
+            bool enableQueryTimeout = false, int timeoutInSec = DEFAULT_QUERY_TIMEOUT_SEC,
             bool useSSL = false);
 
     ClientConfig(
             std::string username,
             std::string password,
-            boost::shared_ptr<StatusListener> listener,
+            std::shared_ptr<StatusListener> listener,
             ClientAuthHashScheme scheme = HASH_SHA1, bool enableAbandon = false,
             bool enableQueryTimeout = false, int timeoutInSec = DEFAULT_QUERY_TIMEOUT_SEC,
             bool useSSL = false);
@@ -57,11 +56,11 @@ public:
             bool useSSL = false);
     std::string m_username;
     std::string m_password;
-    boost::shared_ptr<StatusListener> m_listener;
+    std::shared_ptr<StatusListener> m_listener;
     int32_t m_maxOutstandingRequests;
     ClientAuthHashScheme m_hashScheme;
-    bool m_enableAbandon;
-    bool m_enableQueryTimeout;
+    const bool m_enableAbandon;
+    const bool m_enableQueryTimeout;
     timeval m_queryTimeout;
     timeval m_scanIntervalForTimedoutQuery;
     bool m_useSSL;

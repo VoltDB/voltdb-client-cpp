@@ -26,7 +26,6 @@
 
 #include "ByteBuffer.hpp"
 #include "Column.hpp"
-#include <boost/shared_ptr.hpp>
 #include "Row.hpp"
 #include "Exception.hpp"
 
@@ -45,12 +44,12 @@ public:
      */
 #ifdef SWIG
 %ignore TableIterator(voltdb::SharedByteBuffer rows,
-            boost::shared_ptr<std::vector<voltdb::Column> > columns,
+            std::shared_ptr<std::vector<voltdb::Column>> columns,
             int32_t rowCount);
 #endif
     TableIterator(
             voltdb::SharedByteBuffer rows,
-            boost::shared_ptr<std::vector<voltdb::Column> > columns,
+            std::shared_ptr<std::vector<voltdb::Column>> columns,
             int32_t rowCount) :
         m_buffer(rows), m_columns(columns), m_rowCount(rowCount), m_currentRow(0) {}
 
@@ -70,7 +69,7 @@ public:
      * more rows. OverflowUnderflowException and IndexOutOfBoundsException only result if there are bugs
      * and are not expected normally.
      */
-    voltdb::Row next() throw (NoMoreRowsException, OverflowUnderflowException, IndexOutOfBoundsException) {
+    voltdb::Row next() {
         if (m_rowCount <= m_currentRow) {
             throw NoMoreRowsException();
         }
@@ -85,7 +84,7 @@ public:
 
 private:
     voltdb::SharedByteBuffer m_buffer;
-    boost::shared_ptr<std::vector<voltdb::Column> > m_columns;
+    std::shared_ptr<std::vector<voltdb::Column> > m_columns;
     int32_t m_rowCount;
     int32_t m_currentRow;
 };

@@ -25,7 +25,6 @@
 #define VOLTDB_TABLE_H_
 
 #include "ByteBuffer.hpp"
-#include <boost/shared_ptr.hpp>
 #include <vector>
 #include "Column.hpp"
 #include <sstream>
@@ -46,7 +45,7 @@ public:
      * to the shared buffer indefinitely so watch out for unwanted memory retension.
      */
     Table(SharedByteBuffer buffer);
-    Table(const std::vector<Column> &columns) throw (TableException);
+    Table(const std::vector<Column> &columns);
     Table() {}
 
     ~Table() {
@@ -73,7 +72,7 @@ public:
      * Precondition: Row and Table schema should be same
      * and all the row columns should be init'ed
      */
-    void addRow(RowBuilder& row) throw (TableException, UninitializedColumnException, InCompatibleSchemaException);
+    void addRow(RowBuilder& row);
 
     /*
      * Retrieve a copy of the column metadata.
@@ -95,7 +94,7 @@ public:
      * have ample space available to serialize table data. The needed space can
      * be queried using getSerializedSize()
      */
-    int32_t serializeTo(ByteBuffer& buffer) throw (TableException);
+    int32_t serializeTo(ByteBuffer& buffer);
 
     /**
      * Returns the size in bytes needed to serialize the current table data
@@ -119,8 +118,8 @@ public:
     const static int32_t MAX_TUPLE_LENGTH;
     const static int8_t DEFAULT_STATUS_CODE;
 private:
-    void validateRowScehma(const std::vector<Column>& schema) const throw (InCompatibleSchemaException);
-    boost::shared_ptr<std::vector<voltdb::Column> > m_columns;
+    void validateRowScehma(const std::vector<Column>& schema) const;
+    std::shared_ptr<std::vector<voltdb::Column>> m_columns;
     int32_t m_rowCountPosition;
     int32_t m_rowCount;
     mutable voltdb::SharedByteBuffer m_buffer;
