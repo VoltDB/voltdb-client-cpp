@@ -469,7 +469,7 @@ static void debugEventCallback(int severity, const char* msg) {
 ClientImpl::ClientImpl(ClientConfig config) throw (Exception, LibEventException, MDHashException, SSLException) :
         m_base(NULL), m_ev(NULL), m_cfg(NULL), m_nextRequestId(INT64_MIN), m_nextConnectionIndex(0),
         m_listener(config.m_listener), m_invocationBlockedOnBackpressure(false),
-        m_backPressuredForOutstandingRequests(false), m_loopBreakRequested(false),
+        m_backPressuredForOutstandingRequests(false),
         m_isDraining(false), m_instanceIdIsSet(false), m_outstandingRequests(0), m_leaderAddress(-1),
         m_clusterStartTime(-1), m_username(config.m_username), m_passwordHash(NULL), m_maxOutstandingRequests(config.m_maxOutstandingRequests),
         m_ignoreBackpressure(false), m_useClientAffinity(true),m_updateHashinator(false), m_enableAbandon(config.m_enableAbandon), m_pendingConnectionSize(0),
@@ -1029,7 +1029,6 @@ InvocationResponse ClientImpl::invoke(Procedure &proc) throw (Exception, NoConne
         throw LibEventException("Synchronous invoke: failed running base loop");
     }
 
-    m_loopBreakRequested = false;
     return response;
 }
 
@@ -1078,7 +1077,10 @@ struct bufferevent *ClientImpl::routeProcedure(Procedure &proc, ScopedByteBuffer
     if (hostId >= 0) {
         std::map<int, bufferevent*>::iterator bevEntry = m_hostIdToEvent.find(hostId);
         if (bevEntry != m_hostIdToEvent.end()) {
-            return bevEntry->second;
+            // Check if it is valid and has not been removed due to lost connection
+            if (m_callbacks.find(bevEntry->second) != m_callbacks.end()) {
+                return bevEntry->second;
+            }
         }
     }
     return NULL;
@@ -1155,25 +1157,56 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
      *  break the event loop later.
      */
     struct bufferevent *bev = NULL;
+
+    bool procReadOnly = false;
+    //route transaction to correct event if client affinity is enabled and hashinator updating is not in progress
+    //elastic scalability is disabled
+    if (m_useClientAffinity && !m_distributer.isUpdating()) {
+        if (isReadOnly(proc)) {
+            procReadOnly = true;
+        }
+    }
+
     while (true) {
+        struct bufferevent *routed_bev = NULL;
+        if (m_useClientAffinity && !m_distributer.isUpdating()) {
+            // It is possible that the topology was updated while waiting for backpressure so re-check every time.
+            routed_bev = routeProcedure(proc, sbb);
+        }
         if (m_ignoreBackpressure) {
-            bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+            if (routed_bev == NULL) {
+                bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+            }
+            else {
+                bev = routed_bev;
+            }
             break;
         }
 
         //Assume backpressure if the number of outstanding requests is too large, i.e. leave bev == NULL
         if (m_outstandingRequests <= m_maxOutstandingRequests) {
-            for (size_t ii = 0; ii < m_bevs.size(); ii++) {
-                bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
-                if (m_backpressuredBevs.find(bev) != m_backpressuredBevs.end()) {
+            if (routed_bev == NULL) {
+                for (size_t ii = 0; ii < m_bevs.size(); ii++) {
+                    bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+                    if (m_backpressuredBevs.find(bev) != m_backpressuredBevs.end()) {
+                        bev = NULL;
+                    } else {
+                        break;
+                    }
+                }
+            }
+            else {
+                if (m_backpressuredBevs.find(routed_bev) == m_backpressuredBevs.end()) {
+                    bev = routed_bev;
+                }
+                else {
                     bev = NULL;
-                } else {
-                    break;
                 }
             }
         }
 
         if (bev) {
+            // only skip backpressure if
             break;
         } else {
             bool callEventLoop = true;
@@ -1201,31 +1234,15 @@ void ClientImpl::invoke(Procedure &proc, boost::shared_ptr<ProcedureCallback> ca
                     throw LibEventException(msg);
                 }
 
-                if (m_loopBreakRequested) {
-                    m_loopBreakRequested = false;
-                    m_invocationBlockedOnBackpressure = false;
+            } else {
+                if (routed_bev == NULL) {
                     bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
                 }
-            } else {
-                bev = m_bevs[++m_nextConnectionIndex % m_bevs.size()];
+                else {
+                    bev = routed_bev;
+                }
                 break;
             }
-        }
-    }
-
-    bool procReadOnly = false;
-    struct bufferevent *routed_bev = NULL;
-    //route transaction to correct event if client affinity is enabled and hashinator updating is not in progress
-    //elastic scalability is disabled
-    if (m_useClientAffinity && !m_distributer.isUpdating()) {
-        routed_bev = routeProcedure(proc, sbb);
-        // Check if the routed_bev is valid and has not been removed due to lost connection
-        if ((routed_bev != NULL) && (m_callbacks.find(routed_bev) != m_callbacks.end())) {
-            bev = routed_bev;
-        }
-
-        if (isReadOnly(proc)) {
-            procReadOnly = true;
         }
     }
 
@@ -1266,7 +1283,6 @@ void ClientImpl::runOnce() throw (Exception, NoConnectionsException, LibEventExc
     if (event_base_loop(m_base, EVLOOP_NONBLOCK) == -1) {
         throw LibEventException("runOnce: failed running event base loop");
     }
-    m_loopBreakRequested = false;
 }
 
 void ClientImpl::run() throw (Exception, NoConnectionsException, LibEventException) {
@@ -1279,7 +1295,6 @@ void ClientImpl::run() throw (Exception, NoConnectionsException, LibEventExcepti
     if (event_base_dispatch(m_base) == -1) {
         throw LibEventException("run: Failed running event base loop");
     }
-    m_loopBreakRequested = false;
 }
 
 static void interrupt_callback(evutil_socket_t fd, short events, void *clientData);
@@ -1293,8 +1308,6 @@ void ClientImpl::runForMaxTime(uint64_t uSec) throw (Exception, NoConnectionsExc
 
     event_base_once(m_base, -1, EV_TIMEOUT, interrupt_callback, this, &timeOut);
     event_base_dispatch(m_base);
-
-    m_loopBreakRequested = false;
 }
 
 void ClientImpl::regularReadCallback(struct bufferevent *bev) {
@@ -1362,9 +1375,6 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
             if (m_isDraining && (m_outstandingRequests == 0)) {
                 m_isDraining = false;
                 breakEventLoop = true;
-            } else if (m_loopBreakRequested && (m_outstandingRequests <= m_maxOutstandingRequests)) {
-                // ignore break requested until we have too many outstanding requests
-                breakEventLoop = true;
             }
         } else {
             if (context->m_lengthOrMessage) {
@@ -1372,7 +1382,6 @@ void ClientImpl::regularReadCallback(struct bufferevent *bev) {
             } else {
                 bufferevent_setwatermark( bev, EV_READ, static_cast<size_t>(context->m_nextLength), HIGH_WATERMARK);
             }
-            breakEventLoop |= (m_loopBreakRequested && (m_outstandingRequests <= m_maxOutstandingRequests));
             break;
         }
     }
