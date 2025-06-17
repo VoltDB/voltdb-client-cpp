@@ -1,5 +1,5 @@
 /* This file is part of VoltDB.
- * Copyright (C) 2008-2018 VoltDB Inc.
+ * Copyright (C) 2008-2025 VoltDB Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -415,22 +415,6 @@ SharedByteBuffer fileAsByteBuffer(std::string filename) {
     fclose(fp);
 
     return b;
-}
-
-void testAuthenticationRequestSha1() {
-    SharedByteBuffer original = fileAsByteBuffer("authentication_request.msg");
-    SharedByteBuffer generated(new char[8192], 8192);
-    unsigned char hashedPassword[SHA_DIGEST_LENGTH];
-    std::string password("world");
-    // ok to use low level ssl calls
-    SHA_CTX context;
-    SHA1_Init(&context);
-    SHA1_Update( &context, password.c_str(), password.size());
-    SHA1_Final (hashedPassword, &context);
-    AuthenticationRequest request( "hello", "database", hashedPassword, HASH_SHA1 );
-    request.serializeTo(&generated);
-    CPPUNIT_ASSERT(original.remaining() == generated.remaining());
-    CPPUNIT_ASSERT(::memcmp(original.bytes(), generated.bytes(), original.remaining()) == 0);
 }
 
 void testAuthenticationRequestSha256() {

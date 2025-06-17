@@ -1,5 +1,5 @@
 /* This file is part of VoltDB.
- * Copyright (C) 2008-2018 VoltDB Inc.
+ * Copyright (C) 2008-2025 VoltDB Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -167,8 +167,7 @@ int main(int argc, char* argv[]) {
     int64_t lastMillisecond = millisec_time();
     int64_t thisMillisecond = millisec_time();
 
-    voltdb::ClientConfig config = voltdb::ClientConfig(username, password, voltdb::HASH_SHA256);
-    //voltdb::ClientConfig config = voltdb::ClientConfig(username, password, voltdb::HASH_SHA1);
+    voltdb::ClientConfig config = voltdb::ClientConfig(username, password);
     config.m_useSSL = true;
     voltdb::Client client = voltdb::Client::create(config);
     vector<string> servers;
