@@ -39,7 +39,7 @@ namespace voltdb {
 
         int32_t getSerializedSize() {
             int sz = 8 //String length prefixes
-                    + (m_hashScheme == HASH_SHA256 ? 32 : 20) //SHA-1 hash of PW
+                    + 32 //SHA-256 hash of PW
                     + static_cast<int32_t> (m_username.size())
                     + static_cast<int32_t> (m_service.size())
                     + 4 //length prefix
@@ -51,10 +51,10 @@ namespace voltdb {
         void serializeTo(ByteBuffer *buffer) {
             buffer->position(4);
             buffer->putInt8(1); // Always version 1.
-            buffer->putInt8(m_hashScheme); //scheme.
+            buffer->putInt8(m_hashScheme); // Always HASH_SHA256.
             buffer->putString(m_service);
             buffer->putString(m_username);
-            buffer->put(reinterpret_cast<char*> (m_passwordHash), (m_hashScheme == HASH_SHA1 ? 20 : 32));
+            buffer->put(reinterpret_cast<char*> (m_passwordHash), 32);
             buffer->flip();
             buffer->putInt32(0, buffer->limit() - 4);
         }

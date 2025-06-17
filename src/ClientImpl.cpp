@@ -1,5 +1,5 @@
 /* This file is part of VoltDB.
- * Copyright (C) 2008-2018 VoltDB Inc.
+ * Copyright (C) 2008-2025 VoltDB Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -411,21 +411,15 @@ private:
 void ClientImpl::hashPassword(const std::string& password) throw (MDHashException) {
     const EVP_MD *md = NULL;
     size_t hashDataLength;
-    if (m_hashScheme == HASH_SHA1) {
-        hashDataLength = SHA_DIGEST_LENGTH;
-        md = EVP_sha1();
-    }
-    else if (m_hashScheme == HASH_SHA256) {
+    if (m_hashScheme == HASH_SHA256) {
         hashDataLength = SHA256_DIGEST_LENGTH;
         md = EVP_sha256();
     }
     else {
-        throw MDHashException("Supported hash-schemes are SHA1 and SHA256. Update provided has to either");
+        throw MDHashException("The only currently-supported hash-scheme is SHA256")
     }
     if (md == NULL) {
-        char msg[256];
-        snprintf(msg, sizeof(msg), "Failed to get digest for %s", ((m_hashScheme == HASH_SHA1) ? "SHA1" : "SHA256"));
-        throw MDHashException(msg);
+        throw MDHashException("Failed to get digest for SHA56");
     }
     unsigned int md_len = -1;
     m_passwordHash = (unsigned char *) malloc(hashDataLength);
