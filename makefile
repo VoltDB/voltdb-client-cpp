@@ -28,8 +28,7 @@ ifeq ($(PLATFORM),Darwin)
 endif
 
 ifeq ($(PLATFORM),Linux)
-	#THIRD_PARTY_DIR := third_party_libs/linux
-	THIRD_PARTY_DIR := third-party-install/lib
+	THIRD_PARTY_DIR := third_party_libs/linux
 	THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a \
 					$(THIRD_PARTY_DIR)/libevent_openssl.a \
 					$(THIRD_PARTY_DIR)/libevent_pthreads.a \
