@@ -337,7 +337,7 @@
 #define EVENT__HAVE_SYS_STAT_H 1
 
 /* Define to 1 if you have the <sys/sysctl.h> header file. */
-#define EVENT__HAVE_SYS_SYSCTL_H 1
+#define EVENT__HAVE_SYS_SYSCTL_H 0
 
 /* Define to 1 if you have the <sys/timerfd.h> header file. */
 #define EVENT__HAVE_SYS_TIMERFD_H 1

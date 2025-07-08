@@ -8,13 +8,15 @@ OPTIMIZATION=-O3
 endif
 
 CC=g++
-BOOST_INCLUDES=/usr/local/include
-BOOST_LIBS=/usr/local/lib
+BOOST_INCLUDES=/home/twiewiora/voltdb-client-cpp/boost_1_56_0
+#BOOST_INCLUDES=/usr/local/include
+BOOST_LIBS=/home/twiewiora/voltdb-client-cpp/boost_1_56_0/stage/lib
+#BOOST_LIBS=/usr/local/lib
 
 LIB_NAME=libvoltdbcpp
 KIT_NAME=voltdb-client-cpp-x86_64-7.1
 
-CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} -fPIC
+CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} -fPIC -std=c++11 -w -I/home/twiewiora/cppunit-install/include -L/home/twiewiora/cppunit-install/lib
 PLATFORM = $(shell uname)
 
 ifeq ($(PLATFORM),Darwin)
@@ -28,7 +30,8 @@ ifeq ($(PLATFORM),Darwin)
 endif
 
 ifeq ($(PLATFORM),Linux)
-	THIRD_PARTY_DIR := third_party_libs/linux
+	THIRD_PARTY_DIR := third-party-install/lib
+	#THIRD_PARTY_DIR := third_party_libs/linux
 	THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a \
 					$(THIRD_PARTY_DIR)/libevent_openssl.a \
 					$(THIRD_PARTY_DIR)/libevent_pthreads.a \
@@ -139,7 +142,7 @@ testbin: $(LIB_NAME).a $(TEST_OBJS)
 
 test: testbin
 	@echo 'Running CPPUnit tests'
-	./testbin
+	LD_LIBRARY_PATH=/home/twiewiora/cppunit-install/lib:/home/twiewiora/voltdb-client-cpp/boost_1_56_0/stage/lib ./testbin
 	@echo ' '
 
 # Connection pool testing is put separately since for now it requires a local running Volt server
@@ -150,7 +153,7 @@ cptestbin: $(LIB_NAME).a $(CPTEST_OBJS)
 
 cptest: cptestbin
 	@echo 'Running Connection Pool CPPUnit tests'
-	./cptestbin
+	LD_LIBRARY_PATH=/home/twiewiora/cppunit-install/lib:/home/twiewiora/voltdb-client-cpp/boost_1_56_0/stage/lib ./cptestbin
 	@echo ' '
 
 obj:

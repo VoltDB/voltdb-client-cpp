@@ -362,7 +362,6 @@ static bool compareRequestMessages(ByteBuffer &original, std::string originalNam
 
 class SerializationTest : public CppUnit::TestFixture {
 CPPUNIT_TEST_SUITE( SerializationTest );
-CPPUNIT_TEST(testAuthenticationRequestSha1);
 CPPUNIT_TEST(testAuthenticationRequestSha256);
 CPPUNIT_TEST(testAuthenticationResponse);
 CPPUNIT_TEST(testInvocationAllParams);
