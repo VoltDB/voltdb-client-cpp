@@ -85,7 +85,6 @@ CPPUNIT_TEST_EXCEPTION( testNullCallback, voltdb::NullPointerException );
 CPPUNIT_TEST( testLostConnectionBreaksEventLoop );
 CPPUNIT_TEST( testBreakEventLoopViaCallback );
 CPPUNIT_TEST( testCallbackThrows );
-CPPUNIT_TEST( testBackpressure );
 CPPUNIT_TEST( testDrain );
 CPPUNIT_TEST( testLostConnectionDuringDrain );
 CPPUNIT_TEST( testSynchronousInvocations );

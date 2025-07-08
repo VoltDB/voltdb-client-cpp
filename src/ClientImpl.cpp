@@ -416,7 +416,7 @@ void ClientImpl::hashPassword(const std::string& password) throw (MDHashExceptio
         md = EVP_sha256();
     }
     else {
-        throw MDHashException("The only currently-supported hash-scheme is SHA256")
+        throw MDHashException("The only currently-supported hash-scheme is SHA256");
     }
     if (md == NULL) {
         throw MDHashException("Failed to get digest for SHA56");

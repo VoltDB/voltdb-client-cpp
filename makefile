@@ -14,7 +14,7 @@ BOOST_LIBS=/usr/local/lib
 LIB_NAME=libvoltdbcpp
 KIT_NAME=voltdb-client-cpp-x86_64-7.1
 
-CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} -fPIC
+CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} -fPIC -std=c++11
 PLATFORM = $(shell uname)
 
 ifeq ($(PLATFORM),Darwin)
@@ -28,7 +28,8 @@ ifeq ($(PLATFORM),Darwin)
 endif
 
 ifeq ($(PLATFORM),Linux)
-	THIRD_PARTY_DIR := third_party_libs/linux
+	#THIRD_PARTY_DIR := third_party_libs/linux
+	THIRD_PARTY_DIR := third-party-install/lib
 	THIRD_PARTY_LIBS := $(THIRD_PARTY_DIR)/libevent.a \
 					$(THIRD_PARTY_DIR)/libevent_openssl.a \
 					$(THIRD_PARTY_DIR)/libevent_pthreads.a \
