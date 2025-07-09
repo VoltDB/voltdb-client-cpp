@@ -221,7 +221,7 @@ public:
         m_buffer.putInt16(static_cast<int16_t>(vals.size()));
         for (std::vector<boost::gregorian::date>::const_iterator i = vals.begin(); i != vals.end(); ++i) {
             int32_t encodedDate = encodeDate(*i);
-            m_buffer.putInt64(encodedDate);
+            m_buffer.putInt32(encodedDate);
         }
         m_currentParam++;
         return *this;

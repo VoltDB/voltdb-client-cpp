@@ -44,7 +44,7 @@ OBJS := obj/Client.o \
 		obj/ClientConfig.o \
 		obj/ClientImpl.o \
 		obj/ConnectionPool.o \
-		obj/DataCodec.o \
+		obj/DateCodec.o \
 		obj/RowBuilder.o \
 		obj/Table.o \
 		obj/WireType.o \
@@ -116,7 +116,7 @@ $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 		  include/Exception.hpp include/InvocationResponse.hpp include/Parameter.hpp \
 		  include/ParameterSet.hpp include/Procedure.hpp include/ProcedureCallback.hpp \
 		  include/Row.hpp include/RowBuilder.h include/StatusListener.h include/Table.h \
-		  include/TableIterator.h include/WireType.h include/TheHashinator.h include/DataCodec.h \
+		  include/TableIterator.h include/WireType.h include/TheHashinator.h include/DateCodec.h \
                   include/ClientLogger.h include/Distributer.h include/ElasticHashinator.h \
                   include/MurmurHash3.h include/Geography.hpp include/GeographyPoint.hpp $(KIT_NAME)/include/
 	cp -R include/ttmath/*.h $(KIT_NAME)/include/ttmath/
