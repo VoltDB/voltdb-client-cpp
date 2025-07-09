@@ -26,9 +26,9 @@
 namespace voltdb {
 
     boost::gregorian::date decodeDate(int32_t encodedDate) {
-        int32_t year = (date >> DATE_YEAR_SHIFT) & TWO_BYTE_MASK;
-        int32_t month = (date >> DATE_MONTH_SHIFT) & ONE_BYTE_MASK;
-        int32_t day = (date >> DATE_DAY_SHIFT) & ONE_BYTE_MASK;
+        int32_t year = (encodedDate >> DATE_YEAR_SHIFT) & TWO_BYTE_MASK;
+        int32_t month = (encodedDate >> DATE_MONTH_SHIFT) & ONE_BYTE_MASK;
+        int32_t day = (encodedDate >> DATE_DAY_SHIFT) & ONE_BYTE_MASK;
         return boost::gregorian::date(year, month, day);
     }
 
