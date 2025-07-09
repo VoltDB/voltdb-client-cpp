@@ -44,6 +44,8 @@ std::string wireTypeToString(WireType type) {
         return std::string("STRING");
     case WIRE_TYPE_TIMESTAMP:
         return std::string("TIMESTAMP");
+    case WIRE_TYPE_DATE:
+        return std::string("DATE");
     case WIRE_TYPE_DECIMAL:
         return std::string("DECIMAL");
     case WIRE_TYPE_VARBINARY:

@@ -35,6 +35,7 @@
 #include <sstream>
 #include "Geography.hpp"
 #include "GeographyPoint.hpp"
+#include "DateCodec.h"
 
 namespace voltdb {
 
@@ -95,6 +96,23 @@ public:
         int64_t retval = m_data.getInt64(getOffset(column));
         if (retval == INT64_MIN) m_wasNull = true;
         return retval;
+    }
+
+    /*
+     * Retrieve the value at the specified column index as a Date. The type of the column
+     * must be Date.
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return Date value at the specified column
+     */
+    boost::gregorian::date getDate(int32_t column) throw(voltdb::InvalidColumnException) {
+        validateType(WIRE_TYPE_DATE, column);
+        int32_t encodedDate = m_data.getInt32(getOffset(column));
+        if (encodedDate == INT32_MIN) {
+            m_wasNull = true;
+            return boost::gregorian::date();
+        }
+        return decodeDate(encodedDate);
     }
 
     /*
@@ -269,6 +287,8 @@ public:
             getDecimal(column); break;
         case WIRE_TYPE_TIMESTAMP:
             getTimestamp(column); break;
+        case WIRE_TYPE_DATE:
+            getDate(column); break;
         case WIRE_TYPE_BIGINT:
             getInt64(column); break;
         case WIRE_TYPE_INTEGER:
@@ -326,6 +346,17 @@ public:
      */
     int64_t getTimestamp(const std::string& cname) throw(voltdb::InvalidColumnException) {
         return getTimestamp(getColumnIndexByName(cname));
+    }
+
+    /*
+     * Retrieve the value from the column with the specified name as a Date. The type of the column
+     * must be Date.
+     * @throws InvalidColumnException No column with the specified name exists or the type of the getter
+     * does not match the column type.
+     * @return Date value at the specified column
+     */
+    boost::gregorian::date getDate(const std::string& cname) throw(voltdb::InvalidColumnException) {
+        return getDate(getColumnIndexByName(cname));
     }
 
     /*
@@ -472,6 +503,8 @@ public:
                 ostream << "\"" << getString(ii) << "\""; break;
             case WIRE_TYPE_TIMESTAMP:
                 ostream << getTimestamp(ii); break;
+            case WIRE_TYPE_DATE:
+                ostream << decodeDate(getDate(ii)); break;
             case WIRE_TYPE_DECIMAL:
                 ostream << getDecimal(ii).toString(); break;
             case WIRE_TYPE_VARBINARY:
@@ -524,6 +557,7 @@ private:
             }
             break;
         case WIRE_TYPE_TIMESTAMP:
+        case WIRE_TYPE_DATE:
         case WIRE_TYPE_BIGINT:
         case WIRE_TYPE_FLOAT:
         case WIRE_TYPE_STRING:
@@ -594,6 +628,7 @@ private:
                     length = 8;
                     break;
                 case WIRE_TYPE_INTEGER:
+                case WIRE_TYPE_DATE:
                     length = 4;
                     break;
                 case WIRE_TYPE_SMALLINT:

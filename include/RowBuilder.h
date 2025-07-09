@@ -33,6 +33,7 @@
 #include "Decimal.hpp"
 #include "Geography.hpp"
 #include "GeographyPoint.hpp"
+#include "DateCodec.h"
 
 /* Helper class to build row given the table schema.
  * Column count and it's type is inferred using the table schema
@@ -129,6 +130,11 @@ public:
         case WIRE_TYPE_TIMESTAMP:
             addTimeStamp(INT64_MIN);
             break;
+        case WIRE_TYPE_DATE:
+            m_buffer.ensureRemaining(4);
+            m_buffer.putInt32(INT32_MIN);
+            m_currentColumnIndex++;
+            break;
         case WIRE_TYPE_FLOAT:
             addDouble(-1.7976931348623157E+308);
             break;
@@ -189,6 +195,15 @@ public:
         validateType(WIRE_TYPE_TIMESTAMP);
         m_buffer.ensureRemaining(8);
         m_buffer.putInt64(value);
+        m_currentColumnIndex++;
+        return *this;
+    }
+
+    RowBuilder& addDate(const boost::gregorian::date &value) throw (InvalidColumnException, RowCreationException) {
+        validateType(WIRE_TYPE_DATE);
+        int32_t encodedDate = encodeDate(date);
+        m_buffer.ensureRemaining(4);
+        m_buffer.putInt32(encodedDate);
         m_currentColumnIndex++;
         return *this;
     }
