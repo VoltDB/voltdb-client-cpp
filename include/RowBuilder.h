@@ -201,7 +201,7 @@ public:
 
     RowBuilder& addDate(const boost::gregorian::date &value) throw (InvalidColumnException, RowCreationException) {
         validateType(WIRE_TYPE_DATE);
-        int32_t encodedDate = encodeDate(date);
+        int32_t encodedDate = encodeDate(value);
         m_buffer.ensureRemaining(4);
         m_buffer.putInt32(encodedDate);
         m_currentColumnIndex++;
