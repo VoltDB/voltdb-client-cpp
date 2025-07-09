@@ -209,7 +209,7 @@ private:
             return 8;
         case WIRE_TYPE_DATE:
             row.addDate(m_dateValue);
-            return 8;
+            return 4;
         case WIRE_TYPE_DECIMAL: {
             row.addDecimal(m_decValue);
             return 2*sizeof(int64_t);
