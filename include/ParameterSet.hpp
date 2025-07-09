@@ -197,7 +197,7 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addDate(const boost::gregorian:date &date) throw (voltdb::ParamMismatchException) {
+    ParameterSet& addDate(const boost::gregorian::date &date) throw (voltdb::ParamMismatchException) {
         validateType(WIRE_TYPE_DATE, false);
         int32_t encodedDate = encodeDate(date);
 
@@ -213,13 +213,13 @@ public:
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
      * @return Reference to this parameter set to allow invocation chaining.
      */
-    ParameterSet& addDate(const std::vector<boost::gregorian:date>& vals) throw (voltdb::ParamMismatchException) {
+    ParameterSet& addDate(const std::vector<boost::gregorian::date>& vals) throw (voltdb::ParamMismatchException) {
         validateType(WIRE_TYPE_DATE, true);
         m_buffer.ensureRemaining(4 + static_cast<int32_t>(sizeof(int32_t) * vals.size()));
         m_buffer.putInt8(WIRE_TYPE_ARRAY);
         m_buffer.putInt8(WIRE_TYPE_DATE);
         m_buffer.putInt16(static_cast<int16_t>(vals.size()));
-        for (std::vector<boost::gregorian:date>::const_iterator i = vals.begin(); i != vals.end(); ++i) {
+        for (std::vector<boost::gregorian::date>::const_iterator i = vals.begin(); i != vals.end(); ++i) {
             int32_t encodedDate = encodeDate(*i);
             m_buffer.putInt64(encodedDate);
         }
