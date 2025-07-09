@@ -504,7 +504,7 @@ public:
             case WIRE_TYPE_TIMESTAMP:
                 ostream << getTimestamp(ii); break;
             case WIRE_TYPE_DATE:
-                ostream << decodeDate(getDate(ii)); break;
+                ostream << getDate(ii); break;
             case WIRE_TYPE_DECIMAL:
                 ostream << getDecimal(ii).toString(); break;
             case WIRE_TYPE_VARBINARY:
