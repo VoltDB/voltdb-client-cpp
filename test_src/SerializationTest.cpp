@@ -682,7 +682,7 @@ void testInvocationResponseSelectWithDateColumn() {
     CPPUNIT_ASSERT(r.getDate("DATE") == boost::gregorian::date(1995, 9, 18));
 
     CPPUNIT_ASSERT(iterator.hasNext());
-    Row r = iterator.next();
+    r = iterator.next();
     CPPUNIT_ASSERT(r.isNull(0));
     CPPUNIT_ASSERT(r.isNull("DATE"));
 
