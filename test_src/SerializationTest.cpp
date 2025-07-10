@@ -46,6 +46,7 @@
 #include "openssl/sha.h"
 #include "Geography.hpp"
 #include "GeographyPoint.hpp"
+#include "DateCodec.h"
 
 #undef DEBUG_BYTE_BUFFERS
 #ifdef  DEBUG_BYTE_BUFFERS
@@ -245,6 +246,12 @@ static bool compareParameter(ByteBuffer &original, std::string originalName,
             int64_t o = original.getInt64();
             return (g == o);
         }
+    case WIRE_TYPE_DATE:
+        {
+            int32_t g = generated.getInt32();
+            int32_t o = original.getInt32();
+            return (decodeDate(g) == decodeDate(o));
+        }
     case WIRE_TYPE_DECIMAL:
         {
             int64_t g = generated.getInt64();
@@ -298,6 +305,7 @@ static WireType schemaColTypes[] = {
         WIRE_TYPE_INTEGER,
         WIRE_TYPE_BIGINT,
         WIRE_TYPE_TIMESTAMP,
+        WIRE_TYPE_DATE,
         WIRE_TYPE_DECIMAL,
         WIRE_TYPE_GEOGRAPHY,
         WIRE_TYPE_GEOGRAPHY_POINT
@@ -543,7 +551,7 @@ void testInvocationGeoInsertNulls() {
 void testInvocationAllParams() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_request_all_params.msg");
     std::vector<Parameter> params;
-     params.push_back(Parameter(WIRE_TYPE_STRING, true));
+    params.push_back(Parameter(WIRE_TYPE_STRING, true));
     params.push_back(Parameter(WIRE_TYPE_TINYINT, true));
     params.push_back(Parameter(WIRE_TYPE_SMALLINT, true));
     params.push_back(Parameter(WIRE_TYPE_INTEGER, true));
@@ -643,6 +651,42 @@ void testInvocationResponseSelect() {
         resultCount++;
     }
     CPPUNIT_ASSERT(resultCount == 1);
+}
+
+void testInvocationResponseSelectWithDateColumn() {
+    SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_with_date.msg");
+    original.position(4);
+    boost::shared_array<char> copy(new char[original.remaining()]);
+    original.get(copy.get(), original.remaining());
+    InvocationResponse response(copy, original.capacity() - 4);
+    CPPUNIT_ASSERT(response.success());
+    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
+    CPPUNIT_ASSERT(response.appStatusCode() == -128);
+    CPPUNIT_ASSERT(response.appStatusString() == "");
+    CPPUNIT_ASSERT(response.statusString() == "");
+    CPPUNIT_ASSERT(response.results().size() == 1);
+    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
+    Table results = response.results()[0];
+    CPPUNIT_ASSERT(results.getStatusCode() == -128);
+    CPPUNIT_ASSERT(results.rowCount() == 2);
+    CPPUNIT_ASSERT(results.columnCount() == 1);
+    std::vector<voltdb::Column> columns = results.columns();
+    CPPUNIT_ASSERT(columns.size() == 1);
+    CPPUNIT_ASSERT(columns[0].name() == "DATE");
+    CPPUNIT_ASSERT(columns[0].type() == WIRE_TYPE_DATE);
+    TableIterator iterator = results.iterator();
+
+    CPPUNIT_ASSERT(iterator.hasNext());
+    Row r = iterator.next();
+    CPPUNIT_ASSERT(r.getDate(0) == boost::gregorian::date(1995, 9, 18));
+    CPPUNIT_ASSERT(r.getDate("DATE") == boost::gregorian::date(1995, 9, 18));
+
+    CPPUNIT_ASSERT(iterator.hasNext());
+    Row r = iterator.next();
+    CPPUNIT_ASSERT(r.isNull(0));
+    CPPUNIT_ASSERT(r.isNull("DATE"));
+
+    CPPUNIT_ASSERT(!iterator.hasNext());
 }
 
 void testInvocationGeoSelectBoth() {
