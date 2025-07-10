@@ -677,14 +677,14 @@ void testInvocationResponseSelectWithDateColumn() {
     TableIterator iterator = results.iterator();
 
     CPPUNIT_ASSERT(iterator.hasNext());
-    Row r = iterator.next();
-    CPPUNIT_ASSERT(r.getDate(0) == boost::gregorian::date(1995, 9, 18));
-    CPPUNIT_ASSERT(r.getDate("DATE") == boost::gregorian::date(1995, 9, 18));
+    Row r1 = iterator.next();
+    CPPUNIT_ASSERT(r1.getDate(0) == boost::gregorian::date(1995, 9, 18));
+    CPPUNIT_ASSERT(r1.getDate("DATE") == boost::gregorian::date(1995, 9, 18));
 
     CPPUNIT_ASSERT(iterator.hasNext());
-    r = iterator.next();
-    CPPUNIT_ASSERT(r.isNull(0));
-    CPPUNIT_ASSERT(r.isNull("DATE"));
+    Row r2 = iterator.next();
+    CPPUNIT_ASSERT(r2.isNull(0));
+    CPPUNIT_ASSERT(r2.isNull("DATE"));
 
     CPPUNIT_ASSERT(!iterator.hasNext());
 }
