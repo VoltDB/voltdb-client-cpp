@@ -658,7 +658,7 @@ void testInvocationResponseSelectWithDateColumn() {
     original.position(0);
     boost::shared_array<char> copy(new char[original.remaining()]);
     original.get(copy.get(), original.remaining());
-    InvocationResponse response(copy, original.capacity() - 4);
+    InvocationResponse response(copy, original.capacity());
     CPPUNIT_ASSERT(response.success());
     CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
     CPPUNIT_ASSERT(response.appStatusCode() == -128);
