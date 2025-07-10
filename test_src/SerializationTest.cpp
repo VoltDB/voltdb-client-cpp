@@ -655,7 +655,7 @@ void testInvocationResponseSelect() {
 
 void testInvocationResponseSelectWithDateColumn() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_with_date.msg");
-    original.position(4);
+    original.position(0);
     boost::shared_array<char> copy(new char[original.remaining()]);
     original.get(copy.get(), original.remaining());
     InvocationResponse response(copy, original.capacity() - 4);
