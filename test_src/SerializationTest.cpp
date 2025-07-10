@@ -305,7 +305,6 @@ static WireType schemaColTypes[] = {
         WIRE_TYPE_INTEGER,
         WIRE_TYPE_BIGINT,
         WIRE_TYPE_TIMESTAMP,
-        WIRE_TYPE_DATE,
         WIRE_TYPE_DECIMAL,
         WIRE_TYPE_GEOGRAPHY,
         WIRE_TYPE_GEOGRAPHY_POINT
@@ -376,6 +375,7 @@ CPPUNIT_TEST(testInvocationAllParams);
 CPPUNIT_TEST(testInvocationResponseSuccess);
 CPPUNIT_TEST(testInvocationResponseFailCV);
 CPPUNIT_TEST(testInvocationResponseSelect);
+CPPUNIT_TEST(testInvocationResponseSelectWithDateColumn);
 CPPUNIT_TEST(testInvocationGeoInsert);
 CPPUNIT_TEST(testInvocationGeoInsertNulls);
 CPPUNIT_TEST(testInvocationGeoSelectBoth);
@@ -1221,7 +1221,6 @@ void testTableSerialization() {
     Geography smallPoly;
     Decimal dec;
     const std::string pi = "3.1459";
-    boost::gregorian::date date(1995, 9, 18);
 
     smallPoly.addEmptyRing()
         << GeographyPoint(0, 0)
@@ -1252,14 +1251,13 @@ void testTableSerialization() {
     constructedTable.addRow(row);
     CPPUNIT_ASSERT(constructedTable.rowCount() == 1);
 
-    // 2nd row - vt.addRow( 0, "", 2, 4, 5, new TimestampType(44), new DateType(1995, 9, 18), new BigDecimal("3.1459"), poly, pt);
+    // 2nd row - vt.addRow( 0, "", 2, 4, 5, new TimestampType(44), new BigDecimal("3.1459"), poly, pt);
     row.addInt8(0);
     row.addString("");
     row.addInt16(2);
     row.addInt32(4);
     row.addInt64(5);
     row.addTimeStamp(44);
-    row.addDate(date);
     dec = Decimal(pi);
     row.addDecimal(dec);
     row.addGeography(smallPoly);
@@ -1267,7 +1265,7 @@ void testTableSerialization() {
     constructedTable.addRow(row);
     CPPUNIT_ASSERT(constructedTable.rowCount() == 2);
 
-    // 3rd row - vt.addRow( 0, null, 2, 4, 5, null, null, null, poly, pt);
+    // 3rd row - vt.addRow( 0, null, 2, 4, 5, null, null, poly, pt);
     row.addInt8(0);
     row.addNull();
     row.addInt16(2);
@@ -1275,20 +1273,18 @@ void testTableSerialization() {
     row.addInt64(5);
     row.addNull();
     row.addNull();
-    row.addNull();
     row.addGeography(smallPoly);
     row.addGeographyPoint(smallPoint);
     constructedTable.addRow(row);
     CPPUNIT_ASSERT(constructedTable.rowCount() == 3);
 
-    // 4th row - vt.addRow( null, "woobie", null, null, null, new TimestampType(44), new DateType(1995, 9, 18), new BigDecimal("3.1459"), poly, pt);
+    // 4th row - vt.addRow( null, "woobie", null, null, null, new TimestampType(44), new BigDecimal("3.1459"), poly, pt);
     row.addNull();
     row.addString("woobie");
     row.addNull();
     row.addNull();
     row.addNull();
     row.addTimeStamp(44);
-    row.addDate(date);
     dec = Decimal(pi);
     row.addDecimal(dec);
     row.addGeography(smallPoly);
