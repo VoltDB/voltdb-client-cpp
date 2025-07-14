@@ -372,6 +372,7 @@ CPPUNIT_TEST_SUITE( SerializationTest );
 CPPUNIT_TEST(testAuthenticationRequestSha256);
 CPPUNIT_TEST(testAuthenticationResponse);
 CPPUNIT_TEST(testInvocationAllParams);
+CPPUNIT_TEST(testInvocationDateParams);
 CPPUNIT_TEST(testInvocationResponseSuccess);
 CPPUNIT_TEST(testInvocationResponseFailCV);
 CPPUNIT_TEST(testInvocationResponseSelect);
@@ -579,6 +580,26 @@ void testInvocationAllParams() {
     std::vector<int64_t> timestamps; timestamps.push_back(33); timestamps.push_back(44); ps->addTimestamp(timestamps);
     std::vector<Decimal> decimals; decimals.push_back(Decimal(std::string("3"))); decimals.push_back(std::string("3.14")); decimals.push_back(std::string("3.1459")); ps->addDecimal(decimals);
     ps->addNull().addString("ohnoes!").addInt8(22).addInt16(22).addInt32(22).addInt64(22).addDouble(3.1459).addTimestamp(33).addDecimal(Decimal(std::string("3.1459")));
+    int32_t size = proc.getSerializedSize();
+    ScopedByteBuffer buffer(new char[size], size);
+    proc.serializeTo(&buffer, FAKE_CLIENT_DATA);
+    compareByteBuffers(original, "original_all_types.msg",
+                       buffer,   "generated_all_types.msg");
+}
+
+void testInvocationDateParams() {
+    SharedByteBuffer original = fileAsByteBuffer("invocation_request_date_params.msg");
+    std::vector<Parameter> params;
+    params.push_back(Parameter(WIRE_TYPE_DATE, true));
+    params.push_back(Parameter(WIRE_TYPE_DATE));
+    Procedure proc("date_procedure", params);
+    ParameterSet *ps = proc.params();
+    std::vector<boost::gregorian::date> dates;
+    dates.push_back(boost::gregorian::date(1995, 9, 18));
+    dates.push_back(boost::gregorian::date(2025, 7, 10));
+    ps->addDate(dates);
+    ps->addDate(boost::gregorian::date(2012, 3, 6))
+
     int32_t size = proc.getSerializedSize();
     ScopedByteBuffer buffer(new char[size], size);
     proc.serializeTo(&buffer, FAKE_CLIENT_DATA);
