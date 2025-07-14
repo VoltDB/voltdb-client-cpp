@@ -598,7 +598,7 @@ void testInvocationDateParams() {
     dates.push_back(boost::gregorian::date(1995, 9, 18));
     dates.push_back(boost::gregorian::date(2025, 7, 10));
     ps->addDate(dates);
-    ps->addDate(boost::gregorian::date(2012, 3, 6))
+    ps->addDate(boost::gregorian::date(2012, 3, 6));
 
     int32_t size = proc.getSerializedSize();
     ScopedByteBuffer buffer(new char[size], size);
