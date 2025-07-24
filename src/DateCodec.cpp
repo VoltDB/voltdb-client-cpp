@@ -1,5 +1,5 @@
 /* This file is part of VoltDB.
- * Copyright (C) 2008-2018 VoltDB Inc.
+ * Copyright (C) 2025 VoltDB Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -21,43 +21,21 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef VOLTDB_WIRETYPE_H_
-#define VOLTDB_WIRETYPE_H_
-
-#include <string>
+#include "../include/DateCodec.h"
 
 namespace voltdb {
-/*
- * Note: these constants must be the same as those in:
- *   frontend/org/voltdb/VoltType.java
- *   ee/common/types.h
- */
-enum WireType {
-    WIRE_TYPE_INVALID = -98,
-    WIRE_TYPE_ARRAY = -99,
-    WIRE_TYPE_NULL = 1,
-    WIRE_TYPE_TINYINT = 3,
-    WIRE_TYPE_SMALLINT = 4,
-    WIRE_TYPE_INTEGER = 5,
-    WIRE_TYPE_BIGINT = 6,
-    WIRE_TYPE_FLOAT = 8,
-    WIRE_TYPE_STRING = 9,
-    WIRE_TYPE_TIMESTAMP = 11,
-    WIRE_TYPE_DATE = 12,
-    WIRE_TYPE_VOLTTABLE = 21,
-    WIRE_TYPE_DECIMAL = 22,
-    WIRE_TYPE_VARBINARY = 25,
-    WIRE_TYPE_GEOGRAPHY_POINT = 26,
-    WIRE_TYPE_GEOGRAPHY = 27,
-};
 
-inline bool isVariableSized(WireType type) {
-    return ((type == WIRE_TYPE_VARBINARY)
-            || (type == WIRE_TYPE_STRING)
-            || (type == WIRE_TYPE_GEOGRAPHY));
-}
+    boost::gregorian::date decodeDate(int32_t encodedDate) {
+        int32_t year = (encodedDate >> DATE_YEAR_SHIFT) & TWO_BYTE_MASK;
+        int32_t month = (encodedDate >> DATE_MONTH_SHIFT) & ONE_BYTE_MASK;
+        int32_t day = (encodedDate >> DATE_DAY_SHIFT) & ONE_BYTE_MASK;
+        return boost::gregorian::date(year, month, day);
+    }
 
-std::string wireTypeToString(WireType type);
-
-}
-#endif /* VOLTDB_WIRETYPE_H_ */
+    int32_t encodeDate(const boost::gregorian::date &date) {
+        int32_t year = static_cast<int32_t>(date.year());
+        int32_t month = static_cast<int32_t>(date.month());
+        int32_t day = static_cast<int32_t>(date.day());
+        return (year << DATE_YEAR_SHIFT) | (month << DATE_MONTH_SHIFT) | (day << DATE_DAY_SHIFT);
+    }
+} // voltdb

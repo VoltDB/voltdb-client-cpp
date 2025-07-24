@@ -14,7 +14,7 @@ BOOST_LIBS=/usr/local/lib
 LIB_NAME=libvoltdbcpp
 KIT_NAME=voltdb-client-cpp-x86_64-7.1
 
-CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} -fPIC
+CFLAGS=-I$(BOOST_INCLUDES) -Iinclude -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -g3 ${OPTIMIZATION} -fPIC -std=c++11
 PLATFORM = $(shell uname)
 
 ifeq ($(PLATFORM),Darwin)
@@ -24,7 +24,7 @@ ifeq ($(PLATFORM),Darwin)
 					$(THIRD_PARTY_DIR)/libevent_pthreads.a \
 					$(THIRD_PARTY_DIR)/libssl.a \
 					$(THIRD_PARTY_DIR)/libcrypto.a
-	SYSTEM_LIBS := -L$(BOOST_LIBS) -lc -lpthread -lboost_system-mt -lboost_thread-mt
+	SYSTEM_LIBS := -L$(BOOST_LIBS) -lc -lpthread -lboost_system-mt -lboost_thread-mt -lboost_date_time
 endif
 
 ifeq ($(PLATFORM),Linux)
@@ -35,7 +35,7 @@ ifeq ($(PLATFORM),Linux)
 					$(THIRD_PARTY_DIR)/libssl.a \
 					$(THIRD_PARTY_DIR)/libcrypto.a \
 					-ldl
-	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system -lboost_thread
+	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system -lboost_thread -lboost_date_time
 endif
 
 .PHONEY: all clean test kit
@@ -44,6 +44,7 @@ OBJS := obj/Client.o \
 		obj/ClientConfig.o \
 		obj/ClientImpl.o \
 		obj/ConnectionPool.o \
+		obj/DateCodec.o \
 		obj/RowBuilder.o \
 		obj/Table.o \
 		obj/WireType.o \
@@ -115,7 +116,7 @@ $(KIT_NAME).tar.gz: $(LIB_NAME).a $(LIB_NAME).so
 		  include/Exception.hpp include/InvocationResponse.hpp include/Parameter.hpp \
 		  include/ParameterSet.hpp include/Procedure.hpp include/ProcedureCallback.hpp \
 		  include/Row.hpp include/RowBuilder.h include/StatusListener.h include/Table.h \
-		  include/TableIterator.h include/WireType.h include/TheHashinator.h \
+		  include/TableIterator.h include/WireType.h include/TheHashinator.h include/DateCodec.h \
                   include/ClientLogger.h include/Distributer.h include/ElasticHashinator.h \
                   include/MurmurHash3.h include/Geography.hpp include/GeographyPoint.hpp $(KIT_NAME)/include/
 	cp -R include/ttmath/*.h $(KIT_NAME)/include/ttmath/

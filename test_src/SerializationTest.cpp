@@ -46,6 +46,7 @@
 #include "openssl/sha.h"
 #include "Geography.hpp"
 #include "GeographyPoint.hpp"
+#include "DateCodec.h"
 
 #undef DEBUG_BYTE_BUFFERS
 #ifdef  DEBUG_BYTE_BUFFERS
@@ -245,6 +246,12 @@ static bool compareParameter(ByteBuffer &original, std::string originalName,
             int64_t o = original.getInt64();
             return (g == o);
         }
+    case WIRE_TYPE_DATE:
+        {
+            int32_t g = generated.getInt32();
+            int32_t o = original.getInt32();
+            return (decodeDate(g) == decodeDate(o));
+        }
     case WIRE_TYPE_DECIMAL:
         {
             int64_t g = generated.getInt64();
@@ -362,13 +369,14 @@ static bool compareRequestMessages(ByteBuffer &original, std::string originalNam
 
 class SerializationTest : public CppUnit::TestFixture {
 CPPUNIT_TEST_SUITE( SerializationTest );
-CPPUNIT_TEST(testAuthenticationRequestSha1);
 CPPUNIT_TEST(testAuthenticationRequestSha256);
 CPPUNIT_TEST(testAuthenticationResponse);
 CPPUNIT_TEST(testInvocationAllParams);
+CPPUNIT_TEST(testInvocationDateParams);
 CPPUNIT_TEST(testInvocationResponseSuccess);
 CPPUNIT_TEST(testInvocationResponseFailCV);
 CPPUNIT_TEST(testInvocationResponseSelect);
+CPPUNIT_TEST(testInvocationResponseSelectWithDateColumn);
 CPPUNIT_TEST(testInvocationGeoInsert);
 CPPUNIT_TEST(testInvocationGeoInsertNulls);
 CPPUNIT_TEST(testInvocationGeoSelectBoth);
@@ -544,7 +552,7 @@ void testInvocationGeoInsertNulls() {
 void testInvocationAllParams() {
     SharedByteBuffer original = fileAsByteBuffer("invocation_request_all_params.msg");
     std::vector<Parameter> params;
-     params.push_back(Parameter(WIRE_TYPE_STRING, true));
+    params.push_back(Parameter(WIRE_TYPE_STRING, true));
     params.push_back(Parameter(WIRE_TYPE_TINYINT, true));
     params.push_back(Parameter(WIRE_TYPE_SMALLINT, true));
     params.push_back(Parameter(WIRE_TYPE_INTEGER, true));
@@ -572,6 +580,26 @@ void testInvocationAllParams() {
     std::vector<int64_t> timestamps; timestamps.push_back(33); timestamps.push_back(44); ps->addTimestamp(timestamps);
     std::vector<Decimal> decimals; decimals.push_back(Decimal(std::string("3"))); decimals.push_back(std::string("3.14")); decimals.push_back(std::string("3.1459")); ps->addDecimal(decimals);
     ps->addNull().addString("ohnoes!").addInt8(22).addInt16(22).addInt32(22).addInt64(22).addDouble(3.1459).addTimestamp(33).addDecimal(Decimal(std::string("3.1459")));
+    int32_t size = proc.getSerializedSize();
+    ScopedByteBuffer buffer(new char[size], size);
+    proc.serializeTo(&buffer, FAKE_CLIENT_DATA);
+    compareByteBuffers(original, "original_all_types.msg",
+                       buffer,   "generated_all_types.msg");
+}
+
+void testInvocationDateParams() {
+    SharedByteBuffer original = fileAsByteBuffer("invocation_request_date_params.msg");
+    std::vector<Parameter> params;
+    params.push_back(Parameter(WIRE_TYPE_DATE, true));
+    params.push_back(Parameter(WIRE_TYPE_DATE));
+    Procedure proc("date_procedure", params);
+    ParameterSet *ps = proc.params();
+    std::vector<boost::gregorian::date> dates;
+    dates.push_back(boost::gregorian::date(1995, 9, 18));
+    dates.push_back(boost::gregorian::date(2025, 7, 10));
+    ps->addDate(dates);
+    ps->addDate(boost::gregorian::date(2012, 3, 6));
+
     int32_t size = proc.getSerializedSize();
     ScopedByteBuffer buffer(new char[size], size);
     proc.serializeTo(&buffer, FAKE_CLIENT_DATA);
@@ -644,6 +672,42 @@ void testInvocationResponseSelect() {
         resultCount++;
     }
     CPPUNIT_ASSERT(resultCount == 1);
+}
+
+void testInvocationResponseSelectWithDateColumn() {
+    SharedByteBuffer original = fileAsByteBuffer("invocation_response_select_with_date.msg");
+    original.position(0);
+    boost::shared_array<char> copy(new char[original.remaining()]);
+    original.get(copy.get(), original.remaining());
+    InvocationResponse response(copy, original.capacity());
+    CPPUNIT_ASSERT(response.success());
+    CPPUNIT_ASSERT(response.clientData() == FAKE_CLIENT_DATA);
+    CPPUNIT_ASSERT(response.appStatusCode() == -128);
+    CPPUNIT_ASSERT(response.appStatusString() == "");
+    CPPUNIT_ASSERT(response.statusString() == "");
+    CPPUNIT_ASSERT(response.results().size() == 1);
+    CPPUNIT_ASSERT(response.clusterRoundTripTime() == FAKE_CLUSTER_ROUND_TRIP_TIME);
+    Table results = response.results()[0];
+    CPPUNIT_ASSERT(results.getStatusCode() == -128);
+    CPPUNIT_ASSERT(results.rowCount() == 2);
+    CPPUNIT_ASSERT(results.columnCount() == 1);
+    std::vector<voltdb::Column> columns = results.columns();
+    CPPUNIT_ASSERT(columns.size() == 1);
+    CPPUNIT_ASSERT(columns[0].name() == "DATE");
+    CPPUNIT_ASSERT(columns[0].type() == WIRE_TYPE_DATE);
+    TableIterator iterator = results.iterator();
+
+    CPPUNIT_ASSERT(iterator.hasNext());
+    Row r1 = iterator.next();
+    CPPUNIT_ASSERT(r1.getDate(0) == boost::gregorian::date(1995, 9, 18));
+    CPPUNIT_ASSERT(r1.getDate("DATE") == boost::gregorian::date(1995, 9, 18));
+
+    CPPUNIT_ASSERT(iterator.hasNext());
+    Row r2 = iterator.next();
+    CPPUNIT_ASSERT(r2.isNull(0));
+    CPPUNIT_ASSERT(r2.isNull("DATE"));
+
+    CPPUNIT_ASSERT(!iterator.hasNext());
 }
 
 void testInvocationGeoSelectBoth() {

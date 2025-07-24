@@ -28,10 +28,11 @@
 #include "RowBuilder.h"
 #include "Decimal.hpp"
 #include <boost/scoped_ptr.hpp>
+#include "DateCodec.h"
 
 namespace voltdb {
 
-voltdb::WireType allTypes[11] = {
+voltdb::WireType allTypes[12] = {
             WIRE_TYPE_TINYINT,
             WIRE_TYPE_SMALLINT,
             WIRE_TYPE_INTEGER,
@@ -39,6 +40,7 @@ voltdb::WireType allTypes[11] = {
             WIRE_TYPE_FLOAT,
             WIRE_TYPE_STRING,
             WIRE_TYPE_TIMESTAMP,
+            WIRE_TYPE_DATE,
             WIRE_TYPE_DECIMAL,
             WIRE_TYPE_VARBINARY,
             WIRE_TYPE_GEOGRAPHY_POINT,
@@ -66,6 +68,7 @@ private:
         m_floatValue = rand() / 17;
         m_stringValue = "V01tta8l3Col";
         m_timestampValue = rand() / 37;
+        m_dateValue = boost::gregorian::date(1995, 9, 18);
         TTInt ttInt;
         ttInt.SetMin();
         ttInt +=  rand() + 1;
@@ -92,6 +95,7 @@ private:
         m_floatValue = rand() / 17;
         m_stringValue = "V01tta8l3Col123456789foobar";
         m_timestampValue = INT64_MAX;
+        m_dateValue = boost::gregorian::date(9999, 12, 31);
         TTInt ttInt;
         ttInt.SetMax();
         m_decValue = Decimal(ttInt);
@@ -118,6 +122,7 @@ private:
     double m_floatValue;
     std::string m_stringValue;
     int64_t m_timestampValue;
+    boost::gregorian::date m_dateValue;
     Decimal m_decValue;
     uint8_t m_binData[1024];
     GeographyPoint m_ptValue;
@@ -154,6 +159,9 @@ private:
                 break;
             case WIRE_TYPE_TIMESTAMP:
                 length = 8;
+                break;
+            case WIRE_TYPE_DATE:
+                length = 4;
                 break;
             case WIRE_TYPE_DECIMAL:
                 length = 2*sizeof(int64_t);
@@ -199,6 +207,9 @@ private:
         case WIRE_TYPE_TIMESTAMP:
             row.addTimeStamp(m_timestampValue);
             return 8;
+        case WIRE_TYPE_DATE:
+            row.addDate(m_dateValue);
+            return 4;
         case WIRE_TYPE_DECIMAL: {
             row.addDecimal(m_decValue);
             return 2*sizeof(int64_t);
@@ -261,6 +272,11 @@ private:
             case WIRE_TYPE_TIMESTAMP: {
                 int64_t value = row.getTimestamp(i);
                 CPPUNIT_ASSERT(value == m_timestampValue);
+                break;
+            }
+            case WIRE_TYPE_DATE: {
+                boost::gregorian::date value = row.getDate(i);
+                CPPUNIT_ASSERT(value == m_dateValue);
                 break;
             }
             case WIRE_TYPE_DECIMAL: {
@@ -334,6 +350,11 @@ private:
 
             case WIRE_TYPE_TIMESTAMP: {
                 row.getTimestamp(i);
+                break;
+            }
+
+            case WIRE_TYPE_DATE: {
+                row.getDate(i);
                 break;
             }
 
