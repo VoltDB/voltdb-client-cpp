@@ -37,10 +37,11 @@
 namespace voltdb {
 //The int used for storage and return values
 #ifdef TTMATH_PLATFORM64
-typedef ttmath::Int<2> TTInt;
+#define TTMATH_INT_SIZE 2
 #else
-typedef ttmath::Int<4> TTInt;
+#define TTMATH_INT_SIZE 4
 #endif
+typedef ttmath::Int<TTMATH_INT_SIZE> TTInt;
 
 /*
  * A class for constructing Decimal values with the fixed precision and scale supported by VoltDB
