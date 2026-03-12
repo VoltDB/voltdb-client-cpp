@@ -208,6 +208,20 @@ public:
         return *this;
     }
 
+   /**
+     * Add a bool value for the current parameter
+     * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set
+     * @return Reference to this parameter set to allow invocation chaining.
+     */
+    ParameterSet& addBool(const bool &val) throw (voltdb::ParamMismatchException) {
+        validateType(WIRE_TYPE_BOOL, false);
+        m_buffer.ensureRemaining(2);
+        m_buffer.putInt8(WIRE_TYPE_BOOL);
+        m_buffer.putInt8(val ? 1 : 0);
+        m_currentParam++;
+        return *this;
+    }
+
     /**
      * Add an array of date values for the current parameter
      * @throws ParamMismatchException Supplied parameter is the wrong type for this position or too many have been set

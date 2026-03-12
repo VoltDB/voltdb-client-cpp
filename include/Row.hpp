@@ -115,6 +115,22 @@ public:
         return decodeDate(encodedDate);
     }
 
+   /*
+     * Retrieve the value at the specified column index as a bool. The type of the column
+     * must be bool.
+     * @throws InvalidColumnException The index of the column was invalid or the type of the column does
+     * not match the type of the get method.
+     * @return bool te value at the specified column
+     */
+    bool getBool(int32_t column) throw(voltdb::InvalidColumnException) {
+        validateType(WIRE_TYPE_BOOL, column);
+        int8_t retval = m_data.getInt8(getOffset(column));
+        if (retval == INT8_MIN) {
+            m_wasNull = true;
+        }
+        return retval == 1;
+    }
+
     /*
      * Retrieve the value at the specified column index as an int64_t/BIGINT. The type of the column
      * must be BIGINT, INTEGER, SMALLINT, or TINYINT.
@@ -289,6 +305,8 @@ public:
             getTimestamp(column); break;
         case WIRE_TYPE_DATE:
             getDate(column); break;
+        case WIRE_TYPE_BOOL:
+            getBool(column); break;
         case WIRE_TYPE_BIGINT:
             getInt64(column); break;
         case WIRE_TYPE_INTEGER:
@@ -505,6 +523,8 @@ public:
                 ostream << getTimestamp(ii); break;
             case WIRE_TYPE_DATE:
                 ostream << getDate(ii); break;
+            case WIRE_TYPE_BOOL:
+                ostream << getBool(ii); break;
             case WIRE_TYPE_DECIMAL:
                 ostream << getDecimal(ii).toString(); break;
             case WIRE_TYPE_VARBINARY:
@@ -558,6 +578,7 @@ private:
             break;
         case WIRE_TYPE_TIMESTAMP:
         case WIRE_TYPE_DATE:
+        case WIRE_TYPE_BOOL:
         case WIRE_TYPE_BIGINT:
         case WIRE_TYPE_FLOAT:
         case WIRE_TYPE_STRING:
@@ -630,6 +651,9 @@ private:
                 case WIRE_TYPE_INTEGER:
                 case WIRE_TYPE_DATE:
                     length = 4;
+                    break;
+                case WIRE_TYPE_BOOL:
+                    length = 1;
                     break;
                 case WIRE_TYPE_SMALLINT:
                     length = 2;
