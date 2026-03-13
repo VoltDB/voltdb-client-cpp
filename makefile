@@ -35,7 +35,7 @@ ifeq ($(PLATFORM),Linux)
 					$(THIRD_PARTY_DIR)/libssl.a \
 					$(THIRD_PARTY_DIR)/libcrypto.a \
 					-ldl
-	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system -lboost_thread -lboost_date_time
+	SYSTEM_LIBS := -L $(BOOST_LIBS) -lc -lpthread -lrt -lboost_system-mt -lboost_thread-mt -lboost_date_time-mt
 endif
 
 .PHONEY: all clean test kit
