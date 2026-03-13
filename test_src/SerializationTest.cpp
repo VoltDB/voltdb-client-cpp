@@ -211,6 +211,7 @@ static bool compareParameter(ByteBuffer &original, std::string originalName,
         }
         break;
     case WIRE_TYPE_TINYINT:
+    case WIRE_TYPE_BOOL:
         {
             int8_t g = generated.getInt8();
             int8_t o = original.getInt8();

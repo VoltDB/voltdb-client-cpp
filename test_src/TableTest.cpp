@@ -32,7 +32,7 @@
 
 namespace voltdb {
 
-voltdb::WireType allTypes[12] = {
+voltdb::WireType allTypes[13] = {
             WIRE_TYPE_TINYINT,
             WIRE_TYPE_SMALLINT,
             WIRE_TYPE_INTEGER,
@@ -42,6 +42,7 @@ voltdb::WireType allTypes[12] = {
             WIRE_TYPE_TIMESTAMP,
             WIRE_TYPE_DATE,
             WIRE_TYPE_DECIMAL,
+            WIRE_TYPE_BOOL,
             WIRE_TYPE_VARBINARY,
             WIRE_TYPE_GEOGRAPHY_POINT,
             WIRE_TYPE_GEOGRAPHY,
@@ -84,7 +85,8 @@ private:
                 << GeographyPoint(15.3333, 0)
                 << GeographyPoint(15.999, 15.666)
                 << GeographyPoint(0, 14.1)
-                << GeographyPoint(0, 0);;
+                << GeographyPoint(0, 0);
+        m_bool = true;
     }
 
     void someMaxValues() {
@@ -127,6 +129,7 @@ private:
     uint8_t m_binData[1024];
     GeographyPoint m_ptValue;
     Geography m_polyValue;
+    bool m_bool;
 
     int32_t populateRow(RowBuilder &row, bool nullValue) {
         int32_t rowSize = 0;
@@ -140,6 +143,9 @@ private:
             int32_t length = 0;
             switch (type) {
             case WIRE_TYPE_TINYINT:
+                length = 1;
+                break;
+            case WIRE_TYPE_BOOL:
                 length = 1;
                 break;
             case WIRE_TYPE_SMALLINT:
@@ -210,6 +216,9 @@ private:
         case WIRE_TYPE_DATE:
             row.addDate(m_dateValue);
             return 4;
+        case WIRE_TYPE_BOOL:
+            row.addBool(m_bool);
+            return 1;
         case WIRE_TYPE_DECIMAL: {
             row.addDecimal(m_decValue);
             return 2*sizeof(int64_t);
@@ -277,6 +286,11 @@ private:
             case WIRE_TYPE_DATE: {
                 boost::gregorian::date value = row.getDate(i);
                 CPPUNIT_ASSERT(value == m_dateValue);
+                break;
+            }
+            case WIRE_TYPE_BOOL: {
+                bool value = row.getBool(i);
+                CPPUNIT_ASSERT(value == m_bool);
                 break;
             }
             case WIRE_TYPE_DECIMAL: {
@@ -355,6 +369,11 @@ private:
 
             case WIRE_TYPE_DATE: {
                 row.getDate(i);
+                break;
+            }
+
+            case WIRE_TYPE_BOOL: {
+                row.getBool(i);
                 break;
             }
 
