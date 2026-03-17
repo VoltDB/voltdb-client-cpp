@@ -118,6 +118,9 @@ public:
         case WIRE_TYPE_TINYINT:
             addInt8(INT8_MIN);
             break;
+        case WIRE_TYPE_BOOL:
+            addInt8(INT8_MIN);
+            break;
         case WIRE_TYPE_SMALLINT:
             addInt16(INT16_MIN);
             break;
@@ -204,6 +207,14 @@ public:
         int32_t encodedDate = encodeDate(value);
         m_buffer.ensureRemaining(4);
         m_buffer.putInt32(encodedDate);
+        m_currentColumnIndex++;
+        return *this;
+    }
+
+    RowBuilder& addBool(const bool &value) throw (InvalidColumnException, RowCreationException) {
+        validateType(WIRE_TYPE_BOOL);
+        m_buffer.ensureRemaining(1);
+        m_buffer.putInt8(value ? 1 : 0);
         m_currentColumnIndex++;
         return *this;
     }
